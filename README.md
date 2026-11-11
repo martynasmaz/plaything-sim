@@ -1,152 +1,163 @@
-# Plaything Sim — v0.1
+# Gourdling Barn Dance — Plaything Sim v0.1
 
-A tiny Stone Age village that lives on its own. Six villagers follow simple rules:
-gather, eat, keep warm, rest, grow old and raise children. No AI, accounts or internet.
+A tiny **First Age Homestead** that lives on its own. Six alien Gourdlings gather
+provisions, keep warm, rest, grow old and raise children. Vintage folk-Americana
+art, simple rules. **No AI, accounts, internet, farming or music simulation.**
 
-## Play it — easiest way (no installation)
+## Play — no installation
 
 1. Open the **dist** folder.
-2. Double-click **index.html**. It opens in your web browser.
-3. Read the no-save notice. The game starts **paused**.
-4. Click **1×** to watch, **3×** to speed up, or **Next day →** to see one day at a time.
+2. Double-click **index.html**. It opens in your browser.
+3. Read the no-save notice. The Homestead starts **paused**.
+4. Click **1×** to watch, **3×** to speed up, or **Next day →** to step one day.
 
-**There is no saved game. Closing, refreshing or restarting loses this village.**
-The single file `dist/index.html` contains everything, including Phaser. You can
-copy just that file to another computer. Its embedded comments include the Phaser license.
-If double-clicking opens an editor, right-click the file → Open with → your browser.
+**There is no saved game. Closing, refreshing or restarting loses this Homestead.**
+The single `dist/index.html` contains the game, Phaser, the theme and all SVG art.
+You can copy just that file to another computer and play offline. The Phaser
+license is embedded in its comments. If it opens in an editor, right-click →
+Open with → your web browser.
 
-## What to do
+## How to play
 
-- The first goal: reach **day 30 with at least 5 villagers alive and fire known**.
-  That is a milestone, not the end of the game. You can keep watching.
-- You do not have to give commands. Villagers can discover fire on their own.
-- Click a villager's circle, or their name in **Little lives**, to see their age,
-  activity and five needs. Higher numbers are better.
-- Read the **Village journal** for important changes. It keeps the latest 10 entries.
-- **1×:** one game day every 30 seconds. **3×:** every 10 seconds.
-- **Pause** freezes simulation time. **Next day →** deliberately resolves one full
-  day even while paused; it is useful for learning how the rules work.
-- **Restart** immediately starts a new village at day 0, paused.
+- Goal: reach **day 30 with at least 5 Gourdlings alive and Bonfire known**.
+  That is a milestone, not the end. Keep watching afterward.
+- Commands are optional: Gourdlings can discover the Bonfire on their own.
+- Click a Gourdling, or its name in **Little lives**, for its age, activity and
+  five needs. Higher numbers are better. The name buttons also work on a phone.
+- Read the **Homestead journal** for important changes; it keeps the latest 10.
+- **1×:** one day every 30 seconds. **3×:** one day every 10 seconds.
+- **Pause** freezes simulation time. **Next day →** deliberately resolves one
+  complete day even while paused; it helps you learn the rules.
+- **Restart** immediately returns to a new Homestead at day 0, paused.
 
 ### A word from above
 
-Type one of these commands into the box, then press **Enter** (or click **Queue**).
-The command takes effect at the start of the **next game day**, not when typed.
-Queuing costs nothing. Enter another valid command to replace the queued one,
-or click **Cancel**. Only one can apply per day.
+Type **either** wording in a row below and press **Enter**, or click **Queue**.
+The command applies at the start of the **next day**, not when typed. Queuing is
+free: Wonder is paid only when it applies. Enter another valid command to replace
+it, or click **Cancel**. Only one command applies per day.
 
-| Command | Power | Wait before repeating | What it does |
-| --- | ---: | --- | --- |
-| `rain` | 10 | 4 days | Rain for 3 days: more food from foraging, extra cold. |
-| `drought` | 10 | 4 days | Drought for 3 days: less food from foraging. |
-| `bless` | 20 | 5 days | Everyone gains up to 15 health and 15 happiness. **Not a cure.** |
-| `plague` | 30 | 8 days | Everyone is ill for 3 days: −8 health and −5 happiness each day. |
-| `teach fire` | 25 | Once per run | Learn fire. Needs 3 wood: 2 to learn and 1 to burn today. |
-| `harvest` | 20 | 5 days | Gift up to 12 food, without exceeding 100. |
+| Name (plain alias) | Wonder | Wait before repeating | Effect |
+|---|---:|---|---|
+| `cloud wrangle` (`rain`) | 10 | 4 days | Call 3 days of rain: more gathered provisions, extra cold. |
+| `dry spell` (`drought`) | 10 | 4 days | Call 3 days of drought: fewer gathered provisions. |
+| `hoedown` (`bless`) | 20 | 5 days | Everyone gains up to 15 health and 15 happiness. **Does not cure illness.** |
+| `sick hex` (`plague`) | 30 | 8 days | Everyone ill for 3 days: −8 health and −5 happiness/day. **It can kill Gourdlings.** |
+| `teach spark` (`teach fire`) | 25 | Once per run | Permanent Bonfire knowledge. Needs 3 firewood: 2 to learn, 1 to burn today. |
+| `feast drop` (`harvest`) | 20 | 5 days | Gift up to 12 provisions to the Pantry, not beyond capacity. Normal meals happen later. |
 
-Capital letters and extra spaces are fine. Other phrases are not understood.
-For example, `TEACH   FIRE` works; `please teach fire` does not.
+**Each pair is ONE command**, not two powers. Same effect, same payment, same
+restrictions and **one shared cooldown**. Hoedown on day 4 also blocks bless until
+day 9. The plain aliases remain accepted; parentheses are help formatting, not
+part of what you type. Extra spaces and capital letters are fine: `CLOUD  WRANGLE`
+and `rain` do the same thing. `please rain` does not work.
 
-A command cast on day 4 with a 5-day wait can be cast again on day 9.
-Rain and drought replace each other, not stack. The casting day counts as day 1
-of a 3-day effect. The weather readout separates **today's conditions** from
-**the next day's weather and its remaining days**.
+Rain and dry spells replace each other, not stack. Their casting day counts as
+the first of 3 days. The HUD separates today's weather from upcoming affected
+days. Sick hex is unavailable and hidden under **both names** when plague is
+switched off by the developer. No later-era commands are callable in v0.1.
 
-Commands fail without spending power if conditions are not met: not enough power,
-a repeat too soon, the same weather already active, illness already active,
-food already full, fire already known/less than 3 wood, a blessing when everyone
-already has full health and happiness, or an ended village. Failures are explained.
-Everything is checked again when the queued command applies.
+Commands fail **without spending Wonder** if funds are insufficient, a cooldown
+is active, the same weather is already active, someone is already ill, the Pantry
+is full, Bonfire is known/less than 3 firewood remains, everyone already has full
+health and happiness for hoedown, or the Homestead has ended. Reasons and cooldown
+availability are shown. Conditions are checked again when the command applies.
 
 ### How the little lives work
 
-Every day, commands apply first. A known fire uses 1 wood if available. Villagers
-get hungry and may get cold, then choose **one** action in this order:
+Commands happen first, then a known Bonfire uses 1 firewood if available. Gourdlings
+get hungry and may get cold, then choose **one** activity, in this order:
 
-1. Emergency forage if very hungry and no food remains.
+1. Emergency forage if very hungry and no provisions remain.
 2. Warm up if cold.
-3. Forage if the shared food reserve is low.
-4. Gather wood if the fuel reserve is low.
+3. Forage if the shared provision reserve is low.
+4. Gather firewood if the fuel reserve is low.
 5. Otherwise rest.
 
-Everyone finishes work before meals. Villagers take turns in a rotating order,
-so the same person does not always get scarce food first. Children gather less.
-Ill villagers still work. The shelter has room for everyone (8 maximum).
+All work finishes before meals. Turn order rotates so the same Gourdling does
+not always get scarce provisions first. Children gather less. Ill Gourdlings
+still work. One **Plank shed** has room for all 8 possible Gourdlings.
 
-Food and wood each hold up to 100. Power returns daily. Fire knowledge is permanent,
-but an empty wood stock means an **unlit** campfire. Two happy adults and a healthy
-village can discover fire naturally after 3 qualifying evenings, starting day 10.
-A comfortable, well-fed village can have a child after 15 qualifying evenings.
-Villagers can die from poor health or old age; deaths are brief and non-graphic.
-At zero population, time stops and **Restart village** is offered.
+Provisions, firewood and Wonder each hold up to 100. Wonder returns daily. Bonfire
+knowledge is permanent, but no fuel means an **unlit** Bonfire. A healthy, happy
+Homestead can discover it after 3 qualifying evenings, starting day 10. A
+comfortable, well-fed Homestead can have a child after 15 qualifying evenings.
+The **Pantry** is the existing supply spot, not a new building. Corn and musical
+instruments are decoration, not farming or extra jobs.
 
-## If you want to run the editable version
+Gourdlings can die from poor health or old age; deaths are brief and non-graphic.
+At zero population, time stops and **Restart Homestead** is offered.
 
-You only need this section if you or a developer are changing the game. Playing
-the double-click file above does **not** need Node or a terminal.
+## Run the editable version
 
-With Node.js 20 or newer installed:
+Only needed if changing the game. Playing the double-click file above needs
+**neither Node nor a terminal**.
 
-1. Open a terminal in the `plaything-sim` folder.
-2. Type `npm start` and press Enter. No `npm install` is necessary.
-3. Open **http://127.0.0.1:4173/** in your browser.
-4. Keep the terminal open while playing. Press Ctrl+C there to stop the server.
+With Node.js 20 or newer:
+1. Open a terminal in `plaything-sim`.
+2. Run `npm start`. **No `npm install` needed.**
+3. Open **http://127.0.0.1:4173/**. Keep the terminal open; Ctrl+C stops it.
 
-Use the address above for the top-level `index.html`. That editable version uses
-JavaScript modules and needs the local server; the version in `dist` does not.
-If the port is already busy, stop an earlier server or use `PORT=4174 npm start`
-on Linux/macOS, then open that port instead.
+The top-level `index.html` uses ES modules and needs this server. The `dist`
+version does not. If the port is busy, stop an earlier server or, on Linux/macOS,
+use `PORT=4174 npm start` and open that port instead.
 
-## For the developer
+## Developer map
 
-- `src/config.js` — **all simulation tuning values**. Defaults match the design.
-  `enablePlague: false` disables plague and removes it from the visible list.
+- **`src/theme.js` — single-file reskin:** six-color palette, system serif fonts,
+  CSS, geometry, dimensions/pivots, shape fallbacks, optional sprite map, every
+  UI/log/error/help template, resource/age/activity/reaction labels and names.
+  Set `THEME.sprites = {}` for the fully playable geometric version.
+- `src/commands.js` — **one authoritative accepted-word table**: approved names
+  and original aliases → stable canonical IDs. Resolve before payment/checks.
+  Theme labels cannot change parser vocabulary; help always retains actual words.
+- `src/config.js` — **all rule/balance numbers**, unchanged from the design.
+  `enablePlague: false` hides/rejects both `sick hex` and `plague`.
 - `src/sim.js` — immutable deterministic simulation; no browser, Phaser or randomness.
-  `createState`, `queueCommand`, `stepDay`, `advanceTime`, `restart` and helpers.
-- `src/village-view.js` — **all village drawing and decorative movement**. Replace
-  this when artist assets arrive. Movement never changes simulation results.
-- `src/main.js` — controls, HUD and villager readouts.
-- `tests/sim.test.js` — Node's built-in test runner; no packages required.
-- `docs/design-v0.1.canvas.txt` — complete supplied design source.
-- `docs/IMPLEMENTATION.md` — conventions and resolved ambiguities.
-- `reports/` — 30-day balance evidence and browser-test results.
-- `vendor/` — Phaser **3.90.0**, vendored with its MIT license for offline play.
-
-Useful commands (no dependencies to install):
+- `src/village-view.js` — theme-driven renderer, optional SVG loading, decorative
+  travel/idle-walk frames, separate shadows and ground-contact-y sorting.
+- `src/main.js` — controls and theme-based readouts.
+- `assets/` — 44 approved provisional **SVGs only** and artist metadata.
+- `docs/ART-ASSETS.md` — exact filenames, sizes, anchors and icon redo guidance.
+- `docs/design-v0.1-flavour.canvas.txt` — latest full supplied design; original
+  pre-flavour source is also retained. `docs/IMPLEMENTATION.md` has conventions.
+- `vendor/` — local Phaser **3.90.0** and MIT license; never a runtime CDN.
 
 ```sh
-npm test          # All 8 design build checks (44 individual assertions/tests)
-npm run report    # Exact 30-day no-command run, JSON + CSV evidence
-npm run build     # Regenerate the double-clickable dist/index.html
-npm start         # Serve the editable modules locally
+npm test          # 56 tests: original 8 build checks + aliases, theme and assets
+npm run report    # Original 30-day no-command balance evidence, JSON + CSV
+npm run build     # Inline code, CSS, Phaser and present SVGs into dist/index.html
+npm start         # Serve editable modules locally
 ```
 
-**After changing source or the plague flag, run `npm run build` to update `dist`.**
-The simulation APIs never mutate their input. A rejected `queueCommand` returns
-the original state plus a reason. `stepDay` is an explicit tick; `advanceTime`
-is the playback clock and respects pause.
+**Rebuild after every source, theme or art change.** Missing optional files are
+replaced by shapes; the standalone build drops missing paths instead of making
+broken file requests. Patterns such as `assets/gourdling_{variant}_{state}_{frame}.svg`
+expand to separate images, not an atlas. Empty maps require no assets. See the
+art handoff for adding approved art without changing renderer code.
 
-Optional browser regression: start the server, install `playwright-core` somewhere
-outside this project (or in your development setup), then run:
+Optional separate-profile headless browser regressions, with `playwright-core`
+installed outside this repo and a Chromium executable available:
 
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
 CHROMIUM_PATH=/path/to/chrome node scripts/smoke.mjs
+# Also checks a changed theme, empty map, missing art and offline SVG embedding:
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
+CHROMIUM_PATH=/path/to/chrome node scripts/theme-smoke.mjs
 ```
 
-This launches a separate temporary-profile **headless** browser, never a signed-in
-browser. It tests both the server and the single file with networking offline,
-commands, selection, restart, the day-30 milestone and a narrow screen. It writes
-`screenshot.png` and `reports/browser-smoke.json`. Optional browser tooling is
-not needed by `npm test`, the build or the game itself.
+The optional theme test reads the artist SVG directory by default; override with
+`ART_SVG_DIR=/path/to/svg`. Browser tooling is not needed to play, build or run
+`npm test`. It launches its own temporary headless browser, never your desktop
+browser or a signed-in account.
 
-## First verification
+## Verified result
 
-All **44 tests in all 8 build-check groups passed**. With no commands and unchanged
-design values: fire discovered at the end of **day 12**, first lit **day 13**;
-children born **days 15 and 30**; **8 alive, 21 food, 6 wood, no deaths on day 30**.
-Local-server and fully offline `file://` browser smoke tests passed with zero
-console errors and zero external network requests. See `reports/verification.md`.
+All rule values are unchanged: unassisted Bonfire discovery at **day 12 end**,
+first lit **day 13**, births **days 15 and 30**, **8 alive with 21 provisions and
+6 firewood on day 30; no deaths**. See `reports/verification.md` for current
+unit/browser results. `screenshot.png` shows the integrated art at real UI size.
 
-Local git history is initialized. **No remote, GitHub repository or deployment
-has been created.**
+This follow-up used **local git only: no fetch, pull, rebase or push**. The parent
+will handle its fresh archive and GitHub history alignment separately.

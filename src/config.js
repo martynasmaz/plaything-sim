@@ -1,4 +1,4 @@
-// The one place to tune the simulation. UI positions/colors live in village-view.js.
+// The one place to tune the simulation. All display choices live in theme.js.
 // Values below are copied from the v0.1 design, NOT adjusted to make tests pass.
 export const CONFIG = {
   enablePlague: true, // Set false, then run `npm run build` to hide/disable plague.
@@ -7,7 +7,6 @@ export const CONFIG = {
   start: {
     food: 18, wood: 12, power: 50,
     ages: [40, 50, 60, 70, 80, 90],
-    names: ['Ada', 'Bram', 'Cora', 'Daro', 'Ena', 'Finn'],
     fullness: 75, warmth: 70, health: 100, happiness: 60
   },
   newborn: { fullness: 80, warmth: 60, health: 100, happiness: 60 },

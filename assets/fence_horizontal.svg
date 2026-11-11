@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" stroke-linecap="round" stroke-linejoin="round">
+  <title>fence horizontal</title>
+  <path d="M-4 24 L68 24 L68 31 L-4 31 Z" fill="#D2A23A" stroke="#2B211C" stroke-width="3"/><path d="M-4 40 L68 40 L68 47 L-4 47 Z" fill="#D2A23A" stroke="#2B211C" stroke-width="3"/><path d="M12 16 L19 15 L20 55 L12 56 Z" fill="#D2A23A" stroke="#2B211C" stroke-width="3"/><path d="M46 16 L53 17 L54 56 L46 55 Z" fill="#D2A23A" stroke="#2B211C" stroke-width="3"/>
+</svg>

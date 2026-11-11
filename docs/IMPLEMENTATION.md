@@ -63,8 +63,9 @@ it does not secretly change any other rule or disable ordinary death.
 ## Architecture and delivery
 
 The editable game uses browser ES modules, Phaser 3.90.0 with CANVAS rendering,
-native HTML inputs/buttons for accessibility, and only geometric drawing/text.
-No CDN requests occur at runtime. There are no assets, services, AI, save storage,
+native HTML inputs/buttons for accessibility, the approved SVG art pack from
+`assets/` (via `src/theme.js`) with plain-shape fallbacks for any missing file.
+No CDN requests occur at runtime. There are no services, AI, save storage,
 random game decisions, build dependencies or runtime npm dependencies.
 
 The single-file generator concatenates these small modules in dependency order,
@@ -75,3 +76,45 @@ single-file build uses inline classic scripts to avoid file:// module CORS.
 Browser regression uses an optional external Playwright installation and launches
 its own fresh **headless** process, not the desktop browser or an existing session.
 No user accounts, cookies or credentials are involved.
+
+## Gourdling flavour / theme and approved provisional art
+
+The latest full reference is `design-v0.1-flavour.canvas.txt`; the original source
+is kept for comparison. Opening UI names are First Age, Homestead, Gourdlings,
+Bonfire, Provisions, Firewood, Wonder, Plank shed and Pantry. This changes **no
+rule values, day stages, costs, cooldowns, needs or build-check outcomes**.
+
+All presentation is now in `src/theme.js`: palette, fonts, full CSS, layout,
+geometry callbacks, source dimensions and exact artist pivots, optional image
+map, starting names, activity/reaction labels, HUD/help/error/log templates.
+There is no second stylesheet to swap. `village-view.js` is only the generic
+loader/renderer; empty maps and missing images use the theme's geometric callbacks.
+Simulation imports only pure theme copy/name helpers, never Phaser or browser I/O.
+
+`src/commands.js` is the one accepted-word table. Resolve its normalized wording
+to the unchanged canonical ID **before** queueing, validation, cost or cooldown.
+Pairs: cloud wrangle/rain, dry spell/drought, hoedown/bless, sick hex/plague,
+teach spark/teach fire, feast drop/harvest. Each pair is one command. Both illness
+words disappear with `enablePlague:false`. Help shows name (alias), visibly warns
+that sick hex can kill Gourdlings, and never offers later-era commands. If a new
+theme adds a friendly label, the actual accepted words remain visible too.
+
+The default now maps 44 approved SVGs, with no PNGs. Adult ID order cycles through
+fiddler, banjo, singer, kicker, washboard, jug. Children use their own 48×72 art.
+Source sizes/contact pivots were copied from the artist manifest into the theme;
+actors render at 40×60 (children 30×45), not hard-coded image dimensions in the
+renderer. Normalized origins use the actual feet (adult 32,94; child 24,70.7),
+not the slightly padded canvas edge. Separate shadows sit underneath. World art
+and actors sort by ground-contact y. Idle_1 displays while standing; walk_1/2
+alternate during actual position changes, not while waiting or merely queuing.
+
+The Pantry is a supply crate, not a new building or resource. Instruments,
+lanterns, corn and fence/ground tiles are decoration only. Weather overlays are
+tiled, not stretched; reduced opacity keeps characters readable. Command sign
+uses a CSS nine-slice backdrop and live system-serif text. Exact inventory,
+readability notes and icon-redraw guidance are in `ART-ASSETS.md`.
+
+Build-time inlining embeds present local images as data URIs and makes missing
+paths null (no broken file:// requests). External/outside-project images and
+SVG scripts, raster embeds, foreignObject or remote links/fonts are refused as
+optional fallbacks. The standalone HTML needs no sidecar art folder.

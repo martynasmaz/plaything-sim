@@ -1,6 +1,8 @@
 // Pure, deterministic simulation. No Phaser, DOM, clock, random numbers or I/O.
 // Every transition returns a new state; failed command checks return the old one.
 import { makeConfig } from './config.js';
+import { THEME, t, commandLabel } from './theme.js';
+import { normalizeWords, resolveCommand } from './commands.js';
 
 const clamp = (n, max) => Math.max(0, Math.min(max, n));
 const averageHappiness = s => s.villagers.length
@@ -20,20 +22,20 @@ export function createState(overrides = {}) {
   const c = makeConfig(overrides);
   return {
     config: c, day: 0, age: 'Stone', food: c.start.food, wood: c.start.wood, power: c.start.power,
-    villagers: c.start.ages.map((age, i) => villager(i + 1, c.start.names[i] || `Villager ${i + 1}`,
+    villagers: c.start.ages.map((age, i) => villager(i + 1, THEME.names[i] || t('labels.nameFallback', {id:i+1}),
       age, { fullness: c.start.fullness, warmth: c.start.warmth,
         health: c.start.health, happiness: c.start.happiness }, c)),
     nextId: c.start.ages.length + 1, nextFirstId: 1,
     weather: { type: 'normal', daysLeft: 0 }, fireKnown: false, fireLit: false,
     birthCounter: 0, fireCounter: 0, lastUsed: {}, queuedCommand: null,
     speed: 0, elapsedMs: 0, ended: false, milestoneReached: false, lastDay: null,
-    log: [{ day: 0, text: 'Six villagers begin a Stone Age village. Paused. No saved game.', type: 'info' }]
+    log: [{ day: 0, text: t('log.start'), type: 'info' }]
   };
 }
 export function availableCommands(state) {
   return Object.keys(state.config.commands).filter(k => k !== 'plague' || state.config.enablePlague);
 }
-export const normalizeCommand = text => String(text).trim().replace(/\s+/g, ' ').toLowerCase();
+export const normalizeCommand = normalizeWords;
 export function nextAllowedDay(state, command) {
   const last = state.lastUsed[command];
   if (last === undefined) return 1;
@@ -43,41 +45,41 @@ export function nextAllowedDay(state, command) {
 
 // `day` is the day the command would affect, not the day it was typed.
 export function validateCommand(s, text, day = s.day + 1) {
-  const command = normalizeCommand(text);
+  const command = resolveCommand(text) || normalizeCommand(text);
   const commands = availableCommands(s);
   const fail = message => ({ ok: false, command, message });
-  if (!commands.includes(command)) return fail(`Unknown/unavailable command. Use: ${commands.join(', ')}.`);
-  if (s.ended || !s.villagers.length) return fail('The village has ended. Restart to begin again.');
+  if (!commands.includes(command)) return fail(t('errors.unknown', {commands:commands.map(commandLabel).join(t('labels.separators.list'))}));
+  if (s.ended || !s.villagers.length) return fail(t('errors.ended'));
   const c = s.config;
   const rule = c.commands[command];
   const allowed = nextAllowedDay(s, command);
-  const conditionFail = message => fail(`${message} Earliest by cooldown: day ${Math.max(day, allowed)}; the condition must also be met.`);
-  if (day < allowed) return fail(allowed === Infinity ? 'Teach fire is once per run; fire is already known.'
-    : `${command} is cooling down. Next allowed: day ${allowed} (not day ${day}).`);
-  if (s.power < rule.cost) return fail(`Not enough power: ${command} needs ${rule.cost}; you have ${s.power}. Next allowed by cooldown: day ${Math.max(day, allowed)}; power is also required.`);
+  const conditionFail = message => fail(t('errors.condition', {reason:message,day:Math.max(day,allowed)}));
+  if (day < allowed) return fail(allowed === Infinity ? t('errors.once')
+    : t('errors.cooldown', {command:commandLabel(command),allowed,day}));
+  if (s.power < rule.cost) return fail(t('errors.power', {command:commandLabel(command),cost:rule.cost,power:s.power,day:Math.max(day,allowed)}));
   if (['rain', 'drought'].includes(command) && s.weather.type === command && s.weather.daysLeft > 0)
-    return fail(`Already ${command}; wait until it ends or use the opposite weather. Next cooldown-allowed day: ${Math.max(day, allowed)}.`);
+    return fail(t('errors.weather', {command:commandLabel(command),day:Math.max(day,allowed)}));
   if (command === 'plague' && s.villagers.some(v => v.illnessDays > 0))
-    return fail(`Someone is already ill. Next cooldown-allowed day: ${Math.max(day, allowed)}; illness must end first.`);
-  if (command === 'harvest' && s.food >= c.limits.stock) return conditionFail('Food is already full. Wait until food is used.');
-  if (command === 'teach fire' && s.fireKnown) return fail('Fire is already known. Teaching it again has no effect; no next allowed day this run.');
-  if (command === 'teach fire' && s.wood < c.fire.minWood) return conditionFail(`Teach fire needs at least ${c.fire.minWood} wood (${c.fire.discoveryCost} to learn, ${c.fire.dailyFuel} to burn).`);
+    return fail(t('errors.illness', {day:Math.max(day,allowed)}));
+  if (command === 'harvest' && s.food >= c.limits.stock) return conditionFail(t('errors.foodFull'));
+  if (command === 'teach fire' && s.fireKnown) return fail(t('errors.fireKnown'));
+  if (command === 'teach fire' && s.wood < c.fire.minWood) return conditionFail(t('errors.fireWood', {min:c.fire.minWood,learn:c.fire.discoveryCost,burn:c.fire.dailyFuel}));
   if (command === 'bless' && s.villagers.every(v => v.health === c.limits.need && v.happiness === c.limits.need))
-    return conditionFail('Everyone already has full health and happiness.');
-  return { ok: true, command, message: `${command} can apply on day ${day}.` };
+    return conditionFail(t('errors.blessFull'));
+  return { ok: true, command, message: t('feedback.canApply', {command:commandLabel(command),day}) };
 }
 export function queueCommand(s, text) {
   const result = validateCommand(s, text);
   if (!result.ok) return { ...result, state: s };
   const state = structuredClone(s);
   state.queuedCommand = result.command;
-  return { ...result, state, message: `Queued ${result.command} for day ${s.day + 1}. No power spent yet.` };
+  return { ...result, state, message: t('feedback.queued', {command:commandLabel(result.command),day:s.day+1}) };
 }
 export function cancelCommand(s) {
   return { ...s, queuedCommand: null };
 }
 export function setSpeed(s, speed) {
-  if (!s.config.speeds.includes(speed)) throw new RangeError('Speed must be 0 (pause), 1 or 3.');
+  if (!s.config.speeds.includes(speed)) throw new RangeError(t('errors.speed'));
   return { ...s, speed: s.ended ? 0 : speed };
 }
 export function restart(s) { return createState(s.config); }
@@ -89,33 +91,33 @@ function applyQueued(s, report) {
   const check = validateCommand(s, command, s.day);
   s.queuedCommand = null;
   report.command = check;
-  if (!check.ok) { log(s, `Command rejected: ${check.message}`, 'failure'); return; }
+  if (!check.ok) { log(s, t('log.rejected', {reason:check.message}), 'failure'); return; }
   const c = s.config, rule = c.commands[command];
   s.power -= rule.cost;
   s.lastUsed[command] = s.day;
   let details = '';
   if (command === 'rain' || command === 'drought') {
     s.weather = { type: command, daysLeft: rule.duration };
-    details = `${command} for ${rule.duration} days including today; replaces previous weather. ${command === 'rain' ? 'More food, extra cold.' : 'Lower foraging yields.'}`;
+    details = t('log.weather', {command:commandLabel(command),duration:rule.duration,effect:t('log.'+command)});
   } else if (command === 'plague') {
     for (const v of s.villagers) { v.illnessDays = rule.duration; v.reaction = 'Sick'; }
-    details = `Everyone is ill for ${rule.duration} days including today.`;
+    details = t('log.plague', {duration:rule.duration});
   } else if (command === 'bless') {
     details = s.villagers.map(v => {
       const h = v.health, happy = v.happiness;
       changeNeed(v, 'health', rule.health, c); changeNeed(v, 'happiness', rule.happiness, c);
       v.reaction = 'Grateful';
-      return `${v.name} +${v.health - h} health/+${v.happiness - happy} happiness`;
-    }).join('; ') + '. Illness is not cured.';
+      return t('log.blessPerson', {name:v.name,health:v.health-h,happiness:v.happiness-happy});
+    }).join(t('labels.separators.detail')) + t('log.blessEnd');
   } else if (command === 'harvest') {
     const before = s.food; changeStock(s, 'food', rule.food);
-    details = `Gift: +${s.food - before} food (meals still happen after work).`;
+    details = t('log.harvest', {food:s.food-before});
   } else if (command === 'teach fire') {
     s.fireKnown = true; s.fireCounter = 0; s.wood -= c.fire.discoveryCost;
     for (const v of s.villagers) v.reaction = 'Learned fire';
-    details = `Fire knowledge learned; ${c.fire.discoveryCost} wood spent. Today's fuel check is next.`;
+    details = t('log.teach', {wood:c.fire.discoveryCost});
   }
-  log(s, `${command} (−${rule.cost} power). ${details}`, 'command');
+  log(s, t('log.command', {command:commandLabel(command),cost:rule.cost,details}), 'command');
 }
 
 function chooseWork(s, v, report) {
@@ -181,12 +183,12 @@ function resolveLivesAndDiscovery(s, report) {
     if (v.age >= c.life.death) causes.push('old age');
     const death = { id: v.id, name: v.name, causes };
     report.deaths.push(death);
-    log(s, `${v.name} (#${v.id}) died: ${causes.join(' and ')}.`, 'death');
+    log(s, t('log.death', {name:v.name,id:v.id,causes:causes.map(cause=>t('labels.causes.'+cause)).join(t('labels.separators.cause'))}), 'death');
   }
   s.villagers = s.villagers.filter(v => v.health > 0 && v.age < c.life.death);
   if (!s.villagers.length) {
     s.ended = true; s.speed = 0; s.elapsedMs = 0; s.queuedCommand = null; s.fireLit = false;
-    log(s, 'The village has ended. Restart to begin a new village.', 'end');
+    log(s, t('log.ended'), 'end');
     return;
   }
   const eligibleAdults = s.villagers.filter(v => adult(v, c) && v.health >= c.birth.health
@@ -197,13 +199,13 @@ function resolveLivesAndDiscovery(s, report) {
   s.birthCounter = birthEligible ? s.birthCounter + 1 : 0;
   if (s.birthCounter >= c.birth.consecutiveDays) {
     const id = s.nextId++;
-    const child = villager(id, `Neri ${id}`, 0, c.newborn, c);
+    const child = villager(id, t('labels.newbornName', {id}), 0, c.newborn, c);
     // Newborns are not in today's work/meal/age/timer loop.
     child.activity = 'Newborn';
     if (s.villagers.length >= c.limits.shelter) child.safety = c.needs.unsafe;
     s.villagers.push(child); s.birthCounter = 0;
     report.birth = id;
-    log(s, `${child.name} was born. First work and meal tomorrow.`, 'birth');
+    log(s, t('log.birth', {name:child.name}), 'birth');
   }
   if (!s.fireKnown) {
     const adults = s.villagers.filter(v => adult(v, c) && v.happiness >= c.fire.happiness);
@@ -214,7 +216,7 @@ function resolveLivesAndDiscovery(s, report) {
     if (s.fireCounter >= c.fire.consecutiveDays) {
       s.fireKnown = true; s.wood -= c.fire.discoveryCost; s.fireCounter = 0;
       report.discoveredFire = true;
-      log(s, `The village discovered fire! Spent ${c.fire.discoveryCost} wood; first campfire fuel check is tomorrow.`, 'discovery');
+      log(s, t('log.discovery', {wood:c.fire.discoveryCost}), 'discovery');
     }
   }
 }
@@ -226,7 +228,7 @@ export function stepDay(previous) {
   const s = structuredClone(previous), c = s.config;
   if (!s.villagers.length) {
     s.ended = true; s.speed = 0; s.elapsedMs = 0; s.queuedCommand = null;
-    log(s, 'The village has ended. Restart to begin a new village.', 'end');
+    log(s, t('log.ended'), 'end');
     return s;
   }
   s.day += 1;
@@ -273,10 +275,12 @@ export function stepDay(previous) {
   s.power = clamp(s.power + powerGain, c.limits.power);
   if (s.weather.daysLeft > 0 && --s.weather.daysLeft === 0) s.weather.type = 'normal';
   for (const v of s.villagers) if (v.illnessDays > 0) v.illnessDays -= 1;
-  log(s, `Work: +${report.gatheredFood} food, +${report.gatheredWood} wood. ${report.meals.length} meals. ${s.fireKnown ? (s.fireLit ? `Campfire burned ${report.burnedWood} wood.` : 'Fire known, but unlit today.') : 'Fire unknown.'} Power +${powerGain} (cap ${c.limits.power}).`);
+  log(s, t('log.day', {food:report.gatheredFood,wood:report.gatheredWood,meals:report.meals.length,
+    fire:s.fireKnown ? (s.fireLit?t('log.fireLit',{wood:report.burnedWood}):t('log.fireOut')):t('log.fireUnknown'),
+    power:powerGain,cap:c.limits.power}));
   if (!s.milestoneReached && s.day >= c.milestone.day && s.villagers.length >= c.milestone.population && s.fireKnown) {
     s.milestoneReached = true;
-    log(s, `Milestone: ${s.villagers.length} villagers alive through day ${s.day}, and fire is known. Keep watching!`, 'milestone');
+    log(s, t('log.milestone', {population:s.villagers.length,day:s.day}), 'milestone');
   }
   return s;
 }
@@ -285,7 +289,7 @@ export function stepDay(previous) {
 // unfinished fraction of a day; it never advances weather, illness or cooldowns.
 export function advanceTime(previous, elapsedMs) {
   if (previous.speed === 0 || previous.ended) return previous;
-  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) throw new RangeError('Time must be a finite nonnegative number.');
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) throw new RangeError(t('errors.time'));
   let s = { ...previous, elapsedMs: previous.elapsedMs + elapsedMs * previous.speed };
   while (s.elapsedMs >= s.config.dayMs && !s.ended) {
     s.elapsedMs -= s.config.dayMs;

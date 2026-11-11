@@ -1,0 +1,863 @@
+{
+  "version": "0.1",
+  "palette": {
+    "cream": "#EFE3C8",
+    "ink": "#2B211C",
+    "green": "#3E5B3A",
+    "red": "#A8432F",
+    "mustard": "#D2A23A",
+    "orange": "#C4692C"
+  },
+  "units": "logical pixels",
+  "png_scale_multiplier": 1,
+  "creature_pivot": "adults(32,94); child(24,70.7); coordinates measured from canvas top-left",
+  "strip_exports": "Omitted per developer confirmation. Load frames by explicit names.",
+  "assets": {
+    "gourdling_base_idle_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_base_walk_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_base_walk_2": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_fiddler_idle_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_fiddler_walk_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_fiddler_walk_2": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_banjo_idle_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_banjo_walk_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_banjo_walk_2": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_singer_idle_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_singer_walk_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_singer_walk_2": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_kicker_idle_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_kicker_walk_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_kicker_walk_2": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_washboard_idle_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_washboard_walk_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_washboard_walk_2": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_jug_idle_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_jug_walk_1": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_jug_walk_2": {
+      "logical_size": [
+        64,
+        96
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        96
+      ],
+      "anchor": [
+        32.0,
+        94.0
+      ],
+      "category": "creature",
+      "notes": ""
+    },
+    "gourdling_child_idle_1": {
+      "logical_size": [
+        48,
+        72
+      ],
+      "viewBox": [
+        0,
+        0,
+        48,
+        72
+      ],
+      "anchor": [
+        24.0,
+        70.7
+      ],
+      "category": "creature",
+      "notes": "Provisional 48x72 canvas; adult torso at70%, head132%, neck shortened8 canonical units, tiny65% sprout. Shared template."
+    },
+    "gourdling_child_walk_1": {
+      "logical_size": [
+        48,
+        72
+      ],
+      "viewBox": [
+        0,
+        0,
+        48,
+        72
+      ],
+      "anchor": [
+        24.0,
+        70.7
+      ],
+      "category": "creature",
+      "notes": "Provisional 48x72 canvas; adult torso at70%, head132%, neck shortened8 canonical units, tiny65% sprout. Shared template."
+    },
+    "gourdling_child_walk_2": {
+      "logical_size": [
+        48,
+        72
+      ],
+      "viewBox": [
+        0,
+        0,
+        48,
+        72
+      ],
+      "anchor": [
+        24.0,
+        70.7
+      ],
+      "category": "creature",
+      "notes": "Provisional 48x72 canvas; adult torso at70%, head132%, neck shortened8 canonical units, tiny65% sprout. Shared template."
+    },
+    "shed": {
+      "logical_size": [
+        128,
+        128
+      ],
+      "viewBox": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "anchor": [
+        64.0,
+        120.0
+      ],
+      "category": "prop",
+      "notes": "Mustard plank walls; faded-red roof. Shared mustard wood across shed, fence, logs and pole."
+    },
+    "bonfire_unlit": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        32.0,
+        56.0
+      ],
+      "category": "prop",
+      "notes": ""
+    },
+    "bonfire_lit": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        32.0,
+        56.0
+      ],
+      "category": "prop",
+      "notes": ""
+    },
+    "lantern": {
+      "logical_size": [
+        32,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        32,
+        64
+      ],
+      "anchor": [
+        8.0,
+        61.0
+      ],
+      "category": "prop",
+      "notes": ""
+    },
+    "ground": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        0.0,
+        0.0
+      ],
+      "category": "tile",
+      "notes": "Solid seamless forest green; edge pixels are identical. Only intentionally opaque full-tile asset."
+    },
+    "fence_horizontal": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        32.0,
+        32.0
+      ],
+      "category": "tile",
+      "notes": "West-east ports: rails y24..31 and y40..47; strokes included. Intentional clipped edge rails."
+    },
+    "fence_vertical": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        32.0,
+        32.0
+      ],
+      "category": "tile",
+      "notes": "North-south; exact clockwise-screen -90-degree rotation of horizontal master; rail ports x24..31 and x40..47 match corner."
+    },
+    "fence_corner": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        32.0,
+        32.0
+      ],
+      "category": "tile",
+      "notes": "West-to-south corner; rotate 90-degree steps for other orientations. Same rail ports as both straights."
+    },
+    "corn": {
+      "logical_size": [
+        32,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        32,
+        64
+      ],
+      "anchor": [
+        16.0,
+        62.0
+      ],
+      "category": "prop",
+      "notes": ""
+    },
+    "sign_ui": {
+      "logical_size": [
+        480,
+        72
+      ],
+      "viewBox": [
+        0,
+        0,
+        480,
+        72
+      ],
+      "anchor": [
+        0.0,
+        0.0
+      ],
+      "category": "ui",
+      "notes": "No baked text; recommended live text safe box x42,y20,width396,height32. Min readable display size 360x54. Cream border is intentional UI exception to ink outlines."
+    },
+    "shadow": {
+      "logical_size": [
+        48,
+        16
+      ],
+      "viewBox": [
+        0,
+        0,
+        48,
+        16
+      ],
+      "anchor": [
+        24.0,
+        8.0
+      ],
+      "category": "shadow",
+      "notes": "Flat ink 25%; no blur. Reuse separately; never double-stack shadows."
+    },
+    "gather_food": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        32.0,
+        55.0
+      ],
+      "category": "prop",
+      "notes": "Provisional gathering spot size; mustard/red gourds over green bush."
+    },
+    "gather_wood": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        32.0,
+        59.0
+      ],
+      "category": "prop",
+      "notes": "Provisional size; same mustard wood and cream endgrain as bonfire. No axe: tools excluded by latest scope."
+    },
+    "pantry": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        32.0,
+        57.0
+      ],
+      "category": "prop",
+      "notes": "Supply spot, not a building: open mustard plank crate with gourds and red berries."
+    },
+    "cue_rain": {
+      "logical_size": [
+        32,
+        32
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        16.0,
+        16.0
+      ],
+      "category": "icon",
+      "notes": ""
+    },
+    "overlay_rain": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        0.0,
+        0.0
+      ],
+      "category": "overlay",
+      "notes": "64px periodic in x/y; intentional off-canvas stroke copies. Ink rain; transparent background."
+    },
+    "cue_drought": {
+      "logical_size": [
+        32,
+        32
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        16.0,
+        16.0
+      ],
+      "category": "icon",
+      "notes": ""
+    },
+    "overlay_drought": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        0.0,
+        0.0
+      ],
+      "category": "overlay",
+      "notes": "64px periodic edge ports; ink at25% requested reduced opacity. No fill."
+    },
+    "status_sick": {
+      "logical_size": [
+        24,
+        24
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        12.0,
+        12.0
+      ],
+      "category": "icon",
+      "notes": "Drooping sprout and small plus mark; not a creature face."
+    },
+    "status_unhappy": {
+      "logical_size": [
+        24,
+        24
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        12.0,
+        12.0
+      ],
+      "category": "icon",
+      "notes": ""
+    },
+    "status_uneasy": {
+      "logical_size": [
+        24,
+        24
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        12.0,
+        12.0
+      ],
+      "category": "icon",
+      "notes": ""
+    },
+    "status_hoedown": {
+      "logical_size": [
+        24,
+        24
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        12.0,
+        12.0
+      ],
+      "category": "icon",
+      "notes": "Happy / hoedown reaction: cream star and mustard music note."
+    },
+    "cue_warming": {
+      "logical_size": [
+        24,
+        24
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        12.0,
+        12.0
+      ],
+      "category": "icon",
+      "notes": "Warming cue; orange is permitted for fire/energy only."
+    }
+  }
+}

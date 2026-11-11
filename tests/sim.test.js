@@ -1,5 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { t } from '../src/theme.js';
 import { createState, queueCommand, cancelCommand, stepDay, validateCommand, availableCommands,
   setSpeed, advanceTime, restart, normalizeCommand } from '../src/sim.js';
 
@@ -145,7 +146,7 @@ describe('Build check 3 · three-day weather', () => {
   });
   test('same-weather rejection independent of cooldown', () => {
     const s=createState();s.weather={type:'rain',daysLeft:3};
-    assert.match(queueCommand(s,'rain').message,/Already rain/);
+    assert.match(queueCommand(s,'rain').message,/Already cloud wrangle \(rain\)/);
   });
 });
 
@@ -174,7 +175,7 @@ describe('Build check 4 · command validation and effects', () => {
   });
   test('unaffordable is no mutation/cost/cooldown; conditions checked again on application', () => {
     let s=createState();s.power=9;
-    const r=queueCommand(s,'rain');assert.equal(r.ok,false);assert.match(r.message,/Not enough power/);assert.strictEqual(r.state,s);
+    const r=queueCommand(s,'rain');assert.equal(r.ok,false);assert.match(r.message,/Not enough wonder/i);assert.strictEqual(r.state,s);
     s=queueCommand(createState(),'rain').state;s.power=0;s=stepDay(s);
     assert.equal(s.lastDay.command.ok,false);assert.equal(s.lastUsed.rain,undefined);
     assert.equal(s.weather.type,'normal');assert.equal(s.power,5);assert.equal(s.queuedCommand,null);
@@ -202,7 +203,7 @@ describe('Build check 4 · command validation and effects', () => {
     let s=createState();s.villagers[0].illnessDays=1;assert.match(queueCommand(s,'plague').message,/already ill/);
     s=createState();s.food=100;assert.match(queueCommand(s,'harvest').message,/already full/);
     s=createState();s.fireKnown=true;assert.match(queueCommand(s,'teach fire').message,/already known/);
-    s=createState();s.wood=2;assert.match(queueCommand(s,'teach fire').message,/at least 3 wood/);
+    s=createState();s.wood=2;assert.match(queueCommand(s,'teach fire').message,/at least 3 firewood/);
     s=healthy(createState());assert.match(queueCommand(s,'bless').message,/full health and happiness/);
   });
   test('bless clamps, reports actual gains, and does not cure illness', () => {
@@ -213,7 +214,7 @@ describe('Build check 4 · command validation and effects', () => {
   });
   test('harvest clamps at capacity and uses actual stock gain in log', () => {
     const s=createState();s.food=99;const after=cast(s,'harvest');
-    assert.equal(after.food,94);assert.ok(after.log.some(e=>e.text.includes('+1 food')));
+    assert.equal(after.food,94);assert.ok(after.log.some(e=>e.text.includes(t('log.harvest',{food:1}))));
   });
   test('plague disabled means unknown/unavailable AND absent from visible vocabulary', () => {
     const s=createState({enablePlague:false});assert.ok(!availableCommands(s).includes('plague'));
@@ -340,8 +341,8 @@ describe('Build check 8 · pause / speed / reset / ending', () => {
     s=cast(s,'rain');assert.equal(s.ended,true);assert.equal(s.speed,0);assert.equal(s.villagers.length,0);
     assert.equal(s.power,40); // no day-end regeneration after zero population.
     assert.equal(s.queuedCommand,null);assert.strictEqual(stepDay(s),s);assert.strictEqual(advanceTime(s,999_999),s);
-    assert.match(queueCommand(s,'rain').message,/village has ended/);
-    assert.equal(s.log.at(-1).text,'The village has ended. Restart to begin a new village.');
+    assert.match(queueCommand(s,'rain').message,/Homestead has ended/);
+    assert.equal(s.log.at(-1).text,t('log.ended'));
   });
   test('empty diagnostic state ends cleanly without NaN averages', () => {
     let s=createState();s.villagers=[];s=stepDay(s);assert.equal(s.ended,true);assert.equal(s.speed,0);

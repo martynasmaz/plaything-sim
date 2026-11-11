@@ -1,42 +1,47 @@
-# Verification — v0.1
+# Verification — v0.1 with Gourdling theme, flavour names and approved art
 
-## Design build checks: all pass
+Date: 2026-11-11. No design numbers were tuned.
 
-`npm test`: **44 passed, 0 failed, 8 suites**. No third-party test dependencies.
+## Unit tests: 56 passed, 0 failed (10 suites)
 
-| Section 7 build check | Result | Evidence |
-| --- | --- | --- |
-| No-command run | PASS | Exact initial values; 8 alive on day 30, 21 food, 6 wood, no deaths. Natural fire at day 12 end, lit on day 13. |
-| One normal day | PASS | Fullness 75 → 50 → 80; 2 foragers add 6 food, 6 one-food meals; rest use and all storage/need bounds checked. Rotated work/meal order and priority branches tested. |
-| Three-day weather | PASS | Rain cast day 2 affects yields and warmth on days 2, 3, 4 only; day 5 normal. Opposite weather replaces with fresh timer. |
-| Command validation | PASS | Exact normalization; unknown, cooldown, power and all condition rejections. Queue/replace/cancel, revalidate on application, one payment/effect, cooldown day 4+5 = day 9, plague-disabled vocabulary. |
-| Fire in both routes | PASS | Teach with 3 wood spends 2+1 that day. Natural spends 2 at day end, first burns tomorrow. No-fuel knowledge persists, shelter +20/fire +40 warm-up checked. |
-| Illness and death | PASS | Plague damage 8+8+8 = 24, no fourth day, no sick-day recovery. Bless not a cure. Death removed once; combined old-age/illness causes recorded. |
-| Birth and population cap | PASS | Child after 15 eligible evenings, exact newborn values, first work/meal tomorrow. Failed day resets. Food-after-meals and adult eligibility checked; cap ≤8 across 500 days. |
-| Pause and reset | PASS | Paused time is identity transition. 30s/10s speeds, partial-day preservation, exact restart, zero-population end and all future-command rejection. |
+`npm test` (Node `node:test`, no dependencies). Full output: `node-tests.txt`.
 
-The no-command run succeeded; **no design numbers were tuned**. Full day-by-day
-population, food, wood, power, fire, births and deaths: `no-command.csv` and
-`no-command.json`. Children were born on days 15 and 30.
+| Section 7 build check | Result |
+| --- | --- |
+| No-command run (day 30, ≥5 alive, Bonfire known) | PASS — 8 alive, 21 provisions, 6 firewood, 100 Wonder, no deaths; Bonfire discovered end of day 12, first burns day 13; births days 15 and 30 |
+| One normal day | PASS |
+| Three-day weather | PASS |
+| Command validation | PASS |
+| Bonfire in both routes | PASS |
+| Illness and death (24 damage) | PASS |
+| Birth and population cap | PASS |
+| Pause and reset | PASS |
 
-## Browser checks: both pass
+Extra theme/flavour tests (12): each new name and its old alias produce identical
+canonical states; shared cooldown in both directions (cast day 4 → ready day 9);
+shared restrictions and revalidation; `enablePlague:false` hides/rejects both
+`sick hex` and `plague`; later-version words stay unknown; theme copy/manifest/
+pivot/variant checks; sim numbers unchanged by the theme; build inliner handles
+missing and unsafe asset paths.
 
-A fresh isolated headless Chromium process (temporary profile, no accounts) tested:
+Day-by-day no-command data: `no-command.csv`, `no-command.json`, `balance-console.txt`.
 
-- editable ES-module game at `http://127.0.0.1:4173/`;
-- `file:///workspace/plaything-sim/dist/index.html` with **networking offline**.
+## Browser checks (fresh headless Chromium, temporary profile)
 
-Both rendered the Phaser canvas and passed typing/Enter, unknown-command
-feedback, free queue/replace/cancel, teach-fire effect, rain timers, clickable
-villager circles and roster selection, pause/normal/3× controls, restart,
-30 days stepped through visible controls, the milestone, and 390px layout.
+| Run | Result |
+| --- | --- |
+| Local server `http://127.0.0.1:4173/` with art (53 local requests) | PASS, 0 console errors, 0 external requests |
+| `dist/index.html` from `file://`, network offline (1 request, 44 SVGs inlined) | PASS, 0 console errors |
+| Theme swap (title, resource name, Gourdling names, log text changed by one file) | PASS |
+| Missing optional background → shape fallback | PASS |
+| Empty sprite map → plain shapes, fully playable | PASS (`fallback-shapes.png`) |
+| All configured art files missing → plain shapes, fully playable | PASS |
 
-**Zero browser console errors; zero external requests.** The server version made
-7 local requests; the standalone version made only its own file request.
-See `browser-smoke.json` for machine-readable results.
+Checked in-browser: typing/Enter, unknown phrase, queue/replace/cancel, aliases
+(old words) accepted, teach spark, cloud wrangle timers, clickable Gourdlings,
+speed controls, restart, 30-day milestone, mobile layout, renamed HUD and the
+sick hex "can kill Gourdlings" help line; sprite idle/walk frames, separate
+shadows, child sprite, sick icons, ground/weather tiles, sign panel.
 
-Screenshot of settled movement on day 3: `../screenshot.png`.
-Offline-file screenshot: `file-offline.png`. Narrow-layout screenshots:
-`local-server-mobile.png` and `double-click-offline-mobile.png`.
-
-No remote has been added. No GitHub publishing, messaging or deployment occurred.
+Screenshots: `../screenshot.png` (art), `file-offline.png`, `*-mobile.png`,
+`theme-assets.png`, `theme-assets-illness.png`, `fallback-shapes.png`.
