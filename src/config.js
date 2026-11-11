@@ -44,6 +44,13 @@ export const CONFIG = {
   weather: { chances: { normal: 31, rain: 30, drought: 25, cold: 14 } },
   illness: { chance: 13, duration: 3 },
   rng: { warmupSteps: 8 },
+  // Save and load (v0.2): one local-storage slot. Bump `version` whenever the
+  // saved fields change; an older save then starts a new run.
+  save: { key: 'plaything-sim.save', version: 1 },
+  // Typing exactly this (after the input cleaning) starts a fresh run. With
+  // requireConfirm the first time only asks; typing it again within
+  // confirmSeconds of real (wall-clock) time restarts.
+  freshStart: { phrase: 'begin anew', requireConfirm: true, confirmSeconds: 10 },
   power: { daily: 3, happyBonus: 2, happyAverage: 60 },
   milestone: { day: 30, population: 5 },
   commands: {

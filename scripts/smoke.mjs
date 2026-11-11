@@ -38,7 +38,7 @@ try{
     assert.match(await page.textContent('#forecast'),/Tomorrow/);
     assert.equal(await page.getAttribute('#forecast','data-weather'),'normal');
     await page.waitForFunction(()=>window.plaything?.getState().day===0,{}, {timeout:15000});
-    assert.ok((await page.textContent('#no-save')).includes('closing or reloading resets'));
+    assert.ok(await page.locator('#no-save').isHidden(),'v0.2 saves itself: the no-save notice is gone');
     assert.equal(await page.locator('canvas').count(),1);
     await page.waitForFunction(()=>document.querySelector('#village').dataset.spritePeople==='6');
     assert.deepEqual(JSON.parse(await page.getAttribute('#village','data-missing-sprites')),[]);

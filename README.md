@@ -8,10 +8,13 @@ art, simple rules. **No AI, accounts, internet, farming or music simulation.**
 
 1. Open the **dist** folder.
 2. Double-click **index.html**. It opens in your browser.
-3. Read the no-save notice. The Homestead starts **paused**.
+3. The Homestead starts **paused**.
 4. Click **1×** to watch, **3×** to speed up, or **Next day →** to step one day.
 
-**There is no saved game. Closing, refreshing or restarting loses this Homestead.**
+**The game saves itself** in this browser at the end of every day and whenever
+you queue a command; opening the page again picks up where you left off. To let
+this world go and start a fresh one, type `begin anew`, then type it again
+within 10 seconds.
 The single `dist/index.html` contains the game, Phaser, the theme and all SVG art.
 You can copy just that file to another computer and play offline. The Phaser
 license is embedded in its comments. If it opens in an editor, right-click →
@@ -178,6 +181,9 @@ CHROMIUM_PATH=/path/to/chrome node scripts/theme-smoke.mjs
 # UI switches and ?ui=minimal (keyword commands); BASE_REF=<commit> also compares pixels:
 PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
 CHROMIUM_PATH=/path/to/chrome node scripts/ui-smoke.mjs
+# Save and load: autosave, resume, ended runs, bad saves and "begin anew":
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
+CHROMIUM_PATH=/path/to/chrome node scripts/save-smoke.mjs
 ```
 
 Preview the future minimal screen (world plus command box only) by opening the
