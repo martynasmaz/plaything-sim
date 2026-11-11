@@ -717,19 +717,34 @@ export const THEME = {
 },
   layout: {
     canvas:{width:900,height:480},
-    spots:{shelter:{x:185,y:160},fire:{x:445,y:255},food:{x:755,y:140},wood:{x:738,y:280},rest:{x:235,y:280}},
-    props:{shelter:[185,204],campfire_lit:[445,278],campfire_out:[445,278],food_spot:[755,166],pantry:[655,202],wood_spot:[745,370],lantern:[505,276]},
-    corn:[[58,122],[96,62],[830,93],[855,262],[63,391],[112,467],[800,477],[660,62]],
-    fence:[{key:'fence_corner',x:290,y:85,angle:90},{key:'fence_tile',x:354,y:85,angle:0},{key:'fence_tile',x:418,y:85,angle:0},{key:'fence_tile',x:482,y:85,angle:0},{key:'fence_tile',x:546,y:85,angle:0},{key:'fence_corner',x:610,y:85,angle:0},{key:'fence_vertical',x:610,y:149,angle:0}],
-    labels:{pantry:[655,225],shelter:[185,48],shelterPlaces:[185,63],food:[755,56],wood:[745,448],rest:[235,432],fire:[445,301],weather:[450,24],hint:[22,451]},
-    initial:{x:400,y:325,columns:3,gapX:52,gapY:68},
-    people:{columns:4,offsetX:-72,offsetY:48,gapX:48,gapY:60,footOffset:13,childFootOffset:10},
+    // Green clearing (rounded rectangle). The fence's posts stand on its top edge.
+    ground:{x:30,y:60,width:840,height:405,radius:110},
+    // Cream path ends; every path starts at the Bonfire spot.
+    spots:{shelter:{x:185,y:200},fire:{x:445,y:236},food:{x:700,y:200},wood:{x:700,y:360},rest:{x:185,y:330},pantry:{x:360,y:166}},
+    props:{shelter:[185,204],campfire_lit:[445,222],campfire_out:[445,222],food_spot:[820,180],pantry:[360,160],wood_spot:[830,380],lantern:[500,218]},
+    corn:[[70,58],[640,58],[760,58],[18,210],[18,440],[884,250],[884,470],[300,480]],
+    // Fence pieces are 64x64 tiles centred on (x,y), laid edge to edge on a
+    // 64 px grid so rails join. flipX mirrors a corner/vertical for the left end.
+    // y=76 puts post feet (tile y 56) at 100, on the green; tops poke above the edge.
+    fence:[{key:'fence_corner',x:290,y:76,flipX:true},{key:'fence_tile',x:354,y:76},{key:'fence_tile',x:418,y:76},{key:'fence_tile',x:482,y:76},{key:'fence_corner',x:546,y:76},
+      {key:'fence_vertical',x:290,y:140,flipX:true},{key:'fence_vertical',x:546,y:140}],
+    labels:{pantry:[360,182],shelter:[185,48],shelterPlaces:[185,63],food:[820,92],wood:[830,404],rest:[185,424],fire:[445,246],weather:[450,24],hint:[22,451]},
+    // Where Gourdlings stand. Each living Gourdling gets ONE slot number = its
+    // place in villager-number order (0..7), and uses that same slot in every
+    // grid, so up to 8 never overlap. A cell (50x84) fits an adult sprite
+    // (40x60) plus a name label up to 48 px wide; the four grids never overlap.
+    // Shelter-side activities (newborns, warming without a Bonfire) use the
+    // rest grid beside the Plank shed.
+    slots:{columns:4,gapX:50,gapY:84,grids:{rest:[110,290],fire:[370,310],food:[600,150],wood:[600,320]}},
+    people:{footOffset:13,childFootOffset:10},
     animation:{walkMs:1000,learnMs:600,learnWaitMs:350,idleFrameMs:450,walkFrameMs:250,minTravel:.5,motionThreshold:.001,ease:'Sine.easeInOut'},
     canvasText:{color:'ink',background:'cream',padding:{x:2,y:1}},
-    text:{base:12,small:10,status:9,weather:11,hint:9,labelY:19,statusY:-76,statusSeparator:"\n"},
+    text:{base:12,small:10,status:9,weather:11,hint:9,labelY:19,labelMaxWidth:48,glyph:11},
     needs:{badBelow:40,warningBelow:60},
     fallback:{adultRadius:13,childRadius:10,outline:3,buildingOutline:4,eyeRadius:1.5},
-    icons:{x:-20,y:-61,gap:20},
+    // Status icons stack down the right side of the Gourdling's own sprite,
+    // so they never reach a neighbour's slot.
+    icons:{x:14,y:-36,gap:17,fallbackRadius:7},
     depth:{world:100,weather:1000,labels:2000},
     weatherCue:{x:865,y:27},
     propShadow:{width:.8,height:.2},
@@ -755,6 +770,8 @@ export const THEME = {
       activities:{Waiting:'Waiting',Forage:'Forage','Gather wood':'Gather firewood','Warm up':'Warm up',Rest:'Rest',Newborn:'Newborn'},
       reactions:{Sick:'Sick',Grateful:'Grateful','Learned fire':'Learned Bonfire'},
       conditions:{sick:'sick',unwell:'unwell',unhappy:'unhappy',uneasy:'uneasy'},
+      // One-character marks drawn on the fallback status discs (no icon art).
+      statusGlyphs:{sick_icon:'+',unhappy_icon:'~',uneasy_icon:'!',hoedown_icon:'*',warming_icon:'^'},
       commandNames:{rain:'cloud wrangle',drought:'dry spell',bless:'hoedown',plague:'sick hex','teach fire':'teach spark',harvest:'feast drop'},
       causes:{hunger:'hunger',cold:'cold',illness:'illness','poor health':'poor health','old age':'old age'},
       separators:{list:', ',detail:'; ',cause:' and ',status:' · '},powerGlyph:'⚡',
@@ -844,71 +861,95 @@ export function villagerTextureCandidates(v, child, walking, time) {
 
 // Geometric placeholders. These are THEME callbacks, not simulation or renderer
 // code: a future one-file reskin can replace every primitive as well as sprites.
+// Fallback props were drawn around these points; at() shifts each drawing to
+// wherever THEME.layout.props puts that prop (call g.restore() when done).
+const FALLBACK_ANCHORS={shelter:[185,204],pantry:[655,202],food_spot:[755,166],wood_spot:[745,370],campfire_out:[445,278],campfire_lit:[445,278],lantern:[505,276]};
+function at(g,key){const [x,y]=THEME.layout.props[key],[ax,ay]=FALLBACK_ANCHORS[key];g.save();g.translateCanvas(x-ax,y-ay);}
+function fenceBar(g,x,y,w,h){g.fillStyle(themeColor('mustard')).fillRect(x,y,w,h).lineStyle(3,themeColor('ink')).strokeRect(x,y,w,h);}
+
+// Slot number -> canvas point in one of THEME.layout.slots.grids.
+export function slotPosition(grid,slot) {
+  const S=THEME.layout.slots,[x,y]=S.grids[grid];
+  return {x:x+(slot%S.columns)*S.gapX,y:y+Math.floor(slot/S.columns)*S.gapY};
+}
+
 THEME.fallbacks = {
   base(g) { g.fillStyle(themeColor('cream')).fillRect(0,0,THEME.layout.canvas.width,THEME.layout.canvas.height); },
-  groundMask(g) { g.fillStyle(themeColor('ink')).fillEllipse(444,252,770,385); },
-  paths(g) { const L=THEME.layout;g.lineStyle(20,themeColor('cream'));for(const key of ['shelter','food','wood','rest'])g.beginPath().moveTo(445,255).lineTo(L.spots[key].x,L.spots[key].y).strokePath(); },
+  groundMask(g) { const G=THEME.layout.ground;g.fillStyle(themeColor('ink')).fillRoundedRect(G.x,G.y,G.width,G.height,G.radius); },
+  paths(g) { const L=THEME.layout;g.lineStyle(20,themeColor('cream'));for(const key of ['shelter','food','wood','rest','pantry'])g.beginPath().moveTo(L.spots.fire.x,L.spots.fire.y).lineTo(L.spots[key].x,L.spots[key].y).strokePath(); },
   terrain(g) {
-    const c=themeColor,L=THEME.layout;
+    const c=themeColor,L=THEME.layout,G=L.ground;
     g.fillStyle(c('cream')).fillRect(0,0,L.canvas.width,L.canvas.height);
-    g.fillStyle(c('green')).fillEllipse(444,252,770,385);
-    g.lineStyle(20,c('cream'));
-    for(const key of ['shelter','food','wood','rest'])g.beginPath().moveTo(445,255).lineTo(L.spots[key].x,L.spots[key].y).strokePath();
+    g.fillStyle(c('green')).fillRoundedRect(G.x,G.y,G.width,G.height,G.radius);
+    THEME.fallbacks.paths(g);
   },
   shelter(g) {
-    const c=themeColor;
+    const c=themeColor;at(g,'shelter');
     g.fillStyle(c('mustard')).fillRoundedRect(122,140,126,63,4);
     g.lineStyle(THEME.layout.fallback.buildingOutline,c('ink')).strokeRoundedRect(122,140,126,63,4);
     g.fillStyle(c('red')).fillTriangle(103,147,185,95,267,147);
     g.strokeTriangle(103,147,185,95,267,147);
     g.fillStyle(c('ink')).fillRoundedRect(165,159,40,45,{tl:20,tr:20,bl:0,br:0});
     for(const x of [143,164,206,227])g.lineBetween(x,149,x,199);
+    g.restore();
   },
   pantry(g) {
-    const c=themeColor;g.lineStyle(3,c('ink')).fillStyle(c('mustard')).fillRoundedRect(627,174,56,28,4).strokeRoundedRect(627,174,56,28,4);
+    const c=themeColor;at(g,'pantry');g.lineStyle(3,c('ink')).fillStyle(c('mustard')).fillRoundedRect(627,174,56,28,4).strokeRoundedRect(627,174,56,28,4);
     g.fillStyle(c('red')).fillCircle(643,176,8).fillCircle(663,173,9);
+    g.restore();
   },
-  fence_vertical(g,x,y) {const c=themeColor;g.lineStyle(3,c('ink')).fillStyle(c('mustard')).fillRoundedRect(x-4,y-32,8,64,2).strokeRoundedRect(x-4,y-32,8,64,2);},
-  fence_corner(g,x,y) {THEME.fallbacks.fence_tile(g,x-32,y-32);},
+  // Fence fallbacks match the SVG geometry (centre x,y; rails at tile y 24-31
+  // and 40-47; posts at tile x 12-19 and 46-53) so pieces join on a 64 grid.
+  fence_vertical(g,x,y,flip=false) {const s=flip?-1:1;fenceBar(g,x+s*(-8)-(flip?7:0),y-36,7,72);fenceBar(g,x+s*8-(flip?7:0),y-36,7,72);},
+  fence_corner(g,x,y,flip=false) {
+    const s=flip?-1:1;
+    fenceBar(g,Math.min(x-36*s,x-1*s),y-8,35,7);fenceBar(g,Math.min(x-36*s,x+15*s),y+8,51,7);
+    fenceBar(g,x+s*(-8)-(flip?7:0),y-8,7,44);fenceBar(g,x+s*8-(flip?7:0),y+8,7,28);
+    fenceBar(g,x+s*(-20)-(flip?7:0),y-17,7,41);
+  },
   rain_cue(g,x,y) {g.lineStyle(2,themeColor('ink')).fillStyle(themeColor('cream')).fillEllipse(x,y,26,16).strokeEllipse(x,y,26,16).lineBetween(x-6,y+12,x-9,y+18).lineBetween(x+6,y+12,x+3,y+18);},
   drought_cue(g,x,y) {g.lineStyle(2,themeColor('ink')).fillStyle(themeColor('mustard')).fillCircle(x,y,10).strokeCircle(x,y,10);},
   food_spot(g) {
-    const c=themeColor;
+    const c=themeColor;at(g,'food_spot');
     g.lineStyle(THEME.layout.fallback.outline,c('ink'));
     for(const [x,y,r] of [[697,132,23],[733,126,29],[758,142,21]])g.fillStyle(c('green')).fillCircle(x,y,r).strokeCircle(x,y,r);
     for(const [x,y] of [[687,130],[705,140],[725,117],[740,137],[750,151]])g.fillStyle(c('mustard')).fillCircle(x,y,4);
     g.fillStyle(c('mustard')).fillRoundedRect(700,164,50,22,4).strokeRoundedRect(700,164,50,22,4);
     g.fillCircle(711,166,7).fillCircle(728,164,8).fillCircle(740,167,6);
+    g.restore();
   },
   wood_spot(g) {
-    const c=themeColor;g.lineStyle(THEME.layout.fallback.outline,c('ink'));
+    const c=themeColor;at(g,'wood_spot');g.lineStyle(THEME.layout.fallback.outline,c('ink'));
     for(let i=0;i<3;i++)g.fillStyle(c('mustard')).fillRoundedRect(703+i*3,332+i*12,80-i*8,12,6).strokeRoundedRect(703+i*3,332+i*12,80-i*8,12,6);
+    g.restore();
   },
   campfire_out(g) {
-    const c=themeColor;
+    const c=themeColor;at(g,'campfire_out');
     g.lineStyle(3,c('ink')).strokeEllipse(445,267,84,47);
     for(let i=0;i<8;i++){const a=i*Math.PI/4;g.fillStyle(c('cream')).fillEllipse(445+Math.cos(a)*41,267+Math.sin(a)*23,13,9);}
     g.lineStyle(6,c('ink')).lineBetween(426,272,464,253).lineBetween(428,254,462,272);
+    g.restore();
   },
   campfire_lit(g) {
-    THEME.fallbacks.campfire_out(g);const c=themeColor;
+    THEME.fallbacks.campfire_out(g);const c=themeColor;at(g,'campfire_lit');
     g.fillStyle(c('orange')).fillTriangle(426,266,446,219,464,266);
     g.lineStyle(3,c('ink')).strokeTriangle(426,266,446,219,464,266);
     g.fillStyle(c('mustard')).fillTriangle(436,266,446,238,454,266);
+    g.restore();
   },
   lantern(g) {
-    const c=themeColor;g.lineStyle(3,c('ink')).lineBetween(501,277,501,216).lineBetween(501,216,516,220);
+    const c=themeColor;at(g,'lantern');g.lineStyle(3,c('ink')).lineBetween(501,277,501,216).lineBetween(501,216,516,220);
     g.fillStyle(c('mustard')).fillRoundedRect(509,229,14,20,3).strokeRoundedRect(509,229,14,20,3);
     g.lineBetween(516,220,516,229);
+    g.restore();
   },
   corn(g,x,y) {
     const c=themeColor;g.lineStyle(3,c('ink')).lineBetween(x,y,x,y-36).lineBetween(x,y-10,x-12,y-22);
     g.fillStyle(c('mustard')).fillEllipse(x,y-40,12,24).strokeEllipse(x,y-40,12,24);
   },
   fence_tile(g,x,y) {
-    const c=themeColor;g.lineStyle(3,c('ink'));
-    g.fillStyle(c('mustard')).fillRoundedRect(x,y+20,64,8,2).strokeRoundedRect(x,y+20,64,8,2);
-    g.fillRoundedRect(x+4,y+7,8,42,3).strokeRoundedRect(x+4,y+7,8,42,3);
+    fenceBar(g,x-36,y-8,72,7);fenceBar(g,x-36,y+8,72,7);
+    fenceBar(g,x-20,y-17,7,41);fenceBar(g,x+14,y-16,7,40);
   },
   rain(g) {
     const c=themeColor;g.lineStyle(1,c('cream'),.6);
@@ -927,9 +968,10 @@ THEME.fallbacks = {
     const eyes=scene.add.graphics().fillStyle(c('ink')).fillCircle(-4,-1,F.eyeRadius).fillCircle(4,-1,F.eyeRadius);
     return {body,eyes};
   },
-  statusIcon(g,index) {
-    // Status words remain visible even without these optional small images.
-    g.lineStyle(2,themeColor('ink')).strokeCircle(index*14,0,5);
+  statusIcon(g) {
+    // Without icon art: a cream disc; the view writes copy.labels.statusGlyphs on it.
+    const r=THEME.layout.icons.fallbackRadius;
+    g.fillStyle(themeColor('cream')).fillCircle(0,0,r).lineStyle(2,themeColor('ink')).strokeCircle(0,0,r);
   }
 };
 

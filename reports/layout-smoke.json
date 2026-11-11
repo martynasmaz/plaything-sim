@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "runs": [
+    {
+      "mode": "art",
+      "daysChecked": 31,
+      "maxPeople": 8,
+      "consoleErrors": []
+    },
+    {
+      "mode": "shapes",
+      "daysChecked": 31,
+      "maxPeople": 8,
+      "consoleErrors": []
+    }
+  ]
+}

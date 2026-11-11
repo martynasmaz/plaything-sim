@@ -36,7 +36,7 @@ trim sprites or put their anchor at the SVG edge instead of the actual feet.
 | `drought` | `overlay_drought.svg` | 64×64 → 64×64 tile over 900×480 | 0,0; renderer alpha 65% of file's own reduced opacity |
 | `rain_cue` | `cue_rain.svg` | logical 32×32 / current viewBox 64² → **24×24** | 16,16; weather cue, with text |
 | `drought_cue` | `cue_drought.svg` | logical 32×32 / current viewBox 64² → **24×24** | 16,16; dry-spell cue, with text |
-| `sick_icon` | `status_sick.svg` | logical 24×24 / current viewBox 64² → **18×18** | 12,12; sick/unwell, retains word label |
+| `sick_icon` | `status_sick.svg` | logical 24×24 / current viewBox 64² → **18×18** | 12,12; sick/unwell |
 | `unhappy_icon` | `status_unhappy.svg` | same → **18×18** | 12,12; unhappy |
 | `uneasy_icon` | `status_uneasy.svg` | same → **18×18** | 12,12; uneasy |
 | `hoedown_icon` | `status_hoedown.svg` | same → **18×18** | 12,12; grateful reaction, no music mechanic |
@@ -88,3 +88,18 @@ Aim **<5 KB per creature/prop**, **<2 KB per icon/tile**, optional background
 Use system serif text in the game, not SVG text. Keep all creature frame sizes
 and pivots identical. Missing/empty sprite maps remain fully playable shapes;
 the offline build embeds present files as data URIs and drops missing requests.
+
+## Layout update (slots and fence)
+
+- Gourdlings stand in fixed slots: each living Gourdling's place in villager-number
+  order (0–7) picks the same cell in every grid (`THEME.layout.slots`, 4×2 cells of
+  50×84 px). Grids: rest (also newborns / warming without a Bonfire), Bonfire,
+  wild provisions, firewood. Up to 8 never overlap; names wider than 48 px shrink.
+- Status icons now stack down the right side of each Gourdling's own sprite (18 px,
+  17 px apart) and are the only on-canvas status marks; the words are in the detail
+  panel. Icons must therefore read on their own at 18 px.
+- The clearing is a rounded rectangle (840×405 at 30,60). The fence is three
+  `fence_horizontal` tiles plus two `fence_corner` (left one mirrored) on a 64 px
+  grid at y=76, with a `fence_vertical` under each corner; post feet land on the
+  green. Fence art must keep rails at tile y 24–31 / 40–47 and the corner's
+  downward rails at x 24–31 / 40–47 so mirrored pieces join.

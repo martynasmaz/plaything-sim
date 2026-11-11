@@ -2,7 +2,7 @@
 // profile: never attaches to the desktop browser or uses any signed-in account.
 // Requires a locally installed playwright-core; npm test does NOT require it.
 import assert from 'node:assert/strict';
-import {THEME} from '../src/theme.js';
+import {THEME,slotPosition} from '../src/theme.js';
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -41,7 +41,7 @@ try{
     // Villagers are also clickable circles (scaled canvas coordinates).
     await page.click('[data-person="2"]');
     const box=await page.locator('#village canvas').boundingBox();
-    await page.mouse.click(box.x+(THEME.layout.initial.x+THEME.layout.initial.gapX)/THEME.layout.canvas.width*box.width,box.y+THEME.layout.initial.y/THEME.layout.canvas.height*box.height);
+    const ada=slotPosition('rest',0);await page.mouse.click(box.x+ada.x/THEME.layout.canvas.width*box.width,box.y+(ada.y-17)/THEME.layout.canvas.height*box.height);
     assert.ok((await page.textContent('#villager-detail')).includes('Ada'));
     // Invalid command is visible and never alters state.
     await page.fill('#command-input','make a dragon');await page.press('#command-input','Enter');
