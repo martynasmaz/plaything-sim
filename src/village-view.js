@@ -49,7 +49,8 @@ export function makeVillageScene(getState, onSelect) {
       }
       this.land=this.add.graphics();
       for(const {key,x,y,angle=0,flipX=false} of L.fence){const image=this.image(key,x,y);if(image)image.setAngle(angle).setFlipX(flipX);else THEME.fallbacks[key](this.land,x,y,flipX);}
-      for(const [x,y] of L.corn)if(!this.image('corn',x,y))THEME.fallbacks.corn(this.land,x,y);
+      this.corn=[];
+      for(const [x,y] of L.corn){const image=this.image('corn',x,y);if(image)this.corn.push(image);else THEME.fallbacks.corn(this.land,x,y);}
       // Prop shadows are separate from prop SVGs and remain replaceable.
       for(const key of ['shelter','food_spot','wood_spot','pantry','lantern']) {
         const [x,y]=L.props[key],spec=THEME.assetSpecs[key];
@@ -125,6 +126,23 @@ export function makeVillageScene(getState, onSelect) {
       const box=o=>{const b=o.getBounds();return [Math.round(b.x),Math.round(b.y),Math.round(b.right),Math.round(b.bottom)];};
       return {people:[...this.people].map(([id,p])=>({id,child:p.child,sprite:box(p.sprite?.visible?p.sprite:p.body),label:box(p.label)})),
         scene:this.sceneLabels.filter(o=>o.text).map(box)};
+    }
+    // PLACEHOLDER gust (unmatched input, section 11): sways the existing corn
+    // images and draws a few faint plain wind lines. No new art; replace when
+    // the kit's gust art arrives. Counted in #village[data-gusts] for tests.
+    gust() {
+      const G=THEME.layout.gust,element=document.querySelector('#village');
+      element.dataset.gusts=String(Number(element.dataset.gusts||0)+1);
+      for(const image of this.corn){
+        this.tweens.killTweensOf(image);image.setAngle(0);
+        this.tweens.add({targets:image,angle:G.swayDeg,duration:G.swayMs,yoyo:true,repeat:G.sways-1,ease:'Sine.easeInOut',onComplete:()=>image.setAngle(0)});
+      }
+      for(const [x,y] of G.lines){
+        const line=this.add.graphics().setDepth(THEME.layout.depth.labels).setAlpha(0);
+        line.lineStyle(G.width,Phaser.Display.Color.HexStringToColor(THEME.palette[G.color]).color,1);
+        line.beginPath();line.moveTo(x,y);line.lineTo(x+G.lineLength,y-4);line.strokePath();
+        this.tweens.add({targets:line,x:G.drift,alpha:{from:0,to:G.alpha},duration:G.lineMs/2,yoyo:true,ease:'Sine.easeInOut',onComplete:()=>line.destroy()});
+      }
     }
     update(time) {
       const s=getState(),L=THEME.layout,element=document.querySelector('#village');

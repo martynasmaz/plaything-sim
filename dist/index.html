@@ -1001,6 +1001,9 @@ const THEME = {
     // rest grid beside the Plank shed.
     slots:{columns:4,gapX:50,gapY:84,grids:{rest:[110,290],fire:[370,310],food:[600,150],wood:[600,320]}},
     people:{footOffset:13,childFootOffset:10},
+    // PLACEHOLDER gust for unmatched input (section 11) until the kit art
+    // arrives: the existing corn sways and a few faint plain wind lines drift by.
+    gust:{swayDeg:7,swayMs:260,sways:2,lines:[[140,150],[330,250],[520,190]],lineLength:90,drift:120,lineMs:900,alpha:.45,width:2,color:'cream'},
     animation:{walkMs:1000,learnMs:600,learnWaitMs:350,idleFrameMs:450,walkFrameMs:250,minTravel:.5,motionThreshold:.001,ease:'Sine.easeInOut'},
     canvasText:{color:'ink',background:'cream',padding:{x:2,y:1}},
     text:{base:12,small:10,status:9,weather:11,hint:9,labelY:19,labelMaxWidth:48,glyph:11},
@@ -1191,6 +1194,7 @@ THEME.ui = {
     autoPlaySpeed: null,     // null keeps the sim's start speed; a number sets it on load and restart
     enterRestarts: false,    // Enter in the command box after a wipeout restarts (new seed)
     devOverlay: false,       // developer-only stats + internal log overlay; ?dev=1 also turns it on
+    unmatchedFeedback: 'none', // 'none' | 'gust': answer to typed text with no keyword (section 11)
   },
   presets: {
     minimal: {
@@ -1200,6 +1204,7 @@ THEME.ui = {
       showGoalText:false, showFooter:false, showEndScreenStats:false,
       autoPlaySpeed: 1,      // no buttons, so days run by themselves
       enterRestarts: true,   // no Restart button on screen, so Enter restarts after a wipeout
+      unmatchedFeedback: 'gust', // no feedback line, so a gust rustles the corn instead
     },
   },
   devLogLines: 30,
@@ -2189,9 +2194,11 @@ function queueCommand(s, text) {
 // command, then the normal checks run. No match → { matched: false } and the
 // state is untouched. A refusal or no match never clears the queued command;
 // only a newly accepted command replaces it.
-function queueText(s, text) {
+// `hooks.onUnmatched(text)` fires only when no keyword matched (section 11:
+// the screen may answer with a gust); a match, accepted or refused, never fires it.
+function queueText(s, text, hooks = {}) {
   const command = matchText(s, text);
-  if (command === null) return { ok: false, matched: false, command: null, message: '', state: s };
+  if (command === null) { hooks.onUnmatched?.(text); return { ok: false, matched: false, command: null, message: '', state: s }; }
   return { ...queueCommand(s, command), matched: true };
 }
 function cancelCommand(s) {
@@ -2708,7 +2715,8 @@ function makeVillageScene(getState, onSelect) {
       }
       this.land=this.add.graphics();
       for(const {key,x,y,angle=0,flipX=false} of L.fence){const image=this.image(key,x,y);if(image)image.setAngle(angle).setFlipX(flipX);else THEME.fallbacks[key](this.land,x,y,flipX);}
-      for(const [x,y] of L.corn)if(!this.image('corn',x,y))THEME.fallbacks.corn(this.land,x,y);
+      this.corn=[];
+      for(const [x,y] of L.corn){const image=this.image('corn',x,y);if(image)this.corn.push(image);else THEME.fallbacks.corn(this.land,x,y);}
       // Prop shadows are separate from prop SVGs and remain replaceable.
       for(const key of ['shelter','food_spot','wood_spot','pantry','lantern']) {
         const [x,y]=L.props[key],spec=THEME.assetSpecs[key];
@@ -2784,6 +2792,23 @@ function makeVillageScene(getState, onSelect) {
       const box=o=>{const b=o.getBounds();return [Math.round(b.x),Math.round(b.y),Math.round(b.right),Math.round(b.bottom)];};
       return {people:[...this.people].map(([id,p])=>({id,child:p.child,sprite:box(p.sprite?.visible?p.sprite:p.body),label:box(p.label)})),
         scene:this.sceneLabels.filter(o=>o.text).map(box)};
+    }
+    // PLACEHOLDER gust (unmatched input, section 11): sways the existing corn
+    // images and draws a few faint plain wind lines. No new art; replace when
+    // the kit's gust art arrives. Counted in #village[data-gusts] for tests.
+    gust() {
+      const G=THEME.layout.gust,element=document.querySelector('#village');
+      element.dataset.gusts=String(Number(element.dataset.gusts||0)+1);
+      for(const image of this.corn){
+        this.tweens.killTweensOf(image);image.setAngle(0);
+        this.tweens.add({targets:image,angle:G.swayDeg,duration:G.swayMs,yoyo:true,repeat:G.sways-1,ease:'Sine.easeInOut',onComplete:()=>image.setAngle(0)});
+      }
+      for(const [x,y] of G.lines){
+        const line=this.add.graphics().setDepth(THEME.layout.depth.labels).setAlpha(0);
+        line.lineStyle(G.width,Phaser.Display.Color.HexStringToColor(THEME.palette[G.color]).color,1);
+        line.beginPath();line.moveTo(x,y);line.lineTo(x+G.lineLength,y-4);line.strokePath();
+        this.tweens.add({targets:line,x:G.drift,alpha:{from:0,to:G.alpha},duration:G.lineMs/2,yoyo:true,ease:'Sine.easeInOut',onComplete:()=>line.destroy()});
+      }
     }
     update(time) {
       const s=getState(),L=THEME.layout,element=document.querySelector('#village');
@@ -2931,7 +2956,7 @@ function clearFaint(){
 }
 function select(id){selectedId=id;render();}
 const Scene=makeVillageScene(()=>state,select);
-new Phaser.Game({type:Phaser.CANVAS,...THEME.layout.canvas,parent:'village',
+const game=new Phaser.Game({type:Phaser.CANVAS,...THEME.layout.canvas,parent:'village',
   backgroundColor:THEME.palette.cream,banner:false,audio:{noAudio:true},
   scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:Scene});
 
@@ -3031,13 +3056,19 @@ $('#command-form').addEventListener('submit',e=>{
   // Keyword matcher on every screen (design section 11). No keyword: nothing
   // queued, nothing spent, no message. A match runs the normal checks and the
   // feedback line shows the queued message or the refusal reason as before.
-  const result=queueText(state,$('#command-input').value);
+  const result=queueText(state,$('#command-input').value,{onUnmatched});
   if(!result.matched){render();return;}
   const queued=state.queuedCommand;
   state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';
   if(state.queuedCommand!==queued)slot.save(state);
   render();
 });
+// Unmatched input (no keyword): a 'plaything:unmatched' event always, and with
+// THEME.ui.unmatchedFeedback 'gust' (minimal preset) the placeholder gust.
+function onUnmatched(text){
+  window.dispatchEvent(new CustomEvent('plaything:unmatched',{detail:{text}}));
+  if(ui.unmatchedFeedback==='gust')game.scene.getScene('village')?.gust?.();
+}
 // The end screen also restarts on Enter when the command box is switched off.
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&state.ended&&!ui.enterRestarts&&!(e.target instanceof HTMLButtonElement)){e.preventDefault();reset();}

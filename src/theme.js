@@ -907,6 +907,9 @@ export const THEME = {
     // rest grid beside the Plank shed.
     slots:{columns:4,gapX:50,gapY:84,grids:{rest:[110,290],fire:[370,310],food:[600,150],wood:[600,320]}},
     people:{footOffset:13,childFootOffset:10},
+    // PLACEHOLDER gust for unmatched input (section 11) until the kit art
+    // arrives: the existing corn sways and a few faint plain wind lines drift by.
+    gust:{swayDeg:7,swayMs:260,sways:2,lines:[[140,150],[330,250],[520,190]],lineLength:90,drift:120,lineMs:900,alpha:.45,width:2,color:'cream'},
     animation:{walkMs:1000,learnMs:600,learnWaitMs:350,idleFrameMs:450,walkFrameMs:250,minTravel:.5,motionThreshold:.001,ease:'Sine.easeInOut'},
     canvasText:{color:'ink',background:'cream',padding:{x:2,y:1}},
     text:{base:12,small:10,status:9,weather:11,hint:9,labelY:19,labelMaxWidth:48,glyph:11},
@@ -1097,6 +1100,7 @@ THEME.ui = {
     autoPlaySpeed: null,     // null keeps the sim's start speed; a number sets it on load and restart
     enterRestarts: false,    // Enter in the command box after a wipeout restarts (new seed)
     devOverlay: false,       // developer-only stats + internal log overlay; ?dev=1 also turns it on
+    unmatchedFeedback: 'none', // 'none' | 'gust': answer to typed text with no keyword (section 11)
   },
   presets: {
     minimal: {
@@ -1106,6 +1110,7 @@ THEME.ui = {
       showGoalText:false, showFooter:false, showEndScreenStats:false,
       autoPlaySpeed: 1,      // no buttons, so days run by themselves
       enterRestarts: true,   // no Restart button on screen, so Enter restarts after a wipeout
+      unmatchedFeedback: 'gust', // no feedback line, so a gust rustles the corn instead
     },
   },
   devLogLines: 30,

@@ -6,6 +6,18 @@ v0.2 follows the live design Page (sections 10 and 11, rule clarifications of
 Barn/House Age roadmap is implemented. Simulation numbers live in
 `src/config.js` and match the design and the reference simulator.
 
+## Changelog (Europe/Vilnius)
+
+- 12 Nov 2026: Cruel "97.8% vs 99.5% wiped out" explained. Both numbers are
+  correct; they are different seed ranges, not a rule change. 97.8% is seeds
+  0–499 (the design's section 7 target), 99.5% is seeds 0–199 (the build-check
+  fixture). JS gives exactly those numbers at both 78adf26 (before the
+  follow-up) and ca6942e, with identical per-seed histories on seeds 0–499. The
+  accepted-only queue did not change the cruel player: it only queues commands
+  that already pass the checks.
+- 12 Nov 2026: unmatched-input hook and the placeholder gust
+  (`THEME.ui.unmatchedFeedback`, see "UI switches").
+
 ## Exact day sequencing
 
 `stepDay` clones its input, increments the day label, then performs the design's
@@ -300,8 +312,19 @@ kept lines, and their count, seed by seed against the Python reference.
   the copper/tin outcrops and the Tinker-shed site (their art and their real
   places in the clearing) come after the Artist's mockup is approved; until then
   the shed and the outcrops appear only as journal lines, and the Plank-shed
-  label in the clearing still reads 8 places. Local save/load (also in the v0.2
-  draft) is not started; its spec comes later.
+  label in the clearing still reads 8 places. Save and load has its own section
+  below.
+- Results, 60 days, v0.2 + traits (JS equals Python seed for seed in every
+  cell; the seed range is part of each number):
+
+  | Strategy | Seeds 0–199 (build check) | Seeds 0–499 (design section 7) |
+  |---|---|---|
+  | Untouched | 94.0% alive, 6.0% wiped out | 94.0% alive, 6.0% wiped out |
+  | Helped | 100% alive | 100% alive |
+  | Cruel | 0.5% alive, **99.5% wiped out** | 2.2% alive, **97.8% wiped out** |
+
+  The cruel gap is just the range (seeds 200–499 are a little kinder to the
+  cruel player). Measured identical at 78adf26 and ca6942e; see the changelog.
 - Checks: `tests/v02.test.js` compares all 600 runs (seeds 0–199 × untouched,
   helped, cruel; 60 days) with `tests/fixtures/python-v02-traits-seeds-0-199.json`:
   the summary facts plus SHA-256 digests of the day-by-day history, every trait
@@ -418,8 +441,21 @@ preview until its mockup and spec are approved.
   refused command shows its reason only where the feedback line is shown (not in
   the minimal preview). Either way the input text stays and the queued command
   is kept. The placeholder reads "Type a command, then press Enter".
+- **Unmatched input (section 11: a gust rustles the corn).** The command path
+  has one hook: `queueText(state, text, { onUnmatched })` calls
+  `onUnmatched(text)` only when no keyword matched; a matched command, accepted
+  or refused, never fires it. The page always dispatches a
+  `plaything:unmatched` window event, then acts on
+  `THEME.ui.unmatchedFeedback`: `'none'` (default; the full screen stays silent)
+  or `'gust'` (the minimal preset). **Placeholder until the kit art arrives:**
+  the gust sways the existing corn images a few degrees and draws 3 faint plain
+  cream wind lines that drift and fade (`THEME.layout.gust`; no new art; in the
+  plain-shape fallback only the lines show). `#village[data-gusts]` counts gusts
+  for tests. Tested in `tests/v02.test.js` (hook) and `scripts/ui-smoke.mjs`
+  (minimal gusts on unmatched only; default fires the event with no gust;
+  screenshot `reports/ui-minimal-gust.png`).
 
-Checks: `tests/ui.test.js` (defaults all on, the minimal preset all off, every flag
+Checks: `tests/ui.test.js` (defaults all on but the no-save notice, the minimal preset all off, every flag
 targets real parts of `index.html`, the sim never reads the switches) and
 `scripts/ui-smoke.mjs` (headless browser on `dist/index.html`). With default
 flags nothing is switched off and there is no developer overlay. With
