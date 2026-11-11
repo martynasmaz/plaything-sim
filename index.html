@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plaything Sim · a living Stone Age village</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+<header><div><p class="eyebrow">A LITTLE WORLD / V0.1</p><h1>Plaything<span> Sim</span></h1></div><div class="header-note">No AI. Just little lives<br>and the rules they follow.</div></header>
+<div class="notice" id="no-save"><strong>A fresh world, every time.</strong> No saved game: closing or reloading resets your village. It starts paused. <span>Watch first. Intervene if you like.</span></div>
+<section class="topline" aria-label="Village status"><div class="day-box"><small>STONE AGE</small><strong id="day">Day 0</strong><span id="status">Paused</span></div><div class="stats" id="stats"></div><div class="playback"><div class="segmented" aria-label="Playback speed"><button id="pause" data-speed="0">Pause</button><button id="normal" data-speed="1">1×</button><button id="fast" data-speed="3">3×</button></div><div><button id="next-day" class="subtle">Next day →</button><button id="restart" class="subtle danger">Restart</button></div></div></section>
+<main>
+<section class="world-column">
+<div class="world-panel"><div class="panel-heading"><h2>The clearing</h2><span id="weather-summary">Normal weather</span></div><div id="village" role="img" aria-label="Stone Age village. Select a villager circle or their name below to inspect them."></div><div class="world-caption"><span id="fire-summary">Fire is still a mystery.</span><span id="day-progress">Next day in 30s at 1×</span></div><div class="progress-track"><div id="progress"></div></div></div>
+<div id="milestone" class="milestone" hidden></div>
+<div id="ended" class="end-panel" hidden><h2>The village has ended</h2><p>Every little world has a story. Start another?</p><button id="restart-ended">Restart village</button></div>
+<section class="command-panel"><div class="panel-heading"><h2>A word from above</h2><span>One command per day</span></div><div id="command-list" class="command-list"></div><form id="command-form" autocomplete="off"><label class="sr-only" for="command-input">God command</label><span class="prompt">&gt;</span><input id="command-input" placeholder="Type a listed command, then press Enter" maxlength="100" spellcheck="false"><button type="submit" id="queue">Queue</button></form><div class="queue-row"><span id="queued">Nothing queued.</span><button id="cancel" class="subtle" disabled>Cancel</button></div><p id="feedback" class="feedback" role="status" aria-live="polite">Queuing is free. Power is spent only when the next day starts.</p></section>
+</section>
+<aside><section class="details-panel"><div class="panel-heading"><h2>Little lives</h2><span id="population-label">6 villagers</span></div><div id="roster" class="roster"></div><div id="villager-detail" aria-live="polite"></div></section><section class="log-panel"><div class="panel-heading"><h2>Village journal</h2><span>Latest 10</span></div><ol id="log" aria-live="polite"></ol></section></aside>
+</main>
+<footer><span>Goal: reach day 30 with 5+ villagers and fire.</span><span>Simple shapes now. A bigger story later.</span></footer>
+</div>
+<script src="vendor/phaser.min.js"></script>
+<script type="module" src="src/main.js"></script>
+</body></html>

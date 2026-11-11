@@ -1,0 +1,435 @@
+/* Layout and UI colors only. Village art is in src/village-view.js. */
+:root{
+  color-scheme:dark;
+  --bg:#101d23;
+  --panel:#192a31;
+  --border:#314249;
+  --ink:#eef0df;
+  --muted:#a5b7b2;
+  --mint:#b7d8a4;
+  --orange:#f4b478;
+  --red:#f39b8f}
+*{
+  box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;
+  color:var(--ink)}
+button,input{
+  font:inherit}
+button{
+  cursor:pointer;
+  border:1px solid var(--border);
+  color:var(--ink);
+  background:#233a40;
+  border-radius:7px;
+  padding:8px 13px;
+  transition:background .15s}
+button:hover{
+  background:#355451}
+button:focus-visible,input:focus-visible{
+  outline:2px solid var(--orange);
+  outline-offset:3px}
+button:disabled{
+  cursor:default;
+  opacity:.4}
+button.active,button[aria-pressed=true]{
+  background:var(--mint);
+  color:#182b27;
+  border-color:var(--mint)}
+.app{
+  max-width:1440px;
+  margin:auto;
+  padding:26px 34px 18px}
+header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:18px}
+.eyebrow{
+  font-size:10px;
+  letter-spacing:3px;
+  color:var(--mint);
+  margin:0 0 3px}
+h1{
+  font-family:Georgia,serif;
+  font-size:38px;
+  line-height:1.2;
+  letter-spacing:-1px;
+  margin:0}
+h1 span{
+  font-weight:normal;
+  color:var(--muted)}
+.header-note{
+  text-align:right;
+  font-size:12px;
+  color:var(--muted)}
+.notice{
+  padding:11px 16px;
+  background:#22352f;
+  border:1px solid #3e5641;
+  border-radius:8px;
+  font-size:12px;
+  color:#c1cebc}
+.notice strong{
+  color:var(--ink);
+  margin-right:6px}
+.notice span{
+  float:right;
+  color:var(--mint)}
+.topline{
+  display:flex;
+  align-items:center;
+  gap:22px;
+  padding:18px 0}
+.day-box{
+  display:flex;
+  flex-direction:column;
+  min-width:105px}
+.day-box small{
+  font-size:9px;
+  color:var(--muted);
+  letter-spacing:2px}
+.day-box strong{
+  font:27px Georgia,serif}
+.day-box span{
+  font-size:11px;
+  color:var(--orange)}
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  flex:1}
+.stat{
+  border-left:1px solid var(--border);
+  padding-left:20px}
+.stat small{
+  display:block;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:var(--muted)}
+.stat strong{
+  font-size:23px;
+  font-weight:500}
+.stat em{
+  font-size:10px;
+  font-style:normal;
+  color:var(--muted);
+  margin-left:4px}
+.playback{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:3px}
+.segmented{
+  display:flex;
+  gap:4px}
+.segmented button{
+  padding:6px 14px;
+  font-size:12px}
+.subtle{
+  background:transparent;
+  border:0;
+  padding:5px 8px;
+  font-size:11px;
+  color:var(--muted)}
+.danger{
+  color:var(--red)}
+main{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 330px;
+  gap:20px}
+.world-panel,.command-panel,.details-panel,.log-panel{
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+  background:var(--panel)}
+.panel-heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 16px;
+  gap:10px}
+h2{
+  font-size:13px;
+  font-weight:600;
+  margin:0}
+.panel-heading span{
+  font-size:10px;
+  color:var(--muted)}
+#village{
+  width:100%;
+  aspect-ratio:900/480;
+  background:#263f38}
+#village canvas{
+  display:block;
+  max-width:100%}
+.world-caption{
+  padding:9px 16px;
+  display:flex;
+  justify-content:space-between;
+  font-size:11px;
+  color:var(--muted);
+  gap:10px}
+.world-caption span:first-child{
+  color:var(--mint)}
+.progress-track{
+  height:3px;
+  background:#243c3b}
+#progress{
+  height:100%;
+  width:0;
+  background:var(--orange)}
+.command-panel{
+  margin-top:16px}
+.command-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  padding:0 16px 12px}
+.command-chip{
+  padding:5px 9px;
+  font-size:11px;
+  border-color:#42554e;
+  background:#253c36}
+.command-chip span{
+  color:var(--orange);
+  margin-left:5px}
+.command-chip[disabled]{
+  opacity:.6}
+#command-form{
+  margin:0 16px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border:1px solid #4b6358;
+  border-radius:8px;
+  padding:6px 7px 6px 13px;
+  background:#112720}
+.prompt{
+  color:var(--orange);
+  font:20px monospace}
+#command-input{
+  min-width:0;
+  flex:1;
+  background:transparent;
+  border:0;
+  color:var(--ink);
+  outline:none;
+  padding:7px 0;
+  font-size:13px}
+#command-input::placeholder{
+  color:#91a39b}
+#queue{
+  background:var(--mint);
+  color:#182b27;
+  border:0;
+  font-size:12px;
+  font-weight:600}
+.queue-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin:7px 16px 0;
+  font-size:11px;
+  color:var(--orange)}
+.feedback{
+  font-size:11px;
+  color:var(--muted);
+  min-height:32px;
+  margin:0;
+  padding:4px 16px 12px}
+.feedback.error{
+  color:var(--red)}
+.roster{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  padding:0 16px 12px}
+.roster button{
+  font-size:10px;
+  padding:4px 9px}
+#villager-detail{
+  padding:0 16px 15px;
+  min-height:230px}
+.person-title{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  margin:2px 0 6px}
+.person-title strong{
+  font:22px Georgia,serif}
+.person-title span{
+  font-size:10px;
+  color:var(--muted)}
+.activity{
+  font-size:11px;
+  color:var(--orange);
+  margin-bottom:11px}
+.need{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin:6px 0;
+  font-size:10px}
+.need span:first-child{
+  width:55px;
+  color:var(--muted)}
+.need-track{
+  flex:1;
+  height:5px;
+  border-radius:5px;
+  background:#30444a;
+  overflow:hidden}
+.need-fill{
+  height:100%;
+  background:var(--mint)}
+.need strong{
+  font-size:10px;
+  font-weight:400;
+  width:21px;
+  text-align:right}
+.person-status{
+  font-size:10px;
+  color:var(--muted);
+  margin-top:9px}
+.log-panel{
+  margin-top:16px}
+#log{
+  list-style:none;
+  margin:0;
+  padding:0 16px 10px;
+  max-height:310px;
+  overflow-y:auto;
+  scrollbar-color:#52685d transparent}
+#log li{
+  border-top:1px solid var(--border);
+  padding:9px 0;
+  font-size:11px;
+  color:#c2cdc4;
+  line-height:1.45}
+#log small{
+  color:var(--orange);
+  font-size:9px;
+  letter-spacing:.7px;
+  display:block;
+  margin-bottom:2px}
+#log li[data-type=death],#log li[data-type=failure]{
+  color:var(--red)}
+#log li[data-type=discovery],#log li[data-type=birth],#log li[data-type=milestone]{
+  color:var(--mint)}
+.milestone,.end-panel{
+  margin-top:16px;
+  border:1px solid var(--mint);
+  border-radius:10px;
+  background:#284332;
+  padding:15px}
+.milestone{
+  font-size:13px}
+.end-panel h2{
+  font:25px Georgia,serif}
+.end-panel p{
+  font-size:12px;
+  color:var(--muted)}
+footer{
+  display:flex;
+  justify-content:space-between;
+  gap:20px;
+  padding:16px 0 0;
+  font-size:10px;
+  color:var(--muted)}
+[hidden]{
+  display:none!important}
+.sr-only{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0)}
+@media(min-width:1600px){
+  .app{
+  padding-top:40px}
+}
+@media(max-width:1000px){
+  .app{
+  padding:20px}
+.notice span{
+  display:none}
+main{
+  grid-template-columns:minmax(0,1fr) 280px;
+  gap:12px}
+.stats{
+  gap:8px}
+.stat{
+  padding-left:12px}
+.topline{
+  gap:12px}
+.world-caption{
+  font-size:10px}
+.panel-heading{
+  padding:12px}
+.header-note{
+  font-size:11px}
+}
+@media(max-width:760px){
+  .app{
+  padding:14px}
+.topline{
+  flex-wrap:wrap}
+.stats{
+  min-width:200px}
+.playback{
+  width:100%;
+  flex-direction:row;
+  justify-content:space-between}
+main{
+  grid-template-columns:1fr}
+aside{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px}
+.log-panel{
+  margin-top:0}
+h1{
+  font-size:31px}
+.notice{
+  font-size:11px}
+.world-caption{
+  flex-wrap:wrap}
+footer span:last-child{
+  display:none}
+}
+@media(max-width:460px){
+  aside{
+  grid-template-columns:1fr}
+.stats{
+  gap:5px}
+.stat{
+  padding-left:8px}
+.stat strong{
+  font-size:19px}
+.day-box{
+  min-width:75px}
+.stat small{
+  font-size:8px}
+.header-note{
+  display:none}
+#command-input{
+  font-size:11px}
+}
+
+
+@media(max-width:460px){
+  .stat em{
+  display:block;
+  margin:0;
+  font-size:8px;
+  line-height:1.2}
+.stat strong{
+  line-height:1.1}
+.stat{
+  min-width:0}
+}
+
