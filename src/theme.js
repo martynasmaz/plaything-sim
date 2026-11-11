@@ -923,7 +923,7 @@ export const THEME = {
   copy: {
     ui:{title:'Gourdling Barn Dance',titleSuffix:' · Plaything Sim',eyebrow:'A LITTLE WORLD / V0.2',
       headerNote:'No AI. Just little lives and the rules they follow.',
-      noSaveTitle:'A fresh world, every time.',noSave:'No saved game: closing or reloading resets your Homestead. It starts paused.',watch:'Watch first. Intervene if you like.',
+      noSaveTitle:'Kept on this device.',noSave:'Your Homestead saves itself in this browser; reopening picks up where you left off. It starts paused.',watch:'Watch first. Intervene if you like.',
       villageStatus:'Homestead status',playback:'Playback speed',world:'The barn clearing',
       villageAria:'A little Homestead. Select a creature or its name below to inspect it.',
       pause:'Pause',normal:'1×',fast:'3×',nextDay:'Next day →',restart:'Restart',
@@ -980,8 +980,8 @@ export const THEME = {
       fireWood:'teach spark needs at least {min} firewood ({learn} to learn, {burn} to burn).',blessFull:'Everyone already has full health and happiness.',nobodyIll:'Nobody is ill, so there is nothing to shake off.',farmingKnown:'Farming is already known; teach sowing is once per run.',
       speed:'Speed must be 0 (pause), 1 or 3.',time:'Time must be a finite nonnegative number.'},
     feedback:{canApply:'{command} can apply on day {day}.',queued:'Queued {command} for day {day}. No wonder spent yet.',
-      canceled:'Command canceled. No wonder spent.',reset:'A fresh Homestead. Paused at day 0; no saved game.',applied:'{command} applied on day {day}. See the journal for its effect.'},
-    log:{start:'Six Gourdlings begin a First Age Homestead (seed {seed}). Paused. No saved game.',naturalIllness:'{name} fell ill for {days} days.',rejected:'Command rejected: {reason}',
+      canceled:'Command canceled. No wonder spent.',reset:'A fresh Homestead. Paused at day 0.',beginAnew:'say it again to let this world go',applied:'{command} applied on day {day}. See the journal for its effect.'},
+    log:{start:'Six Gourdlings begin a First Age Homestead (seed {seed}). Paused.',naturalIllness:'{name} fell ill for {days} days.',rejected:'Command rejected: {reason}',
       weather:'{command} for {duration} days including today; replaces previous weather. {effect}',rain:'More provisions, extra cold.',drought:'Lower foraging yields.',
       plague:'Everyone is ill for {duration} days including today.',blessPerson:'{name} +{health} health/+{happiness} happiness',blessEnd:'. Illness is not cured.',
       harvest:'Gift: +{food} provisions (meals still happen after work).',teach:'Bonfire knowledge learned; {wood} firewood spent. Today\'s fuel check is next.',
@@ -1079,7 +1079,7 @@ export function slotPosition(grid,slot) {
 THEME.ui = {
   defaults: {
     showHeader: true,        // eyebrow, title and header note
-    showNotice: true,        // "nothing is saved" notice strip
+    showNotice: false,       // save notice strip (v0.2 saves itself, so the old no-save notice is removed)
     showStats: true,         // day box and the four stat counters
     showButtons: true,       // pause/1x/3x, next day, restart, queue, cancel
     showForecast: true,      // today's weather and tomorrow's forecast
@@ -1108,7 +1108,8 @@ THEME.ui = {
       enterRestarts: true,   // no Restart button on screen, so Enter restarts after a wipeout
     },
   },
-  devLogLines: 30,           // internal-log lines shown in the developer overlay
+  devLogLines: 30,
+  fadeMs: 800,               // how long the faint "begin anew" line takes to fade           // internal-log lines shown in the developer overlay
   // Which page parts each flag hides (CSS selectors into index.html).
   targets: {
     showHeader: ['header'],
@@ -1500,6 +1501,16 @@ h2{
   padding:4px 16px 12px}
 .feedback.error{
   color:var(--red)}
+.feedback.faint{
+  opacity:.6;
+  font-style:italic;
+  transition:opacity .8s ease}
+.feedback.faint.fading,
+#command-input.faint-placeholder.fading::placeholder{
+  opacity:0}
+#command-input.faint-placeholder::placeholder{
+  font-style:italic;
+  transition:opacity .8s ease}
 .roster{
   display:flex;
   flex-wrap:wrap;

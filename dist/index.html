@@ -1017,7 +1017,7 @@ const THEME = {
   copy: {
     ui:{title:'Gourdling Barn Dance',titleSuffix:' · Plaything Sim',eyebrow:'A LITTLE WORLD / V0.2',
       headerNote:'No AI. Just little lives and the rules they follow.',
-      noSaveTitle:'A fresh world, every time.',noSave:'No saved game: closing or reloading resets your Homestead. It starts paused.',watch:'Watch first. Intervene if you like.',
+      noSaveTitle:'Kept on this device.',noSave:'Your Homestead saves itself in this browser; reopening picks up where you left off. It starts paused.',watch:'Watch first. Intervene if you like.',
       villageStatus:'Homestead status',playback:'Playback speed',world:'The barn clearing',
       villageAria:'A little Homestead. Select a creature or its name below to inspect it.',
       pause:'Pause',normal:'1×',fast:'3×',nextDay:'Next day →',restart:'Restart',
@@ -1074,8 +1074,8 @@ const THEME = {
       fireWood:'teach spark needs at least {min} firewood ({learn} to learn, {burn} to burn).',blessFull:'Everyone already has full health and happiness.',nobodyIll:'Nobody is ill, so there is nothing to shake off.',farmingKnown:'Farming is already known; teach sowing is once per run.',
       speed:'Speed must be 0 (pause), 1 or 3.',time:'Time must be a finite nonnegative number.'},
     feedback:{canApply:'{command} can apply on day {day}.',queued:'Queued {command} for day {day}. No wonder spent yet.',
-      canceled:'Command canceled. No wonder spent.',reset:'A fresh Homestead. Paused at day 0; no saved game.',applied:'{command} applied on day {day}. See the journal for its effect.'},
-    log:{start:'Six Gourdlings begin a First Age Homestead (seed {seed}). Paused. No saved game.',naturalIllness:'{name} fell ill for {days} days.',rejected:'Command rejected: {reason}',
+      canceled:'Command canceled. No wonder spent.',reset:'A fresh Homestead. Paused at day 0.',beginAnew:'say it again to let this world go',applied:'{command} applied on day {day}. See the journal for its effect.'},
+    log:{start:'Six Gourdlings begin a First Age Homestead (seed {seed}). Paused.',naturalIllness:'{name} fell ill for {days} days.',rejected:'Command rejected: {reason}',
       weather:'{command} for {duration} days including today; replaces previous weather. {effect}',rain:'More provisions, extra cold.',drought:'Lower foraging yields.',
       plague:'Everyone is ill for {duration} days including today.',blessPerson:'{name} +{health} health/+{happiness} happiness',blessEnd:'. Illness is not cured.',
       harvest:'Gift: +{food} provisions (meals still happen after work).',teach:'Bonfire knowledge learned; {wood} firewood spent. Today\'s fuel check is next.',
@@ -1173,7 +1173,7 @@ function slotPosition(grid,slot) {
 THEME.ui = {
   defaults: {
     showHeader: true,        // eyebrow, title and header note
-    showNotice: true,        // "nothing is saved" notice strip
+    showNotice: false,       // save notice strip (v0.2 saves itself, so the old no-save notice is removed)
     showStats: true,         // day box and the four stat counters
     showButtons: true,       // pause/1x/3x, next day, restart, queue, cancel
     showForecast: true,      // today's weather and tomorrow's forecast
@@ -1202,7 +1202,8 @@ THEME.ui = {
       enterRestarts: true,   // no Restart button on screen, so Enter restarts after a wipeout
     },
   },
-  devLogLines: 30,           // internal-log lines shown in the developer overlay
+  devLogLines: 30,
+  fadeMs: 800,               // how long the faint "begin anew" line takes to fade           // internal-log lines shown in the developer overlay
   // Which page parts each flag hides (CSS selectors into index.html).
   targets: {
     showHeader: ['header'],
@@ -1594,6 +1595,16 @@ h2{
   padding:4px 16px 12px}
 .feedback.error{
   color:var(--red)}
+.feedback.faint{
+  opacity:.6;
+  font-style:italic;
+  transition:opacity .8s ease}
+.feedback.faint.fading,
+#command-input.faint-placeholder.fading::placeholder{
+  opacity:0}
+#command-input.faint-placeholder::placeholder{
+  font-style:italic;
+  transition:opacity .8s ease}
 .roster{
   display:flex;
   flex-wrap:wrap;
@@ -1924,6 +1935,13 @@ const CONFIG = {
   weather: { chances: { normal: 31, rain: 30, drought: 25, cold: 14 } },
   illness: { chance: 13, duration: 3 },
   rng: { warmupSteps: 8 },
+  // Save and load (v0.2): one local-storage slot. Bump `version` whenever the
+  // saved fields change; an older save then starts a new run.
+  save: { key: 'plaything-sim.save', version: 1 },
+  // Typing exactly this (after the input cleaning) starts a fresh run. With
+  // requireConfirm the first time only asks; typing it again within
+  // confirmSeconds of real (wall-clock) time restarts.
+  freshStart: { phrase: 'begin anew', requireConfirm: true, confirmSeconds: 10 },
   power: { daily: 3, happyBonus: 2, happyAverage: 60 },
   milestone: { day: 30, population: 5 },
   commands: {
@@ -2557,6 +2575,88 @@ function advanceTime(previous, elapsedMs) {
 }
 
 
+// ---- src/save.js ----
+// Save and load (design section 10, "Save and load (v0.2)"): one slot in the
+// browser's local storage, written at every day end and whenever the queued
+// command changes, and the "begin anew" fresh start. No rules live here: a
+// loaded run continues exactly as it would have without the reload.
+
+// Not saved: the config (rebuilt from src/config.js), the previous day's report,
+// the play speed and the time inside the current day (an unfinished day is not
+// saved; it replays the same way from its start).
+const NOT_SAVED = new Set(['config', 'lastDay', 'speed', 'elapsedMs']);
+const isCount = n => Number.isInteger(n) && n >= 0;
+
+// The saved record: the format version plus every run field (seed, day, every
+// Gourdling, stocks, discoveries, plots, shed, streaks, weather and its days
+// left, tomorrow's rolled weather and illness, both dice positions, Wonder,
+// cooldowns and once-per-run uses, the queued command, ended flag and stats).
+function serialize(s) {
+  const run = {};
+  for (const [key, value] of Object.entries(s)) if (!NOT_SAVED.has(key)) run[key] = value;
+  return JSON.stringify({ version: s.config.save.version, run });
+}
+
+// Returns a playable state, or null when the text is missing, unreadable or
+// from another save format (the page then starts a new run).
+function deserialize(text, overrides = {}) {
+  if (typeof text !== 'string' || !text) return null;
+  let data;
+  try { data = JSON.parse(text); } catch { return null; }
+  const run = data?.run;
+  if (!run || typeof run !== 'object' || !isCount(run.seed)) return null;
+  const fresh = createState(overrides, run.seed);
+  if (data.version !== fresh.config.save.version) return null;
+  // Every field a run has must be present, with the same kind of value.
+  for (const [key, value] of Object.entries(fresh)) {
+    if (NOT_SAVED.has(key)) continue;
+    if (!(key in run)) return null;
+    const kind = v => v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v;
+    if (value !== null && run[key] !== null && kind(value) !== kind(run[key])) return null;
+  }
+  if (!isCount(run.day) || !isCount(run.rng) || !isCount(run.traitRng) || !isCount(run.nextId)) return null;
+  const need = ['id', 'age', 'fullness', 'warmth', 'health', 'happiness', 'safety'];
+  if (!run.villagers.every(v => v && need.every(k => Number.isFinite(v[k])))) return null;
+  const s = { ...fresh, ...structuredClone(run), config: fresh.config, lastDay: null, elapsedMs: 0 };
+  s.speed = 0;
+  return s;
+}
+
+// One slot. `storage` is localStorage or a stand-in; failures (private mode,
+// storage full, file:// restrictions) never stop the game.
+function createSaveSlot(storage, key) {
+  return {
+    save(s) { try { storage?.setItem(key, serialize(s)); return true; } catch { return false; } },
+    load(overrides = {}) { let text = null; try { text = storage?.getItem(key) ?? null; } catch {} return deserialize(text, overrides); },
+    clear() { try { storage?.removeItem(key); } catch {} },
+  };
+}
+
+// "begin anew": the whole cleaned input must equal the phrase. With
+// requireConfirm the first time only asks; the same phrase again within
+// confirmSeconds of real time restarts. Any other input cancels the pending
+// restart (and is then handled as a normal command). Pending state lives here
+// only, never in the save, so a reload cancels it. `now` is injectable for tests.
+function createFreshStart(rule, now = () => Date.now()) {
+  let askedAt = null;
+  const pending = () => askedAt !== null && now() - askedAt <= rule.confirmSeconds * 1000;
+  return {
+    isPending: pending,
+    // 'ask' (show the faint line), 'restart', 'cancel' (other input while
+    // pending: fade the line, then treat the input as a command) or 'pass'.
+    handle(text) {
+      const wasPending = pending();
+      askedAt = null;
+      if (cleanWords(text) !== cleanWords(rule.phrase)) return wasPending ? 'cancel' : 'pass';
+      if (!rule.requireConfirm || wasPending) return 'restart';
+      askedAt = now();
+      return 'ask';
+    },
+    cancel() { askedAt = null; },
+  };
+}
+
+
 // ---- src/village-view.js ----
 // Renderer only: every palette, primitive, image choice, label and dimension is
 // supplied by theme.js. Rules and command keywords never depend on loaded art.
@@ -2797,9 +2897,38 @@ function applyUi(){
 }
 applyUi();
 const withUiSpeed=s=>ui.autoPlaySpeed===null?s:setSpeed(s,ui.autoPlaySpeed);
-let state=createState({},seedParam!==null&&/^\d+$/.test(seedParam)?Number(seedParam)>>>0:randomSeed()),selectedId=1;
-state=withUiSpeed(state);
-function feedback(text,error=false){$('#feedback').textContent=text;$('#feedback').classList.toggle('error',error);}
+// Save and load (design section 10): one local-storage slot. Opening the page
+// resumes the saved run (an ended one shows its end screen); with no save, an
+// unreadable one or an older format a new run starts and replaces it. An
+// explicit ?seed= always starts that seed fresh.
+const storage=(()=>{try{return window.localStorage;}catch{return null;}})();
+const slot=createSaveSlot(storage,CONFIG.save.key);
+const explicitSeed=seedParam!==null&&/^\d+$/.test(seedParam);
+let state=(!explicitSeed&&slot.load())||createState({},explicitSeed?Number(seedParam)>>>0:randomSeed()),selectedId=1;
+state=withUiSpeed(state);slot.save(state);
+const freshStart=createFreshStart(CONFIG.freshStart);
+function feedback(text,error=false){clearFaint();$('#feedback').textContent=text;$('#feedback').classList.toggle('error',error);}
+// The faint "say it again" line: the feedback line, or (where that is hidden,
+// as in ?ui=minimal) the input's placeholder. It fades on cancel or timeout.
+const input=$('#command-input'),placeholder=input.getAttribute('placeholder');
+let faintTimer=null,fadeTimer=null;
+function showFaint(text){
+  clearFaint();
+  if(ui.showFeedback){const f=$('#feedback');f.textContent=text;f.classList.remove('error','fading');f.classList.add('faint');}
+  else{input.setAttribute('placeholder',text);input.classList.add('faint-placeholder');}
+  faintTimer=setTimeout(fadeFaint,CONFIG.freshStart.confirmSeconds*1000);
+}
+function fadeFaint(){
+  clearTimeout(faintTimer);faintTimer=null;freshStart.cancel();
+  const f=$('#feedback');if(!f.classList.contains('faint')&&!input.classList.contains('faint-placeholder'))return;
+  f.classList.add('fading');input.classList.add('fading');
+  fadeTimer=setTimeout(clearFaint,THEME.ui.fadeMs);
+}
+function clearFaint(){
+  clearTimeout(faintTimer);clearTimeout(fadeTimer);faintTimer=fadeTimer=null;
+  const f=$('#feedback');if(f.classList.contains('faint')){f.textContent='';f.classList.remove('faint','fading');}
+  if(input.classList.contains('faint-placeholder')){input.setAttribute('placeholder',placeholder);input.classList.remove('faint-placeholder','fading');}
+}
 function select(id){selectedId=id;render();}
 const Scene=makeVillageScene(()=>state,select);
 new Phaser.Game({type:Phaser.CANVAS,...THEME.layout.canvas,parent:'village',
@@ -2892,26 +3021,40 @@ function renderProgress(){
 }
 $('#command-form').addEventListener('submit',e=>{
   e.preventDefault();
-  // Minimal preset: Enter after a wipeout starts a fresh run with a new seed.
+  // Enter on the end screen starts a fresh run with a new seed (and saves it).
   if(state.ended&&ui.enterRestarts){reset();return;}
+  // "begin anew" is checked before keyword matching and costs nothing.
+  const fresh=freshStart.handle(input.value);
+  if(fresh==='ask'){input.value='';showFaint(t('feedback.beginAnew'));return;}
+  if(fresh==='restart'){reset();return;}
+  if(fresh==='cancel')fadeFaint();
   // Keyword matcher on every screen (design section 11). No keyword: nothing
   // queued, nothing spent, no message. A match runs the normal checks and the
   // feedback line shows the queued message or the refusal reason as before.
   const result=queueText(state,$('#command-input').value);
   if(!result.matched){render();return;}
-  state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';render();
+  const queued=state.queuedCommand;
+  state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';
+  if(state.queuedCommand!==queued)slot.save(state);
+  render();
 });
-$('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.canceled'));render();};
+// The end screen also restarts on Enter when the command box is switched off.
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&state.ended&&!ui.enterRestarts&&!(e.target instanceof HTMLButtonElement)){e.preventDefault();reset();}
+});
+$('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.canceled'));slot.save(state);render();};
 for(const b of document.querySelectorAll('[data-speed]'))b.onclick=()=>{state=setSpeed(state,Number(b.dataset.speed));render();};
-$('#next-day').onclick=()=>{state=stepDay(state);showCommandResult();render();};
-function reset(){state=withUiSpeed(restart(state,randomSeed()));selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
+$('#next-day').onclick=()=>{state=stepDay(state);slot.save(state);showCommandResult();render();};
+// A new run with a new seed; it replaces the save at once.
+function reset(){freshStart.cancel();state=withUiSpeed(restart(state,randomSeed()));slot.save(state);selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
 $('#restart').onclick=reset;$('#restart-ended').onclick=reset;
 function showCommandResult(){const r=state.lastDay?.command;if(r)feedback(r.ok?t('feedback.applied',{command:commandLabel(r.command),day:state.day}):r.message,!r.ok);}
 let lastTime=performance.now();
 function frame(now){
   const dt=document.hidden?0:Math.min(now-lastTime,1000);lastTime=now;
-  const oldDay=state.day;state=advanceTime(state,dt);
-  if(state.day!==oldDay){showCommandResult();render();}else renderProgress();
+  const oldDay=state.day,prevEnded=state.ended;state=advanceTime(state,dt);
+  // Autosave at every day end (after the nightly rolls).
+  if(state.day!==oldDay||state.ended!==prevEnded){slot.save(state);showCommandResult();render();}else renderProgress();
   requestAnimationFrame(frame);
 }
 render();requestAnimationFrame(frame);

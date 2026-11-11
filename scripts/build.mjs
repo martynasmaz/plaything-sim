@@ -35,7 +35,7 @@ export async function build({root=projectRoot,output=path.join(root,'dist/index.
   const read=name=>readFile(path.join(root,name),'utf8');
   const {THEME,spriteManifest}=await import(pathToFileURL(path.join(root,'src/theme.js')).href+`?build=${Date.now()}`);
   const art=await inlineAssets(spriteManifest(THEME),root);
-  const files=['src/commands.js','src/theme.js','src/config.js','src/sim.js','src/village-view.js','src/main.js'];
+  const files=['src/commands.js','src/theme.js','src/config.js','src/sim.js','src/save.js','src/village-view.js','src/main.js'];
   let code='';
   for(const file of files){
     const source=(await read(file)).replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');

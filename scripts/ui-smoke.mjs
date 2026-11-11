@@ -1,5 +1,6 @@
 // Browser check for the UI switches (THEME.ui), on the built dist/index.html.
-// 1) Default flags: every switchable part is visible, no ui-* classes, no
+// 1) Default flags: every switchable part is visible except the no-save notice
+//    (removed in v0.2 save/load: only ui-hide-showNotice), no
 //    errors, no developer overlay. With BASE_REF=<commit> it also checks that
 //    the default page renders pixel-for-pixel and box-for-box like that commit's
 //    build (used at 350ac25 against 87c90b0; later commits change the page).
@@ -47,7 +48,7 @@ try{
   {
     const {page,context,errors}=await open(current+'?seed=9');
     const hidden=await page.evaluate(()=>[...document.querySelectorAll('[hidden]')].map(n=>n.id||n.className));
-    assert.deepEqual(hidden.filter(x=>x!=='milestone'&&x!=='ended'&&x!=='end-overlay'),[],'default: nothing switched off');
+    assert.deepEqual(hidden.filter(x=>x!=='milestone'&&x!=='ended'&&x!=='end-overlay'),['no-save'],'default: only the removed no-save notice is off');
     assert.equal(await page.locator('#dev-overlay').count(),0,'no developer overlay by default');
     assert.match(await page.locator('.person-traits').innerText(),/^Traits: \w+ and \w+$/);
     await page.locator('.details-panel').screenshot({path:path.join(root,'reports/v02-traits-detail.png')});
@@ -78,7 +79,7 @@ try{
       identical=sa.equals(sb);
       if(!identical){await writeFile(`/tmp/ui-a-${width}.png`,sa);await writeFile(`/tmp/ui-b-${width}.png`,sb);}
       assert.deepEqual(b.errors,[]);
-      assert.deepEqual(await b.page.evaluate(()=>[...document.documentElement.classList].filter(c=>c.startsWith('ui-'))),[]);
+      assert.deepEqual(await b.page.evaluate(()=>[...document.documentElement.classList].filter(c=>c.startsWith('ui-'))),['ui-hide-showNotice']);
       report['default'+width]={elements:lb.length,layoutIdentical:true,pixelIdentical:identical,attempts};
       await a.context.close();await b.context.close();
     }

@@ -8,13 +8,15 @@ import {THEME, resolveUi, uiHiddenClasses} from '../src/theme.js';
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
 const showFlags=Object.keys(THEME.ui.defaults).filter(k=>k.startsWith('show'));
 
-test('default flags show everything and keep the sim start speed', ()=>{
+test('default flags show everything (but the removed no-save notice) and keep the sim start speed', ()=>{
   const ui=resolveUi();
-  for(const k of showFlags)assert.equal(ui[k],true,k);
+  for(const k of showFlags)assert.equal(ui[k],k!=='showNotice',k);
+  // v0.2 saves itself, so the no-save notice is off by default (design section 10).
+  assert.equal(ui.showNotice,false);
   assert.equal(ui.autoPlaySpeed,null);
   assert.equal(ui.enterRestarts,false,'the full screen restarts with its Restart button');
   assert.equal(ui.devOverlay,false,'developer overlay is off by default');
-  assert.deepEqual(uiHiddenClasses(ui),[]);
+  assert.deepEqual(uiHiddenClasses(ui),['ui-hide-showNotice']);
   assert.deepEqual(resolveUi('no-such-preset'),ui);
   assert.deepEqual(resolveUi(null,{bogus:false}),ui,'unknown flags are dropped');
 });

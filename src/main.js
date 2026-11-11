@@ -1,3 +1,5 @@
+import { createSaveSlot, createFreshStart } from './save.js';
+import { CONFIG } from './config.js';
 import { createState, stepDay, queueCommand, cancelCommand, setSpeed, advanceTime,
   restart, availableCommands, validateCommand, nextAllowedDay, tomorrowWeather, queueText, populationCap, shelterPlaces } from './sim.js';
 import { makeVillageScene } from './village-view.js';
@@ -39,9 +41,38 @@ function applyUi(){
 }
 applyUi();
 const withUiSpeed=s=>ui.autoPlaySpeed===null?s:setSpeed(s,ui.autoPlaySpeed);
-let state=createState({},seedParam!==null&&/^\d+$/.test(seedParam)?Number(seedParam)>>>0:randomSeed()),selectedId=1;
-state=withUiSpeed(state);
-function feedback(text,error=false){$('#feedback').textContent=text;$('#feedback').classList.toggle('error',error);}
+// Save and load (design section 10): one local-storage slot. Opening the page
+// resumes the saved run (an ended one shows its end screen); with no save, an
+// unreadable one or an older format a new run starts and replaces it. An
+// explicit ?seed= always starts that seed fresh.
+const storage=(()=>{try{return window.localStorage;}catch{return null;}})();
+const slot=createSaveSlot(storage,CONFIG.save.key);
+const explicitSeed=seedParam!==null&&/^\d+$/.test(seedParam);
+let state=(!explicitSeed&&slot.load())||createState({},explicitSeed?Number(seedParam)>>>0:randomSeed()),selectedId=1;
+state=withUiSpeed(state);slot.save(state);
+const freshStart=createFreshStart(CONFIG.freshStart);
+function feedback(text,error=false){clearFaint();$('#feedback').textContent=text;$('#feedback').classList.toggle('error',error);}
+// The faint "say it again" line: the feedback line, or (where that is hidden,
+// as in ?ui=minimal) the input's placeholder. It fades on cancel or timeout.
+const input=$('#command-input'),placeholder=input.getAttribute('placeholder');
+let faintTimer=null,fadeTimer=null;
+function showFaint(text){
+  clearFaint();
+  if(ui.showFeedback){const f=$('#feedback');f.textContent=text;f.classList.remove('error','fading');f.classList.add('faint');}
+  else{input.setAttribute('placeholder',text);input.classList.add('faint-placeholder');}
+  faintTimer=setTimeout(fadeFaint,CONFIG.freshStart.confirmSeconds*1000);
+}
+function fadeFaint(){
+  clearTimeout(faintTimer);faintTimer=null;freshStart.cancel();
+  const f=$('#feedback');if(!f.classList.contains('faint')&&!input.classList.contains('faint-placeholder'))return;
+  f.classList.add('fading');input.classList.add('fading');
+  fadeTimer=setTimeout(clearFaint,THEME.ui.fadeMs);
+}
+function clearFaint(){
+  clearTimeout(faintTimer);clearTimeout(fadeTimer);faintTimer=fadeTimer=null;
+  const f=$('#feedback');if(f.classList.contains('faint')){f.textContent='';f.classList.remove('faint','fading');}
+  if(input.classList.contains('faint-placeholder')){input.setAttribute('placeholder',placeholder);input.classList.remove('faint-placeholder','fading');}
+}
 function select(id){selectedId=id;render();}
 const Scene=makeVillageScene(()=>state,select);
 new Phaser.Game({type:Phaser.CANVAS,...THEME.layout.canvas,parent:'village',
@@ -134,26 +165,40 @@ function renderProgress(){
 }
 $('#command-form').addEventListener('submit',e=>{
   e.preventDefault();
-  // Minimal preset: Enter after a wipeout starts a fresh run with a new seed.
+  // Enter on the end screen starts a fresh run with a new seed (and saves it).
   if(state.ended&&ui.enterRestarts){reset();return;}
+  // "begin anew" is checked before keyword matching and costs nothing.
+  const fresh=freshStart.handle(input.value);
+  if(fresh==='ask'){input.value='';showFaint(t('feedback.beginAnew'));return;}
+  if(fresh==='restart'){reset();return;}
+  if(fresh==='cancel')fadeFaint();
   // Keyword matcher on every screen (design section 11). No keyword: nothing
   // queued, nothing spent, no message. A match runs the normal checks and the
   // feedback line shows the queued message or the refusal reason as before.
   const result=queueText(state,$('#command-input').value);
   if(!result.matched){render();return;}
-  state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';render();
+  const queued=state.queuedCommand;
+  state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';
+  if(state.queuedCommand!==queued)slot.save(state);
+  render();
 });
-$('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.canceled'));render();};
+// The end screen also restarts on Enter when the command box is switched off.
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&state.ended&&!ui.enterRestarts&&!(e.target instanceof HTMLButtonElement)){e.preventDefault();reset();}
+});
+$('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.canceled'));slot.save(state);render();};
 for(const b of document.querySelectorAll('[data-speed]'))b.onclick=()=>{state=setSpeed(state,Number(b.dataset.speed));render();};
-$('#next-day').onclick=()=>{state=stepDay(state);showCommandResult();render();};
-function reset(){state=withUiSpeed(restart(state,randomSeed()));selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
+$('#next-day').onclick=()=>{state=stepDay(state);slot.save(state);showCommandResult();render();};
+// A new run with a new seed; it replaces the save at once.
+function reset(){freshStart.cancel();state=withUiSpeed(restart(state,randomSeed()));slot.save(state);selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
 $('#restart').onclick=reset;$('#restart-ended').onclick=reset;
 function showCommandResult(){const r=state.lastDay?.command;if(r)feedback(r.ok?t('feedback.applied',{command:commandLabel(r.command),day:state.day}):r.message,!r.ok);}
 let lastTime=performance.now();
 function frame(now){
   const dt=document.hidden?0:Math.min(now-lastTime,1000);lastTime=now;
-  const oldDay=state.day;state=advanceTime(state,dt);
-  if(state.day!==oldDay){showCommandResult();render();}else renderProgress();
+  const oldDay=state.day,prevEnded=state.ended;state=advanceTime(state,dt);
+  // Autosave at every day end (after the nightly rolls).
+  if(state.day!==oldDay||state.ended!==prevEnded){slot.save(state);showCommandResult();render();}else renderProgress();
   requestAnimationFrame(frame);
 }
 render();requestAnimationFrame(frame);

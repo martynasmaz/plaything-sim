@@ -131,3 +131,14 @@ test('"How a Gourdling decides" exists and every quoted number matches config', 
     else assert.equal(Number(m[1]), value, `${pattern} says ${m[1]}, config says ${value}`);
   }
 });
+
+test('"Save and load" quotes the save and fresh-start settings from config', () => {
+  const save = doc.slice(doc.indexOf('## Save and load (v0.2)'), doc.indexOf('## Art in the page'));
+  assert.ok(save.length > 500, 'Save and load section missing');
+  const flat = save.replace(/\s+/g, ' ');
+  assert.ok(flat.includes(`key \`${c.save.key}\``));
+  assert.ok(flat.includes(`save format version ${c.save.version}`));
+  assert.ok(flat.includes(`equal \`${c.freshStart.phrase}\``));
+  assert.ok(flat.includes(`\`requireConfirm: ${c.freshStart.requireConfirm}\``));
+  assert.ok(flat.includes(`within ${c.freshStart.confirmSeconds} seconds of real`));
+});

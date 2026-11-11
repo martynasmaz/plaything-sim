@@ -319,6 +319,55 @@ kept lines, and their count, seed by seed against the Python reference.
   also checks the traits line, the developer overlay and a keyword sentence in
   the minimal preview.
 
+## Save and load (v0.2)
+
+Design section 10, "Save and load (v0.2, scheduled next)". Code: `src/save.js`
+(no rules), wired in `src/main.js`; numbers in `CONFIG.save` and
+`CONFIG.freshStart`.
+
+- **One slot**, local storage key `plaything-sim.save`, this device only. It is
+  written at every day end (after the nightly rolls), whenever the queued
+  command changes (accepted command or Cancel), and at once for a new run.
+  Nothing is shown on screen.
+- **What it holds:** save format version 1 plus every run field: seed, day,
+  every Gourdling (number, age, needs, illness days, traits), next number,
+  provisions, firewood, Bonfire and farming state with the 4 plots, the shed,
+  the birth/Bonfire/farming streaks, command weather and its days left,
+  tomorrow's rolled weather and illness, both dice positions, Wonder, every
+  cooldown and once-per-run use, the queued command, the ended flag and the run
+  stats, plus the journal and internal log. Not saved: the config (rebuilt from
+  `src/config.js`), the previous day's report, the play speed and time inside
+  the unfinished day (it replays the same way from its start).
+- **Opening the page** resumes the save, paused (or at the preset's auto-play
+  speed). With no save, an unreadable one, a missing field or another format
+  version, a new run starts with a new seed and replaces it. Bump
+  `CONFIG.save.version` whenever the saved fields change. `?seed=N` always starts
+  that seed fresh (and saves it), for testing and replays.
+- **Ended runs** reopen on their end screen. Enter (or Restart) starts a new run
+  with a new seed and overwrites the save at once.
+- **Fresh start by typing.** After the section 11 cleaning, the whole input must
+  equal `begin anew` (`CONFIG.freshStart.phrase`). It is not a keyword synonym
+  and is checked before keyword matching; it costs nothing. With
+  `requireConfirm: true` (decided by the PM), the first time nothing restarts:
+  the feedback line shows the faint text "say it again to let this world go"
+  (`feedback.beginAnew` in theme.js; where the feedback line is hidden, as in
+  `?ui=minimal`, the input's placeholder shows it instead), the game keeps
+  running and no Wonder is spent. Typed again within 10 seconds of real
+  (wall-clock) time (`confirmSeconds`), a new run starts with a new seed and
+  overwrites the save. Any other input, or the time running out, cancels quietly
+  and the faint text fades (`THEME.ui.fadeMs`); other input then runs as a
+  normal command. The pending state is never saved, so a reload cancels it.
+  With `requireConfirm: false` the first `begin anew` restarts at once.
+- The old no-save notice is removed (design section 10): `showNotice` now
+  defaults to `false`, and its copy, if switched back on, describes the
+  autosave. The start and restart messages no longer say "No saved game".
+- Tests: `tests/save.test.js` (round trip; reload after a day end or with a
+  queued command on days 1, 13 and 30, then play to day 60, equals an
+  uninterrupted run for 6 seed/strategy pairs; ended runs; bad saves; storage
+  failures; every "begin anew" case with a fake clock) and
+  `scripts/save-smoke.mjs` (the same in the built page with Playwright's fake
+  clock; screenshot `reports/save-begin-anew.png`).
+
 ## Art in the page (outside the canvas)
 
 The forecast (`#forecast`) renders the live word "Tomorrow", then `tag_tomorrow`
@@ -337,7 +386,7 @@ is unchanged, and the radically minimal screen (world plus one text box) is a
 preview until its mockup and spec are approved.
 
 - `THEME.ui.defaults` holds the flags; all `show…` flags are `true` by default:
-  `showHeader`, `showNotice`, `showStats`, `showButtons`, `showForecast`,
+  `showHeader`, `showNotice` (off by default since save/load), `showStats`, `showButtons`, `showForecast`,
   `showWorldTitle`, `showWorldCaption`, `showMilestone`, `showCommandList`,
   `showQueueStatus`, `showFeedback`, `showDetailPanel`, `showJournal`,
   `showGoalText`, `showFooter`, `showEndScreenStats`. Three more settings:
