@@ -6,26 +6,27 @@ import { Page, Section, Text, Table, TableOfContents, Properties, Steps, Numbere
 
 export default function App() {
   return (
-    <Page title="Plaything Sim: Game Design Doc" width="column" summary="v0.1: one First Age homestead, six starting Gourdlings and six typed god commands. PM-approved Gourdling barn-dance names and accepted plain aliases are integrated; simulation rules, numbers, costs, cooldowns, versions and build-check outcomes are unchanged.">
+    <Page title="Plaything Sim: Game Design Doc" width="column" summary="v0.1 is a seeded survival sim: an untouched Homestead usually survives but struggles, a helpful god lets it flourish, and a cruel god can wipe it out. Deaths are permanent. Sections 2–6 hold the rules; section 7 holds the simulation evidence and build checks.">
       <Properties items={[
-        { label: "Status", value: "Main design reference · PM-approved flavour and command naming integrated" },
+        { label: "Status", value: "Main design reference · survival rebalance validated by a 500-run seeded simulation" },
         { label: "Owner", value: "Martynas · solo side project" },
+        { label: "Direction", value: "Survival challenge. Survivable without god commands; god powers help the Homestead thrive but are never required." },
         { label: "Confirmed first build", value: "6 starting Gourdlings · 8 maximum · one fixed Homestead · First Age (Stone) only, with the Bonfire (fire) milestone" },
         { label: "Confirmed later step", value: "Barn Age (Bronze) in v0.3; existing starting thresholds remain unchanged" },
         { label: "Platform and visuals", value: "Browser target confirmed. Gourdling barn-dance art direction locked. Game engine still undecided." }
       ]} />
-      <Callout tone="info" lead="One command, two accepted wordings.">Each final god-command name and its plain alias call exactly the same action, with one effect, one cost and one shared cooldown. The later teach tinkering command also accepts teach bronze, but that alias is hidden from the in-game help list. Later commands remain candidates for their existing versions, not additions to v0.1.</Callout>
+      <Callout tone="warning" lead="Deaths are permanent, and wipeout is real.">Natural weather and illness come from a seeded dice roll, so each run differs but can be replayed exactly. Untouched Homesteads usually survive with losses; sick hex can kill; repeated cruelty usually ends the Homestead.</Callout>
       <TableOfContents items={[
         { label: "Rename map and visual boundaries", id: "renames" },
-        { label: "1. Pitch and design pillars", id: "pitch" },
-        { label: "2. Core loop and day order", id: "loop" },
+        { label: "1. Pitch, pillars and tone", id: "pitch" },
+        { label: "2. Core loop, randomness and wipeout", id: "loop" },
         { label: "3. Gourdlings: needs and life cycle", id: "villagers" },
         { label: "4. Homestead resources and work", id: "resources" },
         { label: "5. Ages and discoveries", id: "ages" },
         { label: "6. God commands, aliases and help", id: "commands" },
-        { label: "7. Small-step roadmap and build checks", id: "roadmap" },
+        { label: "7. Balance evidence, roadmap and build checks", id: "roadmap" },
         { label: "8. Out of scope", id: "scope" },
-        { label: "9. Questions for Martynas", id: "questions" }
+        { label: "9. Decisions and open questions", id: "questions" }
       ]} />
 
       <Section heading="Rename map and visual boundaries" id="renames">
@@ -48,124 +49,145 @@ export default function App() {
           ["Bronze tool / iron tool", "Bronze work tool / iron work tool", "The same singular metal tools; no new equipment system."],
           ["Shared store", "Pantry", "The existing supply spot, not another building."],
           ["Barn Age’s bronze-making knowledge", "Tinkering", "The existing copper-and-tin work-tool discovery, not another technology gate."],
+          ["Very cold weather (new)", "Cold snap", "A natural weather type only; there is no cold-snap command."],
+          ["Game over (new)", "The Homestead Falls Quiet", "End-screen title after the last Gourdling dies."],
           ["`rain`", "`cloud wrangle`", "Wrangle rain clouds; rain remains an accepted alias."],
-          ["`drought`", "`dry spell`", "The same three-day drought; drought remains an alias."],
+          ["`drought`", "`dry spell`", "Three days of drought; drought remains an alias."],
           ["`bless`", "`hoedown`", "A magical health-and-happiness lift; no music system."],
-          ["`plague`", "`sick hex`", "The same harmful illness; it can be fatal."],
+          ["`plague`", "`sick hex`", "Harmful illness for everyone; it can be fatal."],
           ["`teach fire`", "`teach spark`", "Teach permanent Bonfire knowledge, not just ignite it."],
-          ["`harvest`", "`feast drop`", "The same direct gift of provisions, not instant meals."],
+          ["`harvest`", "`feast drop`", "A direct gift of provisions, not instant meals."],
           ["Later `heal`", "Later `shake off`", "Shake off illness; same candidate effect."],
           ["Later `teach farming`", "Later `teach sowing`", "The same candidate farming-knowledge shortcut."],
           ["Later `teach bronze`", "Later `teach tinkering`", "Tinkering knowledge; teach bronze is a hidden accepted alias."],
           ["Later `storm`", "Later `sky stomp`", "The same uncommitted stronger-weather idea."]
         ]} />
-        <Text>All six plain v0.1 words remain accepted aliases—alternative words for the same commands. Later heal, teach farming and storm likewise remain accepted aliases when their candidate commands ship. Teach bronze works as a hidden alias when teach tinkering ships, but is not shown in the player help list. This is a naming and input-wording change only; no simulation or balance changes are introduced.</Text>
+        <Text>All six plain v0.1 words remain accepted aliases—alternative words for the same commands. Later heal, teach farming and storm likewise remain accepted aliases when their candidate commands ship. Teach bronze works as a hidden alias when teach tinkering ships, but is not shown in the player help list.</Text>
         <Text>Art reference: /workspace/art/barn_style_guide.md, with the style sheet and barn scene. Use the locked simplified vintage woodcut folk-Americana look: mustard gourd bodies, long bendy necks, visible green sprouts, dot eyes, uniform ink outlines and flat fills. Follow the guide’s six-colour palette, prop shapes and sign-plank interface; these are visual instructions, not new simulation rules.</Text>
-        <Text>The images are not population or building specifications: v0.1 still starts with 6 Gourdlings, has cap 8, one shared Plank shed and initially unknown Bonfire knowledge. Hats, instruments, corn-like edge plants and theatrical poses add no jobs, music system, farming, resource yields or needs. Era names do not automatically add or upgrade buildings. Keep the existing day units and timings; the scene’s example “Cycle” label changes none of them. Existing unhappy and sick labels remain valid without requiring sad-slump poses. Command names do not require new props or action systems.</Text>
+        <Text>The images are not population or building specifications: v0.1 still starts with 6 Gourdlings, has cap 8, one shared Plank shed and initially unknown Bonfire knowledge. Hats, instruments, corn-like edge plants and theatrical poses add no jobs, music system, farming, resource yields or needs. Era names do not automatically add or upgrade buildings. Keep the existing day units and timings; the scene’s example “Cycle” label changes none of them. Command names do not require new props or action systems.</Text>
       </Section>
 
-      <Section heading="1. Pitch and design pillars" id="pitch">
-        <Text>Watch a tiny Gourdling community gather provisions, keep warm, raise children and eventually discover new ways to live. Act as a god by typing a small set of known commands, then watch ordinary rules turn each intervention into visible consequences. The broad inspiration is the digital-life premise of Black Mirror’s “Plaything”; this is an original game, not a recreation of its characters, creatures or story.</Text>
-        <Callout lead="Build the living Homestead first.">Every number below is a starting value to tune through testing, not a proven balance. Use needs, timers and clear conditions; no real AI, language models or freely interpreted text.</Callout>
+      <Section heading="1. Pitch, pillars and tone" id="pitch">
+        <Text>Watch a tiny Gourdling community gather provisions, keep warm, raise children and try to outlast bad weather and illness. Act as a god by typing a small set of known commands: help them flourish, or make their lives harder. The broad inspiration is the digital-life premise of Black Mirror’s “Plaything”; this is an original game, not a recreation of its characters, creatures or story.</Text>
+        <Callout lead="Build the living Homestead first.">Every number below is a starting value backed by a simple simulation, not final balance. Use needs, timers, clear conditions and one seeded dice roll; no real AI, language models or freely interpreted text.</Callout>
         <NumberedList items={[
-          { text: "The Homestead lives without orders.", items: ["Gourdlings choose one daily activity using a fixed priority list. Helpful god commands are optional, including teaching Bonfire knowledge."] },
+          { text: "The Homestead can survive on its own.", items: ["Gourdlings choose one daily activity using a fixed priority list. Untouched, they usually survive 60 days but lose members, grow slowly and discover the Bonfire late."] },
+          { text: "God powers make the difference between surviving and thriving.", items: ["Sensible help means faster growth, fewer deaths, an early Bonfire and quicker recovery. Help is never required. From v0.3, help can also speed age progress; in v0.1 the only progress milestone is the Bonfire."] },
+          { text: "Stakes are real.", items: ["Deaths are permanent. Sick hex can kill. Bad luck can rarely end an untouched Homestead, and repeated dry spells and sick hexes usually wipe it out."] },
           { text: "Cause and effect stay readable.", items: ["Show what changed, why it changed and how long it lasts. Gourdlings react with a short label or simple animation, not generated dialogue."] },
-          { text: "Small before clever.", items: ["One Homestead, shared supplies, no individual inventories, no complicated personalities and no map expansion in v0.1."] },
-          { text: "Observation is the reward.", items: ["The first goal is to keep at least 5 Gourdlings alive through day 30 and discover the Bonfire. Show a milestone message, then allow play to continue; this is not a hard win screen."] }
+          { text: "Small before clever.", items: ["One Homestead, shared supplies, no individual inventories, no complicated personalities and no map expansion in v0.1."] }
         ]} />
+        <Text>Tone, decided: a cosy, goofy barn-dance look with real survival stakes. Deaths and wipeouts are stated plainly and briefly, never graphic or mocking. There is no moral score; the consequences are the judgement.</Text>
       </Section>
 
-      <Section heading="2. Core loop and day order" id="loop">
+      <Section heading="2. Core loop, randomness and wipeout" id="loop">
         <Properties items={[
           { label: "Tick", value: "One simulation update, equal to one game day. Moving pictures between updates do not change the rules." },
           { label: "Pace", value: "30 real seconds per game day at normal speed; pause and 3× speed are available. Day 30 takes 15 minutes at normal speed." },
-          { label: "Starting state", value: "Day 0, paused; 6 adults; 18 provisions; 12 firewood; 50 wonder; normal weather; Bonfire unknown." },
-          { label: "Player’s job", value: "Watch needs and supplies, type a listed command, and see its result. There are no direct work orders." }
+          { label: "Starting state", value: "Day 0, paused; 6 adults; 18 provisions; 12 firewood; 50 wonder; Bonfire unknown; a run seed; day 1’s weather already rolled and shown." },
+          { label: "Player’s job", value: "Watch needs, supplies and tomorrow’s weather, type a listed command, and see its result. There are no direct work orders." }
         ]} />
         <Steps steps={[
-          { title: "1. Apply the queued command", detail: "At the start of the next day, check its cost and conditions. If valid, pay once and apply it; otherwise explain the failure and change nothing. Only one command can take effect per day." },
-          { title: "2. Set today’s conditions", detail: "Read the active weather and illness. If Bonfire knowledge is known and at least 1 firewood remains, spend 1 firewood and light the shared Bonfire for this day; otherwise it is out." },
+          { title: "1. Apply the queued command", detail: "At the start of the day, check its cost and conditions. If valid, pay once and apply it; otherwise explain the failure and change nothing. Only one command can take effect per day." },
+          { title: "2. Set today’s conditions", detail: "Weather is the active command weather if any, otherwise the natural weather rolled last night. Apply last night’s natural illness roll, if any. If Bonfire knowledge is known and at least 1 firewood remains, spend 1 firewood and light the Bonfire for today." },
           { title: "3. Lower needs and choose work", detail: "Apply daily fullness and warmth changes, then let each Gourdling take one action. Recheck shared stocks after every action so the whole community does not do the same job unnecessarily." },
-          { title: "4. Eat and resolve wellbeing", detail: "Each Gourdling may eat one meal, then update health, safety and happiness using the rules below. No eating during work; provisions gathered today are available for today’s meal." },
-          { title: "5. Resolve lives and discoveries", detail: "Add 1 day of age, remove deaths, then check the birth counter and natural Bonfire discovery. Newborns begin taking daily turns tomorrow. If nobody remains, end the run now." },
-          { title: "6. Close the day", detail: "Restore wonder, reduce weather and illness timers by 1, check milestones, and write the day’s important changes into a short event log." }
+          { title: "4. Eat and resolve wellbeing", detail: "Each Gourdling may eat one meal, then update health, safety and happiness using the rules below. Provisions gathered today are available for today’s meal." },
+          { title: "5. Resolve lives and discoveries", detail: "Add 1 day of age and remove deaths. If nobody remains, stop the day loop now and show the wipeout end screen. Otherwise check the birth counter and natural Bonfire discovery; newborns act from tomorrow." },
+          { title: "6. Close the day", detail: "Restore wonder, reduce weather and illness timers by 1, check milestones, log important changes, then roll tomorrow’s natural weather and natural illness and show tomorrow’s weather." }
         ]} />
-        <Text>Use a permanent number for each Gourdling. Visit them in number order, but move the first place to the next living Gourdling each day; use the same order for work and meals. This keeps scarce supplies from always favoring the same person, without adding randomness.</Text>
-        <Text>The screen needs the day and age, population, provisions, firewood, wonder, weather and its days remaining, Bonfire state, a command box and visible command list. Selecting a Gourdling shows needs, age and today’s activity. Keep the latest 10 important log entries; do not log every meal. At zero population, pause with “The Homestead has ended” and offer Restart.</Text>
+        <Table columns={["Natural weather (rolled nightly)", "Chance", "Effect"]} align={["start", "end", "start"]} rows={[
+          ["Fair", "31%", "Normal foraging and warmth."],
+          ["Rain", "30%", "Same as cloud wrangle’s rain: better foraging, −10 extra warmth."],
+          ["Dry spell", "25%", "Same as the dry spell command’s drought: poor foraging."],
+          ["Cold snap", "14%", "Normal foraging, −40 extra warmth for everyone. No command creates it."]
+        ]} />
+        <Text>Randomness, in plain words: each night the game rolls one 100-sided die for tomorrow’s weather, then a second die for illness. On 1–13 of the illness die (13%), one living Gourdling, chosen by a third roll, falls ill for 3 days with the same illness as sick hex. A Gourdling who is already ill is not affected again. Nothing else is random: gathering, meals, births and discoveries follow fixed rules.</Text>
+        <Text>The seed is a starting number for the dice. The same seed with the same commands on the same days replays exactly the same run, so testers can reproduce problems. The game always makes exactly three rolls per night, even when a command overrides the weather or nobody can fall ill, so commands never shift later dice. Use a simple fixed generator from the sim script; Restart picks a new seed.</Text>
+        <Text>Command weather overrides natural weather for its 3 days; natural rolls for those days are discarded. A cold snap is weather, so cloud wrangle or dry spell can replace it. Show tomorrow’s natural weather as soon as it is rolled; if a command will override it, show the command weather instead.</Text>
+        <Text>Use a permanent number for each Gourdling. Visit them in number order, but move the first place to the next living Gourdling each day; use the same order for work and meals. This rotation itself is not random and keeps scarce supplies from always favouring the same Gourdling.</Text>
+        <Text>The screen needs the day and age, population, provisions, firewood, wonder, today’s and tomorrow’s weather, weather days remaining, Bonfire state, a command box and visible command list. Selecting a Gourdling shows needs, age, illness and today’s activity. Keep the latest 10 important log entries; do not log every meal.</Text>
+        <Properties items={[
+          { label: "Wipeout end screen", value: "The Homestead Falls Quiet" },
+          { label: "Trigger", value: "The last living Gourdling dies at day end. Stop the day loop immediately; no further days, weather rolls, births, discoveries or wonder gain." },
+          { label: "Body text", value: "“The last Gourdling is gone. The Homestead lasted N days.”" },
+          { label: "Stats shown", value: "Days lasted; peak population; births; deaths; Bonfire discovered (yes, on day N / no); run seed in small text." },
+          { label: "Actions", value: "Restart only. It starts a fresh day-0 run with a new seed. Commands are not accepted after wipeout." },
+          { label: "Look", value: "Sign-plank panel in the barn-dance style; plain, short wording, no jokes about the deaths." }
+        ]} />
       </Section>
 
       <Section heading="3. Gourdlings: needs and life cycle" id="villagers">
         <Table columns={["Value", "Daily rule", "Low-value response"]} align={["start", "start", "start"]} rows={[
           ["Fullness · 0–100", "Start 75. Lose 25/day. After work, if at 75 or below and provisions are available, eat 1 provision for +30.", "Below 40 and provisions below 1: forage before other work. At 20 or below after meals: lose 10 health."],
-          ["Warmth · 0–100", "Start 70. Lose 10/day, plus 10 during rain. A Plank-shed place gives +10/day; a lit Bonfire gives another +5/day.", "Below 40: take the warm-up action if not emergency-foraging. At 20 or below after actions: lose 10 health."],
-          ["Health · 0–100", "Start 100. Apply hunger, cold and illness damage together. Recover 4/day only if there was no damage, no illness, and fullness and warmth both finish at 50 or above.", "At 0: die at day end. Below 50: visibly unwell; no separate injury system."],
+          ["Warmth · 0–100", "Start 70. Lose 10/day, plus 10 in rain or 40 in a cold snap. A Plank-shed place gives +10/day; a lit Bonfire gives another +10/day.", "Below 40: take the warm-up action if not emergency-foraging. At 20 or below after actions: lose 10 health."],
+          ["Health · 0–100", "Start 100. Apply hunger, cold and illness damage together; illness costs 20 health per ill day. Recover 4/day only if there was no damage, no illness, and fullness and warmth both finish at 50 or above.", "At 0: die at day end, permanently. Below 50: visibly unwell; no separate injury system."],
           ["Safety · 0–100", "A displayed condition, not another draining need: 80 with a Plank-shed place, health at least 50 and no illness; otherwise 40.", "Show an uneasy label at 40. No enemies or separate safety action in v0.1."],
           ["Happiness · 0–100", "Start 60. After meals, gain 2 if fullness, warmth and safety are all at least 50; otherwise lose 4 if any is below 40. Otherwise no change. Illness also costs 5/day.", "Below 40: show unhappy. Below 50: cannot contribute to a birth or natural Bonfire discovery. No rebellion." ]
         ]} />
-        <Text>Higher always means better. Keep every 0–100 value within that range after each change. Warmth’s Plank-shed and Bonfire gains happen with its daily loss, before choosing work. Update safety after health changes; apply daily happiness changes before birth and discovery checks.</Text>
+        <Text>Higher always means better. Sum all of a day’s warmth changes, then keep the value within 0–100, before choosing work. Keep every other 0–100 value within range after each change. Update safety after health changes; apply daily happiness changes before birth and discovery checks.</Text>
         <Table columns={["Life rule", "Starting design"]} align={["start", "start"]} rows={[
           ["Identity", "A short name and permanent number, age in game days, current activity, and an illness-days counter. No skills, sex, relationships or hereditary traits."],
           ["Starting ages", "The 6 adults begin at ages 40, 50, 60, 70, 80 and 90 days. Age is deliberately compressed, not a realistic human calendar."],
           ["Child", "Age 0–19 days. Forages fewer provisions and gathers less firewood, but eats 1 provision/day like everyone else. Cannot count toward births or discoveries."],
-          ["Adult and elder", "Adult at 20 days. Elder at 240 days; same work and needs in v0.1 to avoid another system. Dies on reaching 300 days."],
+          ["Adult and elder", "Adult at 20 days. Elder at 240 days; same work and needs in v0.1. Dies on reaching 300 days."],
           ["Birth eligibility", "After deaths, require population below 8, provisions at least twice the population plus 4, no living Gourdling ill, and at least 2 adults aged 20–239 with health ≥70, fullness ≥60, warmth ≥50 and happiness ≥50."],
-          ["Birth timer", "Add 1 to a Homestead-wide counter on each eligible day; reset to 0 on any ineligible day. At 15, add one child and reset the counter. This abstracts family life; no pairing or pregnancy simulation."],
+          ["Birth timer", "Add 1 to a Homestead-wide counter on each eligible day; reset to 0 on any ineligible day. At 5, add one child and reset the counter. This abstracts family life; no pairing or pregnancy simulation."],
           ["Newborn", "Age 0, health 100, fullness 80, warmth 60, happiness 60. No birth resource cost beyond the reserve requirement. The child consumes and works from the following day."],
-          ["Death", "At day end remove anyone with health 0 or age 300. Keep a brief cause in the log; record multiple causes if applicable. No bodies, burial or resource refund." ]
+          ["Death", "At day end remove anyone with health 0 or age 300. Death is permanent; there is no revive command. Keep a brief cause in the log. No bodies, burial or resource refund." ]
         ]} />
         <Text>Meal rule: nobody eats more than once per day, and nobody eats automatically above 75 fullness. When provisions run out, skip the meal without allowing stocks to become negative. Newborns receive the same Plank-shed access as everyone else; the Homestead already has space for 8.</Text>
       </Section>
 
       <Section heading="4. Homestead resources and work" id="resources">
         <Table columns={["Resource", "Supply and use", "Limit"]} align={["start", "start", "start"]} rows={[
-          ["Provisions", "Shared wild food. One meal costs 1. Adult foraging yields 3 normally, 4 in rain, 1 in drought; child yields 1 normally, 2 in rain, 0 in drought.", "0–100; starting 18."],
+          ["Provisions", "Shared wild food. One meal costs 1. Adult foraging yields 3 in fair weather or a cold snap, 4 in rain, 1 in a dry spell; child yields 1, 2 and 0 respectively.", "0–100; starting 18."],
           ["Firewood", "Adult gathering yields 2; child yields 1. Teaching/discovering the Bonfire uses 2 once; a known Bonfire uses 1 each day it burns.", "0–100; starting 12."],
           ["Plank shed", "One already-built shared Plank shed with 8 places. No maintenance or construction in this build.", "8 places; no item stock."],
           ["Wonder", "Player-only command budget. Start 50; gain 3 each day, plus 2 more if living Gourdlings’ average happiness is at least 60.", "0–100; no faith system yet." ]
         ]} />
-        <Text>Provision and firewood spots are fixed and unlimited in v0.1. They represent nearby land, not farms or tree-by-tree resources. There is no thirst, water stock, tool stock, walking-time cost or carrying inventory. Show a Gourdling near the relevant spot for their daily action; travel is decorative.</Text>
+        <Text>Provision and firewood spots are fixed and unlimited in v0.1. There is no thirst, water stock, tool stock, walking-time cost or carrying inventory. Show a Gourdling near the relevant spot for their daily action; travel is decorative.</Text>
         <Steps steps={[
-          { title: "Emergency provisions", detail: "If this Gourdling’s fullness is below 40 and Homestead provisions are below 1, forage. In drought a child may bring back 0; show that outcome honestly." },
+          { title: "Emergency provisions", detail: "If this Gourdling’s fullness is below 40 and Homestead provisions are below 1, forage. In a dry spell a child may bring back 0; show that outcome honestly." },
           { title: "Warm up", detail: "Otherwise, if warmth is below 40, warm up at the Plank shed for +20 warmth, or +40 when the Bonfire is lit. This spends the daily action, not extra firewood." },
           { title: "Build the provision reserve", detail: "Otherwise, if provisions are below 4 times the living population, forage. Count all ages in the population." },
           { title: "Build the fuel reserve", detail: "Otherwise, if firewood is below 6, gather firewood." },
           { title: "Rest", detail: "Otherwise, rest for +5 happiness. Rest does not increase health directly; normal daily recovery still applies." }
         ]} />
-        <Text>Stop at the first matching action. Add gathered supplies immediately, up to the storage limit; discard excess and show the actual amount gained. All Gourdlings use the same decision list. Initial provisions are below the target on purpose, so gathering is visible on the first day.</Text>
+        <Text>Stop at the first matching action. Add gathered supplies immediately, up to the storage limit; discard excess and show the actual amount gained. All Gourdlings use the same decision list.</Text>
       </Section>
 
       <Section heading="5. Ages and discoveries" id="ages">
         <Table columns={["Stage", "Condition", "Result"]} align={["start", "start", "start"]} rows={[
-          ["First Age · v0.1", "Starting age. Gathering, shared Plank shed, births, ageing and six god commands.", "The only playable age in the first build."],
-          ["Discover the Bonfire · v0.1", "From day 10 onward: at least 2 adults, average Homestead happiness ≥50, no illness and firewood ≥3 for 3 consecutive day-end checks. Reset the counter whenever a condition fails.", "Bonfire knowledge becomes permanent; spend 2 firewood once. Its first naturally discovered Bonfire burns on the next day’s fuel check. `teach spark` (alias `teach fire`) can skip this wait."],
+          ["First Age · v0.1", "Starting age. Gathering, shared Plank shed, births, ageing, natural weather and illness, and six god commands.", "The only playable age in the first build."],
+          ["Discover the Bonfire · v0.1", "From day 20 onward: at least 2 adults, average Homestead happiness ≥50, no illness and firewood ≥3 for 3 consecutive day-end checks. Reset the counter whenever a condition fails.", "Bonfire knowledge becomes permanent; spend 2 firewood once. It first burns on the next day’s fuel check. `teach spark` (alias `teach fire`) can skip this wait."],
           ["First Age → Barn Age · v0.3 confirmed", "Bonfire known; population ≥8; provisions ≥16; and a Tinker shed produces the first bronze work tool using 2 copper stones, 1 tin stone and 2 firewood. Check together after production.", "Enter the Barn Age permanently. Unlock a small metalworking task and improved gathering. Metal-stone, Tinker-shed and tool rules must be specified before building this version."],
           ["Barn Age → House Age · proposed v0.4", "Barn Age reached; population ≥10; provisions ≥20; and a Forge stove produces the first iron work tool using 3 iron stones and 3 firewood. Check together after production.", "Enter the House Age permanently. Add one production improvement rather than a large technology tree. Forge-stove rules are a later design task."],
           ["House Age → later era · beyond roadmap", "Provisional gate: population ≥12, provisions ≥24, iron work tools available, and average happiness ≥60 for 20 consecutive days; reset the day counter on failure.", "A later-era milestone only until its content is designed. No later-era implementation promised." ]
         ]} />
-        <Text>The Barn Age’s key discovery is Tinkering: learning to turn copper stones and tin stones into a useful work tool with firewood in the Tinker shed. This is the world’s flavour name for the existing bronze-making knowledge, not a different material, extra research step, new timer or additional age gate. The recipe stays exactly 2 copper stones, 1 tin stone and 2 firewood for the first bronze work tool. Teaching Tinkering gives knowledge only; it does not supply ingredients, produce a free tool or bypass the production condition.</Text>
-        <Text>Later thresholds are a direction for future design, not complete production rules or historical claims. v0.2 proposes raising housing and the population limit to 12 so later conditions become reachable. Ages never go backward, and a player command must not be the only path to progress.</Text>
-        <Text>v0.1 ends its technology work at the Bonfire. Keep the age label at First Age, show the Bonfire-discovery milestone, and do not display a Barn Age progress bar for systems that do not exist yet. These remain the original Stone-only v0.1 and fire milestone; confirming Bronze in v0.3 does not approve extra first-build content.</Text>
+        <Text>The Barn Age’s key discovery is Tinkering: turning copper stones and tin stones into a useful work tool with firewood in the Tinker shed. This is the flavour name for the existing bronze-making knowledge, not an extra research step or age gate. Teaching Tinkering gives knowledge only; it does not supply ingredients, produce a free tool or bypass the production condition.</Text>
+        <Text>Help and progress: in v0.1, god help speeds up only the Bonfire milestone (teach spark, or a healthier, happier Homestead meeting the natural condition). Faster age progress from player help applies from v0.3 onward, when the Barn Age gate exists; a larger, better-fed population reaches its population and provisions thresholds sooner. Ages never go backward, and a player command must never be the only path to progress.</Text>
+        <Text>v0.1 ends its technology work at the Bonfire. Keep the age label at First Age, show the Bonfire-discovery milestone, and do not display a Barn Age progress bar. v0.2 proposes raising housing and the population limit to 12 so later conditions become reachable.</Text>
       </Section>
 
       <Section heading="6. God commands, aliases and help" id="commands">
-        <Text>Commands affect the whole Homestead; there is no target selection. The parser—the command reader—first removes leading/trailing spaces, reduces repeated spaces to one and ignores letter case. Then it accepts either a final name or its listed plain alias as an exact match. For example, `CLOUD   WRANGLE` and `rain` both select the same rain command after normalisation. This is a fixed command reader, not a conversation.</Text>
-        <Text>Resolve the wording to one underlying command before checking its cost, cooldown or other restrictions. Casting either wording starts the same cooldown for both and applies the existing effect exactly once, with one charge. Both also share the once-per-run limit where applicable. No alias creates a second command, extra queue slot, separate effect or separate cooldown. Only the final names and listed aliases are accepted; earlier review names are not additional aliases.</Text>
-        <Text>The in-game help list shows the final name followed by the plain alias in parentheses. The exception is teach tinkering: show only that name, never its hidden alias teach bronze. Parentheses are help formatting, not typed command syntax. Unknown input changes nothing and shows the six available v0.1 entries below. Later candidates join help only when their existing planned versions ship; they are not callable in v0.1.</Text>
+        <Text>Commands affect the whole Homestead; there is no target selection. The parser—the command reader—first removes leading/trailing spaces, reduces repeated spaces to one and ignores letter case. Then it accepts either a final name or its listed plain alias as an exact match. For example, `CLOUD   WRANGLE` and `rain` both select the same rain command. This is a fixed command reader, not a conversation.</Text>
+        <Text>Resolve the wording to one underlying command before checking its cost, cooldown or other restrictions. Casting either wording starts the same cooldown for both and applies the effect exactly once, with one charge. No alias creates a second command, extra queue slot, separate effect or separate cooldown.</Text>
+        <Text>The in-game help list shows the final name followed by the plain alias in parentheses. The exception is teach tinkering: show only that name, never its hidden alias teach bronze. Parentheses are help formatting, not typed command syntax. Unknown input changes nothing and shows the six v0.1 entries below. Commands are not accepted after a wipeout.</Text>
         <Table columns={["v0.1 help entry", "Help text"]} align={["start", "start"]} rows={[
-          ["`cloud wrangle (rain)`", "Call 3 days of rain: more gathered provisions, but extra cold."],
-          ["`dry spell (drought)`", "Call 3 days of drought: fewer gathered provisions."],
-          ["`hoedown (bless)`", "Give everyone +15 health and +15 happiness. Does not cure illness."],
-          ["`sick hex (plague)`", "Make everyone ill for 3 days. Illness causes health and happiness loss and can kill Gourdlings."],
+          ["`cloud wrangle (rain)`", "Call 3 days of rain: more gathered provisions, a little extra cold. Replaces a dry spell or cold snap."],
+          ["`dry spell (drought)`", "Call 3 days of drought: far fewer gathered provisions. Replaces rain or a cold snap."],
+          ["`hoedown (bless)`", "Give everyone +25 health and +15 happiness. Does not cure illness."],
+          ["`sick hex (plague)`", "Make everyone ill for 3 days: −20 health and −5 happiness each day. This can kill Gourdlings, and deaths are permanent."],
           ["`teach spark (teach fire)`", "Teach permanent Bonfire knowledge; firewood is still required to learn and burn."],
           ["`feast drop (harvest)`", "Add 12 provisions, up to capacity. Gourdlings still eat at the normal meal step."]
         ]} />
         <Table columns={["Command", "Rule effect", "Visible reaction"]} align={["start", "start", "start"]} rows={[
-          ["`cloud wrangle`", "Set rain for 3 days, including the day it applies. Use rain’s foraging yields and extra warmth loss. Replaces drought; does not stack.", "Rain over the Homestead; foragers show gathering in rain, and cold Gourdlings seek the Plank shed."],
-          ["`dry spell`", "Set drought for 3 days, including today. Use drought’s foraging yields. No extra warmth effect. Replaces rain; does not stack.", "Dry ground cue; the log explains smaller provision gains. Gourdlings follow normal survival priorities."],
-          ["`hoedown`", "Immediately add 15 health and 15 happiness to every living Gourdling, within their limits. Does not remove illness.", "Brief grateful reaction; show actual health and happiness changes. No new dance or music simulation."],
-          ["`sick hex`", "Give each currently living Gourdling 3 illness days, including today. Each illness day costs 8 health and 5 happiness; no natural health recovery while ill. No spreading or random infections.", "Sick label and a simple unwell reaction. Gourdlings still work; weakened Gourdlings may die."],
-          ["`teach spark`", "If Bonfire knowledge is unknown and firewood ≥3, permanently unlock it and spend 2 firewood. Today’s fuel check then spends 1 more firewood to light it. Natural discovery is no longer needed.", "Gourdlings gather briefly around the Bonfire; warming becomes more effective. Logs distinguish knowledge from an unlit Bonfire."],
-          ["`feast drop`", "Immediately add 12 provisions, up to capacity. This is a direct gift of wild food, not farming; normal meals still happen later today.", "Provisions appear at the Pantry; Gourdlings eat at the normal meal step." ]
+          ["`cloud wrangle`", "Set rain for 3 days, including the day it applies. Use rain’s foraging yields and extra warmth loss. Replaces natural or command weather; does not stack.", "Rain over the Homestead; foragers gather in rain, and cold Gourdlings seek the Plank shed."],
+          ["`dry spell`", "Set drought for 3 days, including today. Use dry-spell foraging yields. No extra warmth effect. Replaces natural or command weather; does not stack.", "Dry ground cue; the log explains smaller provision gains."],
+          ["`hoedown`", "Immediately add 25 health and 15 happiness to every living Gourdling, within their limits. Does not remove illness.", "Brief grateful reaction; show actual health and happiness changes. No new dance or music simulation."],
+          ["`sick hex`", "Give each currently living Gourdling 3 illness days, including today. Each illness day costs 20 health and 5 happiness; no natural health recovery while ill. No spreading.", "Sick label and a simple unwell reaction. Gourdlings still work; weakened Gourdlings may die."],
+          ["`teach spark`", "If Bonfire knowledge is unknown and firewood ≥3, permanently unlock it and spend 2 firewood. Today’s fuel check then spends 1 more firewood to light it.", "Gourdlings gather briefly around the Bonfire; warming becomes more effective."],
+          ["`feast drop`", "Immediately add 12 provisions, up to capacity. A direct gift of wild food, not farming; normal meals still happen later today.", "Provisions appear at the Pantry; Gourdlings eat at the normal meal step." ]
         ]} />
         <Table columns={["Command", "Wonder", "Shared cooldown", "Ships"]} align={["start", "end", "start", "start"]} rows={[
           ["`cloud wrangle` / `rain`", "10", "4 days", "v0.1"],
@@ -175,45 +197,72 @@ export default function App() {
           ["`teach spark` / `teach fire`", "25", "Once per run", "v0.1"],
           ["`feast drop` / `harvest`", "20", "5 days", "v0.1"]
         ]} />
-        <Text>A cooldown is the minimum wait before repeating that command. If accepted on day 4 with a 5-day cooldown, it is next allowed on day 9. Cooldowns are separate for each of the six underlying commands and do not advance while paused. For example, hoedown on day 4 also prevents bless until day 9; using the alias cannot bypass the wait.</Text>
+        <Text>A cooldown is the minimum wait before repeating that command. If accepted on day 4 with a 5-day cooldown, it is next allowed on day 9. Cooldowns are separate for each of the six underlying commands and do not advance while paused. Costs, cooldowns and wonder income are unchanged by the survival rebalance.</Text>
         <NumberedList items={[
           "While paused or between days, keep at most one queued command. Let the player cancel or replace it before the next update. Queuing never spends wonder; the day-start check does.",
           "Reject with no cost and no cooldown if wonder is insufficient, its cooldown is active, or the Homestead has ended. Check again at application time, not just when typed.",
-          "Also reject cloud wrangle during rain, dry spell during drought, sick hex while any Gourdling is already ill, feast drop at full provisions, teach spark when known or firewood is below 3, and hoedown if everybody already has both full health and full happiness. Each plain alias follows exactly the same rejection rules.",
-          "A successful opposite weather command replaces the old weather immediately and starts a fresh 3-day timer. Other effects keep running. Hoedown adds values but is not a cure; an already-ill Gourdling still takes that day’s illness damage.",
+          "Also reject cloud wrangle when today is already rain, dry spell when today is already a dry spell (natural or commanded), sick hex while any Gourdling is already ill, feast drop at full provisions, teach spark when known or firewood is below 3, and hoedown if everybody already has full health and full happiness. Each plain alias follows the same rules.",
+          "A successful weather command replaces today’s weather immediately and starts a fresh 3-day timer. Other effects keep running. Hoedown adds values but is not a cure; an ill Gourdling still takes that day’s illness damage.",
           "A 3-day effect applies on its casting day and the next 2 days; reduce its remaining-days counter after each affected day. Display any failure reason and the next allowed day. Invalid commands never silently do nothing."
         ]} />
         <Table columns={["Later help entry", "Help text / possible effect", "Earliest version"]} align={["start", "start", "start"]} rows={[
           ["`shake off (heal)`", "Clear illness from everyone; keep distinct from hoedown. Cost and cooldown need a later balance pass.", "v0.2 candidate"],
           ["`teach sowing (teach farming)`", "Give an early route to the same farming knowledge the Homestead can discover itself.", "v0.2 candidate"],
-          ["`teach tinkering`", "Teach the Barn Age’s Tinkering knowledge only. Copper and tin stones, firewood and the Tinker shed are still required; no free tool or production-gate bypass.", "v0.3 candidate"],
+          ["`teach tinkering`", "Teach the Barn Age’s Tinkering knowledge only. Copper and tin stones, firewood and the Tinker shed are still required.", "v0.3 candidate"],
           ["`sky stomp (storm)`", "A stronger weather disruption only if the simpler weather system proves fun.", "Beyond v0.3 candidate"]
         ]} />
-        <Text>Developer-only alias note: teach tinkering also accepts `teach bronze` after the same normalisation. That hidden alias selects exactly the same Tinkering action, effect, cost, cooldown and restrictions, but must not appear in player help or unknown-command suggestions. Do not use bronze or metal in this command’s visible name. This does not hide recipe materials or change what the work tool is made from.</Text>
-        <Text>Later commands are suggestions, not approved scope or implemented rules. Their final naming and alias policy are specified here without changing their versions or inventing costs and cooldowns. Favor adding one useful command at a time rather than expanding the vocabulary before the Homestead works.</Text>
+        <Text>Developer-only alias note: teach tinkering also accepts `teach bronze` after the same normalisation. That hidden alias selects exactly the same action, cost, cooldown and restrictions, but must not appear in player help or unknown-command suggestions. Later commands are suggestions, not approved scope.</Text>
       </Section>
 
-      <Section heading="7. Small-step roadmap and build checks" id="roadmap">
+      <Section heading="7. Balance evidence, roadmap and build checks" id="roadmap">
+        <Table columns={["Changed number", "Old", "New"]} align={["start", "end", "end"]} rows={[
+          ["Illness damage per ill day (sick hex and natural)", "8 health", "20 health"],
+          ["Hoedown health gain", "+15", "+25"],
+          ["Lit Bonfire warmth", "+5/day", "+10/day"],
+          ["Birth timer", "15 eligible days", "5 eligible days"],
+          ["Earliest natural Bonfire discovery", "Day 10", "Day 20"],
+          ["Natural weather", "Always fair", "31% fair · 30% rain · 25% dry spell · 14% cold snap"],
+          ["Cold-snap extra warmth loss", "—", "−40/day"],
+          ["Natural illness", "None", "13% per night, one Gourdling, 3 days"]
+        ]} />
+        <Text>Unchanged: every command cost and cooldown, wonder start and income, feast drop size, all needs and decay rates, gathering yields, starting state, 6 starting Gourdlings, cap 8, and the version plan.</Text>
+        <Table columns={["500 seeded runs · by day 60", "Untouched", "Helped", "Cruel"]} align={["start", "end", "end", "end"]} rows={[
+          ["Alive at day 60", "93.8%", "100%", "3.2%"],
+          ["Wiped out by day 30 / 60", "1.8% / 6.2%", "0% / 0%", "67.6% / 96.8%"],
+          ["Median wipeout day (wiped runs)", "41", "—", "25"],
+          ["Runs with a death by day 30 / 60", "55.6% / 74.4%", "2.8% / 5.6%", "96.6% / 100%"],
+          ["Average deaths by day 60", "1.69", "0.06", "5.94"],
+          ["Average population day 30 / 60", "5.50 / 6.23", "7.75 / 7.98", "1.21 / 0.06"],
+          ["Average births by day 60", "1.92", "2.03", "0.00"],
+          ["Reached cap 8 by day 60", "50.8% (median day 43)", "98.4% (median day 20)", "0%"],
+          ["Bonfire by day 60 · median day", "95.0% · day 22", "100% · day 1", "55.6% · day 22"],
+          ["Back to 90+ health within 10 days after an illness", "0%", "87.1% (median 7 days)", "0%"]
+        ]} />
+        <Text>Seeds 0–499, 60 days each. Untouched uses no commands. Helped casts at most one command a day in this order: hoedown if anyone is at 45 health or less; teach spark if unknown; feast drop if provisions are below 2 per Gourdling; cloud wrangle if today is a dry spell or cold snap; hoedown if anyone is at 75 or less. Cruel casts sick hex whenever allowed, otherwise dry spell. All strategies obey wonder, costs, cooldowns and rejection rules, and see only today’s state and weather.</Text>
+        <Text>Untouched recovery is slow because health only regains 4 a day: after a 3-day illness drops a Gourdling to 40, it needs about 13 healthy days to reach 90. Simulator: /workspace/sim/gourdling_survival.py (Python 3, no installs). Run `python3 gourdling_survival.py --self-test --check-targets` for the rule tests and targets; full per-run results are in /workspace/sim/gourdling_results_500.json.</Text>
         <Table columns={["Version", "Small deliverable", "Done when"]} align={["start", "start", "start"]} rows={[
-          ["v0.1 · living First Age Homestead", "The rules in this document: 6 starting Gourdlings, cap 8, shared provisions and firewood, Plank shed, Bonfire, births/age/death, six commands, basic readouts, log, pause, speed and restart.", "A new player can follow one day’s decisions and understand why supplies or health changed. Run the checks below before expanding."],
-          ["v0.2 · sustainable growth", "First add a local save/load and a simple housing upgrade to cap 12. Then add one small farming loop with an autonomous discovery gate. Consider shake off and teach sowing only after that loop works.", "Reload restores the same Homestead, and growth does not outrun provisions by accident. This version needs its own short rules update first."],
-          ["v0.3 · first Barn Age milestone", "Add copper stones, tin stones, one Tinker-shed task and the first bronze work tool; apply the starting age gate. Keep one Homestead and only one tool improvement.", "The community can reach the Barn Age without a god command; the benefit is visible."],
+          ["v0.1 · surviving First Age Homestead", "The rules in this document: 6 starting Gourdlings, cap 8, provisions and firewood, Plank shed, Bonfire, seeded weather and illness, births/age/permanent death, six commands, readouts, log, pause, speed, wipeout screen and restart.", "A new player can follow one day’s decisions and understand why supplies or health changed. All build checks below pass."],
+          ["v0.2 · sustainable growth", "First add a local save/load and a simple housing upgrade to cap 12. Then add one small farming loop with an autonomous discovery gate. Consider shake off and teach sowing only after that loop works.", "Reload restores the same Homestead, including its seed state. This version needs its own short rules update first."],
+          ["v0.3 · first Barn Age milestone", "Add copper stones, tin stones, one Tinker-shed task and the first bronze work tool; apply the starting age gate. From here, player help can also speed age progress.", "The community can reach the Barn Age without a god command; the benefit is visible."],
           ["v0.4 · optional House Age milestone", "Only after the Barn Age is enjoyable: iron stones, one Forge-stove task, one iron work tool and the starting House Age gate.", "A short extra step, not a new sprawling game. Reassess scope before starting."]
         ]} />
-        <Text>v0.1 has no saved game: show a plain notice before starting that closing or reloading resets the run. Restart returns every value, timer and discovery to day 0. Do not promise dates until the first Homestead has been tested.</Text>
+        <Text>v0.1 has no saved game: show a plain notice before starting that closing or reloading resets the run. Do not promise dates until the first Homestead has been tested.</Text>
         <Table columns={["Build check", "Expected result"]} align={["start", "start"]} rows={[
-          ["No-command run", "From the exact starting state, reach day 30 with at least 5 living Gourdlings and Bonfire knowledge discovered. This tests whether god intervention is truly optional."],
-          ["One normal day", "With provisions available, fullness 75 becomes 50 before the meal and 80 afterward. Provisions decrease by exactly 1 per eater; no stock goes below 0 or above 100."],
-          ["Three-day weather", "Cast cloud wrangle on day 2: its yield and cold effects apply on days 2, 3 and 4, then normal weather resumes on day 5 unless replaced."],
+          ["Untouched survival (seeds 0–199, 60 days)", "At least 88% alive at day 60; at most 10% wiped out; at least 65% lose a Gourdling; at least 85% discover the Bonfire, with median discovery on day 20 or later. Simulator values: 94.5%, 5.5%, 81.0%."],
+          ["Helped strategy (seeds 0–199)", "At least 95% alive at day 60; at least 90% reach cap 8; at most 20% of runs lose a Gourdling. Simulator values: 100%, 97.5%, 8.5%."],
+          ["Cruel strategy (seeds 0–199)", "At least 90% wiped out by day 60. Simulator value: 97.0%."],
+          ["Seed replay", "Running the same seed with the same commands on the same days twice gives identical day-by-day logs. Restart uses a different seed."],
+          ["One fair day", "With provisions available, fullness 75 becomes 50 before the meal and 80 afterward. Provisions decrease by exactly 1 per eater; no stock goes below 0 or above 100."],
+          ["Three-day weather", "Cast cloud wrangle on day 2 when a cold snap is forecast: days 2, 3 and 4 are rain regardless of rolls, then day 5 uses its natural roll."],
           ["Command validation", "An unknown phrase, early repeat or unaffordable command changes no state and explains why. A cooldown of 5 from day 4 allows day 9, not day 8."],
-          ["Bonfire in both routes", "Use teach spark with 3 firewood: spend 2 to learn and 1 to burn today. Natural discovery spends 2 at day end and first burns tomorrow. With no fuel, knowledge remains but warming uses the Plank-shed value."],
-          ["Illness and death", "With full provisions/warmth and no hoedown, sick hex causes 24 health damage over 3 days, not 3 days plus a fourth. Health reaching 0 removes the Gourdling once."],
-          ["Birth and population cap", "15 consecutive eligible day-end checks create exactly one child; one failed day resets the counter. Population never exceeds 8 in v0.1."],
-          ["Pause and reset", "Pausing freezes days, effects and cooldowns. Restart clears queued commands, counters, wonder changes and discoveries. Zero population ends the run cleanly."]
+          ["Bonfire in both routes", "Teach spark with 3 firewood: spend 2 to learn and 1 to burn today. With no illness, natural discovery happens no earlier than day 22 (day-20 start plus 3 checks), spends 2 and first burns the next day."],
+          ["Illness and death", "With full provisions/warmth and no hoedown, sick hex takes a 100-health Gourdling to 40 over 3 days. If everyone starts at 60, all die on day 3, the loop stops and the end screen appears."],
+          ["Birth and population cap", "5 consecutive eligible day-end checks create exactly one child; one failed day resets the counter. Population never exceeds 8 in v0.1."],
+          ["Wipeout and restart", "After the last death, no further days, rolls, commands or wonder gain. The end screen stats match the run log. Restart returns all values, timers, discoveries and cooldowns to day 0 with a new seed."],
+          ["Pause", "Pausing freezes days, weather, illness timers and cooldowns."]
         ]} />
-        <Text>These are the same build-check outcomes as before, with renamed terms. Names and aliases select the same underlying actions; changing the input wording must not change an outcome.</Text>
-        <Text>Developer handoff: normalise input, resolve the final name or alias to one command, then use its existing effect, cost, shared cooldown and restrictions. Help shows name (plain alias), except teach tinkering alone. Keep teach bronze accepted but hidden when that later candidate ships. This is a specification update, not a claim that the game code has already changed.</Text>
-        <Text>Artist handoff: draw Gourdlings in the Homestead, gathering spots for Provisions and Firewood, one shared Plank shed, the Bonfire and Pantry supply spot, plus readable rain, drought, illness, grateful and warming cues. Follow the locked style guide and sign-plank command UI; instruments remain cosmetic. Tinker shed, copper/tin stones and bronze work tool belong to v0.3; Forge stove, iron stones and iron work tool are later. Keep the Gourdling body unchanged across ages. The developer builds daily rules before polish, and the project manager keeps later-version ideas out of the first-build task list.</Text>
+        <Text>Developer handoff: add a seeded generator with exactly three rolls per night (weather, illness, illness target); weather commands override rolls but do not skip them. Apply the changed numbers above. Stop the loop on wipeout and show the end screen; Restart picks a new seed. Command parsing, aliases, help format, costs and shared cooldowns are unchanged. Port the sim’s rules, not its code; the seeded build checks must match within the stated thresholds.</Text>
+        <Text>Artist handoff: draw Gourdlings in the Homestead, Provisions and Firewood gathering spots, one Plank shed, the Bonfire and Pantry, and readable fair, rain, dry-spell, cold-snap, illness, grateful and warming cues. New: the cold-snap cue, a tomorrow’s-weather tag, and The Homestead Falls Quiet end-screen sign plank. Follow the locked style guide; Tinker shed and related props belong to v0.3.</Text>
       </Section>
 
       <Section heading="8. Out of scope" id="scope">
@@ -221,20 +270,21 @@ export default function App() {
           "No real AI, language models, free conversation or interpretation of arbitrary player wishes.",
           "No multiple Homesteads, large generated worlds, borders, war, trade, diplomacy or multiplayer.",
           "No individual inventories, job assignment menus, complex travel, building placement or detailed crafting in v0.1.",
-          "No relationship simulation, genetics, realistic pregnancy, contagious disease model or elaborate death scenes.",
+          "No relationship simulation, genetics, realistic pregnancy, contagious disease spread, revival or elaborate death scenes.",
           "No seasons, water economy, farming, metal resources or playable Barn Age/House Age content in v0.1.",
-          "No final engine choice, paid assets, monetization, cloud saves or elaborate story yet. The browser target and visual style are now confirmed, not additional game systems."
+          "No random gathering yields, random events beyond weather and single-Gourdling illness, or difficulty settings in v0.1.",
+          "No final engine choice, paid assets, monetization, cloud saves or elaborate story yet."
         ]} />
-        <Text>The initial tone is a neutral observation toy: consequences are clear, deaths are brief and non-graphic, and there is no moral score. Rain helps food but chills villagers; harmful commands exist for experimentation, not as required play.</Text>
-        <Text>The tone statement above is retained verbatim; its “food” and “villagers” mean provisions and Gourdlings here. Visual barn-dance flavour does not settle the tone or difficulty questions below.</Text>
       </Section>
 
-      <Section heading="9. Questions for Martynas" id="questions">
-        <NumberedList items={[
-          { text: "Should this feel mostly cozy, unsettling, or somewhere between?", items: ["In particular, do you want plague and permanent death in the very first playable build, or should those wait?"] },
-          { text: "Do you prefer a calm living toy or a survival challenge that needs frequent intervention?", items: ["This draft starts with optional god commands and a 15-minute, 30-day observation goal; your answer determines how harsh the numbers should become."] }
+      <Section heading="9. Decisions and open questions" id="questions">
+        <Table columns={["Question", "Decision"]} align={["start", "start"]} rows={[
+          ["Tone: cosy, unsettling or between?", "Decided: cosy barn-dance look with real stakes. Permanent death and a lethal sick hex ship in v0.1; deaths are shown plainly, never graphically."],
+          ["Calm living toy or survival challenge?", "Decided: survival challenge that the Homestead can survive without god commands. Untouched it struggles; helped it flourishes; cruelty or rare bad luck can wipe it out."],
+          ["Platform", "Decided: browser."],
+          ["Command aliases", "Decided: plain aliases accepted and shown; teach bronze hidden."]
         ]} />
-        <Text>The two gameplay questions are unchanged. Browser is final, so the browser-versus-desktop question is removed. Engine selection remains open. The PM has resolved command aliases as specified above; this naming integration does not change tone or difficulty or resolve the existing plague/death question.</Text>
+        <Text>Still open: the game engine. Balance numbers remain starting values; re-run the simulator after any change to them.</Text>
       </Section>
     </Page>
   );

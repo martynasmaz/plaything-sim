@@ -57,13 +57,13 @@ export function makeVillageScene(getState, onSelect) {
         if(!this.image(key,x,y))THEME.fallbacks[key](this.land);
       }
       this.cues=this.add.graphics();
-      for(const key of ['rain','drought']) {
+      for(const key of ['rain','drought','cold']) {
         const image=this.image(key,0,0);if(image)this.optionalImages.set(key,image.setVisible(false));
       }
       for(const key of ['campfire_lit','campfire_out']) {
         const image=this.image(key,...L.props[key]);if(image)this.optionalImages.set(key,image.setVisible(false));
       }
-      for(const key of ['rain_cue','drought_cue']) {
+      for(const key of ['rain_cue','drought_cue','cold_cue']) {
         const image=this.image(key,L.weatherCue.x,L.weatherCue.y);if(image)this.optionalImages.set(key,image.setVisible(false));
       }
       this.weatherLabel=this.text('scene.normal',L.labels.weather,{},L.text.weather);

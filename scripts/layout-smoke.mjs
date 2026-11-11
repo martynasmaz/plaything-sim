@@ -36,7 +36,7 @@ try{
     const page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
     page.setDefaultTimeout(20000);
-    await page.goto(pathToFileURL(result.output).href);
+    await page.goto(pathToFileURL(result.output).href+"?seed=9");
     await page.waitForSelector('#village[data-ready="true"]');
     const boxes=async day=>{
       await page.waitForFunction(d=>{const e=document.querySelector('#village');return e.dataset.simDay===String(d)&&e.dataset.walking==='false'&&e.dataset.layoutBoxes;},day);

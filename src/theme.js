@@ -757,16 +757,16 @@ export const THEME = {
       villageStatus:'Homestead status',playback:'Playback speed',world:'The barn clearing',
       villageAria:'A little Homestead. Select a creature or its name below to inspect it.',
       pause:'Pause',normal:'1×',fast:'3×',nextDay:'Next day →',restart:'Restart',
-      endTitle:'The Homestead has ended',endBody:'Every little world has a story. Start another?',restartVillage:'Restart Homestead',
+      endTitle:'The Homestead Falls Quiet',endBody:'The last Gourdling is gone. The Homestead lasted {days} days.',restartVillage:'Restart',
       commandTitle:'A word from above',oneCommand:'One command per day',commandInput:'God command',prompt:'>',
       placeholder:'Type a listed command, then press Enter',queue:'Queue',cancel:'Cancel',
       feedback:'Queuing is free. Wonder is spent only when the next day starts.',
       lives:'Little lives',journal:'Homestead journal',latest:'Latest {count}',
-      goal:'Goal: reach day {day} with {population}+ Gourdlings and {fire}.',footer:'A gourd-shaped world, living on its own.'},
+      goal:'Left alone, the Homestead can survive, but it struggles. Your help can make it flourish.',footer:'A gourd-shaped world, living on its own.'},
     labels:{ages:{Stone:'First Age'},resources:{population:'Gourdlings',food:'Provisions',wood:'Firewood',power:'Wonder',shelter:'Plank shed',fire:'Bonfire'},
       needs:{fullness:'Fullness',warmth:'Warmth',health:'Health',safety:'Safety',happiness:'Happiness'},
       units:{food:'provisions',wood:'firewood',warmth:'warmth',happiness:'happiness'},
-      life:{child:'Child',adult:'Adult',elder:'Elder'},weather:{normal:'normal',rain:'rain',drought:'drought'},
+      life:{child:'Child',adult:'Adult',elder:'Elder'},weather:{normal:'fair',rain:'rain',drought:'dry spell',cold:'cold snap'},
       activities:{Waiting:'Waiting',Forage:'Forage','Gather wood':'Gather firewood','Warm up':'Warm up',Rest:'Rest',Newborn:'Newborn'},
       reactions:{Sick:'Sick',Grateful:'Grateful','Learned fire':'Learned Bonfire'},
       conditions:{sick:'sick',unwell:'unwell',unhappy:'unhappy',uneasy:'uneasy'},
@@ -777,7 +777,8 @@ export const THEME = {
       separators:{list:', ',detail:'; ',cause:' and ',status:' · '},powerGlyph:'⚡',
       nameFallback:'Gourdling {id}',newbornName:'Neri {id}'},
     hud:{day:'Day {day}',logDay:'DAY {day}',paused:'Paused · time is still',ended:'Homestead ended',speed:'{speed}× · {seconds}s per day',
-      cap:'/ {max}',population:'{count} Gourdlings',weather:'Today: {today} · Next: {next}{remaining}',remaining:' ({days} days left)',
+      cap:'/ {max}',population:'{count} Gourdlings',weather:'Today: {today}{remaining}',remaining:' ({days} more days)',tomorrow:'Tomorrow',tomorrowWeather:'Tomorrow: {weather}',
+      endStats:{days:'Days lasted',peak:'Peak population',births:'Births',deaths:'Deaths',fire:'Bonfire discovered',fireYes:'yes, on day {day}',fireNo:'no',seed:'Run seed {seed}'},
       fireKnown:'{fire} known · {state}',burning:'burning today',unlit:'unlit today',
       fireUnknown:'{fire} unknown · discovery {counter}/{required} (from day {day})',
       person:'#{id} · {stage} · {age} days old',gain:' · +{amount} {unit}',
@@ -788,15 +789,15 @@ export const THEME = {
       milestone:'Milestone reached: through day {day}, with {population}+ lives and the knowledge of {fire}. Life goes on.',
       stopped:'Time has stopped.',nextIn:'Next day in {seconds}s',pausedNext:'Paused · next day in {seconds}s at 1×'},
     scene:{shelter:'PLANK SHED',shelterPlaces:'{places} places · always open',pantry:'PANTRY',food:'WILD PROVISIONS',wood:'FIREWOOD GROVE',rest:'RESTING PLACE',
-      hint:'SELECT A LITTLE LIFE TO SEE ITS NEEDS',rain:'RAIN · GOOD FOR PROVISIONS, COLD FOR LITTLE LIVES',drought:'DROUGHT · A SMALLER GATHERING',normal:'A QUIET DAY IN THE CLEARING',
+      hint:'SELECT A LITTLE LIFE TO SEE ITS NEEDS',rain:'RAIN · GOOD FOR PROVISIONS, COLD FOR LITTLE LIVES',drought:'DRY SPELL · A SMALLER GATHERING',cold:'COLD SNAP · BITTER COLD, STAY WARM',normal:'A FAIR DAY IN THE CLEARING',
       fireUnknown:'BONFIRE · NOT YET KNOWN',fireLit:'BONFIRE · BURNING TODAY',fireOut:'BONFIRE KNOWN · UNLIT TODAY'},
-    help:{rain:'Call {duration} days of rain: more gathered provisions, but extra cold.',
-      drought:'Call {duration} days of drought: fewer gathered provisions.',
+    help:{rain:'Call {duration} days of rain: more gathered provisions, a little extra cold. Replaces a dry spell or cold snap.',
+      drought:'Call {duration} days of drought: far fewer gathered provisions. Replaces rain or a cold snap.',
       bless:'Give everyone +{health} health and +{happiness} happiness. Does not cure illness.',
-      plague:'Make everyone ill for {duration} days. Illness causes health and happiness loss and can kill Gourdlings.',
+      plague:'Make everyone ill for {duration} days: −{damage} health and −{mood} happiness each day. This can kill Gourdlings, and deaths are permanent.',
       'teach fire':'Teach permanent Bonfire knowledge; firewood is still required to learn and burn.',
       harvest:'Add {food} provisions, up to capacity. Gourdlings still eat at the normal meal step.'},
-    errors:{unknown:'Unknown/unavailable command. Use: {commands}.',ended:'The Homestead has ended. Restart to begin again.',
+    errors:{unknown:'Unknown/unavailable command. Use: {commands}.',ended:'The Homestead has fallen quiet. Commands are no longer accepted; Restart to begin again.',
       condition:'{reason} Earliest by cooldown: day {day}; the condition must also be met.',
       once:'Teach spark is once per run; Bonfire is already known.',cooldown:'{command} is cooling down. Next allowed: day {allowed} (not day {day}).',
       power:'Not enough wonder: {command} needs {cost}; you have {power}. Next allowed by cooldown: day {day}; wonder is also required.',
@@ -807,11 +808,11 @@ export const THEME = {
       speed:'Speed must be 0 (pause), 1 or 3.',time:'Time must be a finite nonnegative number.'},
     feedback:{canApply:'{command} can apply on day {day}.',queued:'Queued {command} for day {day}. No wonder spent yet.',
       canceled:'Command canceled. No wonder spent.',reset:'A fresh Homestead. Paused at day 0; no saved game.',applied:'{command} applied on day {day}. See the journal for its effect.'},
-    log:{start:'Six Gourdlings begin a First Age Homestead. Paused. No saved game.',rejected:'Command rejected: {reason}',
+    log:{start:'Six Gourdlings begin a First Age Homestead (seed {seed}). Paused. No saved game.',naturalIllness:'{name} fell ill for {days} days.',rejected:'Command rejected: {reason}',
       weather:'{command} for {duration} days including today; replaces previous weather. {effect}',rain:'More provisions, extra cold.',drought:'Lower foraging yields.',
       plague:'Everyone is ill for {duration} days including today.',blessPerson:'{name} +{health} health/+{happiness} happiness',blessEnd:'. Illness is not cured.',
       harvest:'Gift: +{food} provisions (meals still happen after work).',teach:'Bonfire knowledge learned; {wood} firewood spent. Today\'s fuel check is next.',
-      command:'{command} (−{cost} wonder). {details}',death:'{name} (#{id}) died: {causes}.',ended:'The Homestead has ended. Restart to begin a new Homestead.',
+      command:'{command} (−{cost} wonder). {details}',death:'{name} (#{id}) died: {causes}.',ended:'The last Gourdling is gone. The Homestead falls quiet.',
       birth:'{name} was born. First work and meal tomorrow.',discovery:'The Homestead discovered the Bonfire! Spent {wood} firewood; first Bonfire fuel check is tomorrow.',
       fireLit:'Bonfire burned {wood} firewood.',fireOut:'Bonfire known, but unlit today.',fireUnknown:'Bonfire unknown.',
       day:'Work: +{food} provisions, +{wood} firewood. {meals} meals. {fire} Wonder +{power} (cap {cap}).',
@@ -908,6 +909,7 @@ THEME.fallbacks = {
     fenceBar(g,x+s*(-20)-(flip?7:0),y-17,7,41);
   },
   rain_cue(g,x,y) {g.lineStyle(2,themeColor('ink')).fillStyle(themeColor('cream')).fillEllipse(x,y,26,16).strokeEllipse(x,y,26,16).lineBetween(x-6,y+12,x-9,y+18).lineBetween(x+6,y+12,x+3,y+18);},
+  cold_cue(g,x,y) {g.lineStyle(2,themeColor('ink'));for(let i=0;i<3;i++){const a=i*Math.PI/3;g.lineBetween(x-Math.cos(a)*10,y-Math.sin(a)*10,x+Math.cos(a)*10,y+Math.sin(a)*10);}},
   drought_cue(g,x,y) {g.lineStyle(2,themeColor('ink')).fillStyle(themeColor('mustard')).fillCircle(x,y,10).strokeCircle(x,y,10);},
   food_spot(g) {
     const c=themeColor;at(g,'food_spot');
@@ -954,6 +956,10 @@ THEME.fallbacks = {
   rain(g) {
     const c=themeColor;g.lineStyle(1,c('cream'),.6);
     for(let i=0;i<60;i++){const x=(i*139)%900,y=(i*79)%470;g.lineBetween(x,y,x-4,y+13);}
+  },
+  cold(g) {
+    const c=themeColor;g.fillStyle(c('cream'),.75);
+    for(let i=0;i<70;i++){const x=(i*127)%900,y=(i*61)%470;g.fillCircle(x,y,2);}
   },
   drought(g) {
     const c=themeColor;g.fillStyle(c('mustard')).fillCircle(825,40,16);g.lineStyle(2,c('ink')).strokeCircle(825,40,16);
@@ -1310,6 +1316,33 @@ h2{
   font-size:13px}
 .end-panel h2{
   font:25px var(--heading-font)}
+.end-stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:8px;
+  margin:10px 0}
+.end-stats div{
+  border-top:1px solid var(--ink);
+  padding-top:4px}
+.end-stats dt{
+  font-size:11px;
+  letter-spacing:.06em;
+  text-transform:uppercase}
+.end-stats dd{
+  margin:0;
+  font:20px var(--heading-font)}
+.end-seed{
+  display:block;
+  margin-top:8px;
+  font-size:10px;
+  opacity:.75}
+.weather-line{
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap}
+.forecast{
+  font-weight:bold}
 .end-panel p{
   font-size:12px;
   color:var(--muted)}

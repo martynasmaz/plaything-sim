@@ -6,9 +6,10 @@
     "offline": false,
     "consoleErrors": [],
     "externalRequests": [],
-    "requests": 53,
-    "day30Population": 8,
-    "day30Food": 21,
+    "requests": 106,
+    "seed": 9,
+    "wipeoutSeed": 39,
+    "wipeoutDay": 11,
     "checks": [
       "load/render",
       "unknown phrase",
@@ -17,8 +18,10 @@
       "rain and days",
       "villager details and clickable circles",
       "speed controls",
-      "restart",
-      "30-day milestone",
+      "restart with new seed",
+      "30 days identical to the pure sim",
+      "forecast (natural and command)",
+      "wipeout end screen and restart",
       "mobile layout",
       "approved flavour names and fatal-illness help"
     ]
@@ -30,9 +33,10 @@
     "offline": true,
     "consoleErrors": [],
     "externalRequests": [],
-    "requests": 1,
-    "day30Population": 8,
-    "day30Food": 21,
+    "requests": 2,
+    "seed": 9,
+    "wipeoutSeed": 39,
+    "wipeoutDay": 11,
     "checks": [
       "load/render",
       "unknown phrase",
@@ -41,8 +45,10 @@
       "rain and days",
       "villager details and clickable circles",
       "speed controls",
-      "restart",
-      "30-day milestone",
+      "restart with new seed",
+      "30 days identical to the pure sim",
+      "forecast (natural and command)",
+      "wipeout end screen and restart",
       "mobile layout",
       "approved flavour names and fatal-illness help"
     ]
