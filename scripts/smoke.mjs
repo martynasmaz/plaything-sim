@@ -7,7 +7,7 @@ import {createState,stepDay} from '../src/sim.js';
 import {chooseCommand} from '../tests/strategies.js';
 // Seed 9: day 1 fair, day 2 a natural cold snap (the design's cloud-wrangle example).
 // Seed 39: the cruel strategy wipes the Homestead out on day 11.
-const SEED=9,CRUEL_SEED=39;
+const SEED=9,CRUEL_SEED=48; // seed 48: the cruel strategy ends the Homestead on day 11 (v0.2 + traits)
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -42,8 +42,8 @@ try{
     assert.equal(await page.locator('canvas').count(),1);
     await page.waitForFunction(()=>document.querySelector('#village').dataset.spritePeople==='6');
     assert.deepEqual(JSON.parse(await page.getAttribute('#village','data-missing-sprites')),[]);
-    assert.equal(await page.locator('[data-command]').count(),6);
-    for(const entry of ['cloud wrangle (rain)','dry spell (drought)','hoedown (bless)','sick hex (plague)','teach spark (teach fire)','feast drop (harvest)'])assert.ok((await page.textContent('#command-help')).includes(entry));
+    assert.equal(await page.locator('[data-command]').count(),8); // six v0.1 + shake off, teach sowing (v0.2)
+    for(const entry of ['cloud wrangle (rain)','dry spell (drought)','hoedown (bless)','sick hex (plague)','teach spark (teach fire)','feast drop (harvest)','shake off (heal)','teach sowing (teach farming)'])assert.ok((await page.textContent('#command-help')).includes(entry));
     assert.ok((await page.textContent('#command-help')).includes('can kill Gourdlings'));
     for(const label of ['Provisions','Firewood','Wonder'])assert.ok((await page.textContent('#stats')).includes(label));
     // Villagers are also clickable circles (scaled canvas coordinates).
@@ -99,7 +99,7 @@ try{
     assert.equal(s.day,expected.day);assert.equal(s.villagers.length,expected.villagers.length);assert.equal(s.food,expected.food);
     assert.deepEqual(s.log,expected.log);
     assert.equal(await page.locator('#milestone').isVisible(),expected.milestoneReached);
-    // Wipeout: a cruel god on seed 39, typed through the command box.
+    // Wipeout: a cruel god on seed 48, typed through the command box.
     await page.goto(`${url}?seed=${CRUEL_SEED}`);await page.waitForSelector('#village[data-ready="true"]');
     for(let i=0;i<60;i++){
       s=await page.evaluate(()=>window.plaything.getState());if(s.ended)break;

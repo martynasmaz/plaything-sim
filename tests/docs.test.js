@@ -8,7 +8,7 @@ import { CONFIG as c } from '../src/config.js';
 
 const doc = readFileSync(new URL('../docs/IMPLEMENTATION.md', import.meta.url), 'utf8');
 const section = doc.split('## How a Gourdling decides')[1]?.split('\n## ')[0] ?? '';
-const n = c.needs, w = c.work, ch = c.weather.chances;
+const n = c.needs, w = c.work, ch = c.weather.chances, P = c.personality, F = c.farming, S = c.shed, K = c.commands;
 const CHECKS = [
   [/loses (\d+) fullness/, n.fullnessLoss],
   [/warmth changed once: −(\d+)/, n.warmthLoss],
@@ -45,9 +45,10 @@ const CHECKS = [
   [/Happiness gains (\d+)/, n.happyGain],
   [/or loses (\d+) if any/, n.unhappyLoss],
   [/or age (\d+) means death/, c.life.death],
-  [/fewer than (\d+) Gourdlings, at least/, c.limits.population],
+  [/than the cap \((\d+), or/, c.limits.population],
+  [/or (\d+)\s+once the second shed/, c.limits.population + c.shed.places],
   [/at least (\d+)\s+provisions per Gourdling/, c.birth.foodPerPerson],
-  [/per Gourdling plus (\d+)/, c.birth.extraFood],
+  [/provisions per Gourdling plus (\d+), nobody/, c.birth.extraFood],
   [/at least (\d+) adults \(ages/, c.birth.adults],
   [/\(ages (\d+) to/, c.life.adult],
   [/to\s+(\d+)\) have/, c.life.elder - 1],
@@ -72,14 +73,61 @@ const CHECKS = [
   [/falls ill \((\d+)%\)/, c.illness.chance],
   [/the illness lasts (\d+) days/, c.illness.duration],
   [/override the weather for (\d+) days/, c.commands.rain.duration],
+  // v0.2 and personalities
+  [/Hardy Gourdling\s+loses (\d+) instead/, P.hardyColdLoss],
+  [/instead of (\d+) in a cold snap; a Shivery/, n.coldWarmthLoss],
+  [/Shivery one loses (\d+) more/, P.shiveryExtraLoss],
+  [/Brave Gourdling warms up only below (\d+)/, P.braveWarmUpBelow],
+  [/Timid one\s+whenever it is below (\d+)/, P.timidWarmUpBelow],
+  [/roll is\s+1–(\d+) skips/, P.scatterbrained.chance],
+  [/: 1–(\d+) forage, /, P.scatterbrained.forageUpTo],
+  [/forage, \d+–(\d+) gather firewood/, P.scatterbrained.woodUpTo],
+  [/any age\): \+(\d+) provisions/, F.harvestFood],
+  [/at least (\d+) per\s+Gourdling plus 1/, F.plantFoodPerPerson],
+  [/per\s+Gourdling plus (\d+)\. Planting/, F.plantExtraFood],
+  [/Planting costs (\d+) provision/, F.plantCost],
+  [/the fuel target is (\d+)\./, S.woodTarget],
+  [/Sociable\s+Gourdling gets \+(\d+)/, P.restTogether],
+  [/and a Loner \+(\d+); resting/, P.restAlone],
+  [/Grabby Gourdlings eat first \(in the\s+rotating order\) and eat at (\d+)/, P.grabbyEatAtOrBelow],
+  [/Generous Gourdling at (\d+)\s+fullness or more/, P.generousMinFullness],
+  [/\*\*Farming \(v0\.2\)\.\*\* From day (\d+)/, F.fromDay],
+  [/at least\s+(\d+) Gourdlings are 20 or older, average happiness is 55/, F.adults],
+  [/average happiness is (\d+)\+, provisions/, F.happiness],
+  [/provisions are at least (\d+)\s+per Gourdling and nobody/, F.foodPerPerson],
+  [/After (\d+) such days in a row farming/, F.consecutiveDays],
+  [/earliest natural day is (\d+)\)/, F.fromDay + F.consecutiveDays - 1],
+  [/A field of (\d+)\s+plots appears/, F.plots],
+  [/gains (\d+) in fair weather/, F.growth.normal],
+  [/(\d+) in rain, \d+\s+in a dry spell and loses/, F.growth.rain],
+  [/(\d+)\s+in a dry spell and loses/, F.growth.drought],
+  [/loses (\d+) in a cold snap \(never/, -F.growth.cold],
+  [/it is ripe at (\d+)\./, F.ripeAt],
+  [/with at least (\d+)\s+Gourdlings and \d+ firewood/, S.population],
+  [/Gourdlings and (\d+) firewood, the/, S.wood],
+  [/next morning with (\d+) more places/, S.places],
+  [/cap goes from (\d+) to/, c.limits.population],
+  [/cap goes from \d+ to (\d+)/, c.limits.population + S.places],
+  [/seed\s+XOR 0x([0-9A-F]+)/, null, v => parseInt(v, 16) === P.seedXor],
+  [/same (\d+) warm-up steps/, c.rng.warmupSteps],
+  [/Each\s+Gourdling gets (\d+) traits/, P.perGourdling],
+  [/from the (\d+) opposite pairs/, P.list.length / 2],
+  [/one step picks 1 of (\d+)/, P.list.length],
+  [/second picks 1 of the (\d+) left/, P.list.length - 2],
+  [/is\s+exactly (\d+) behaviour roll/, 1],
+  [/alias `heal`, (\d+) Wonder/, K.heal.cost],
+  [/Wonder, (\d+)-day cooldown:/, K.heal.cooldown],
+  [/alias `teach farming`, (\d+) Wonder/, K['teach farming'].cost],
+  [/at most (\d+)\s+lines a day/, P.logPerDay],
 ];
 
 test('"How a Gourdling decides" exists and every quoted number matches config', () => {
   assert.ok(section.length > 500, 'section missing from docs/IMPLEMENTATION.md');
-  for (const [pattern, value] of CHECKS) {
+  for (const [pattern, value, check] of CHECKS) {
     // Line breaks in the Markdown count as spaces.
     const m = section.match(new RegExp(pattern.source.replace(/ /g, '\\s+')));
     assert.ok(m, `phrase not found: ${pattern}`);
-    assert.equal(Number(m[1]), value, `${pattern} says ${m[1]}, config says ${value}`);
+    if (check) assert.ok(check(m[1]), `${pattern} says ${m[1]}`);
+    else assert.equal(Number(m[1]), value, `${pattern} says ${m[1]}, config says ${value}`);
   }
 });

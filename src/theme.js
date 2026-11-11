@@ -921,7 +921,7 @@ export const THEME = {
     shadow:{alpha:.25,offsetX:4,offsetY:4}
   },
   copy: {
-    ui:{title:'Gourdling Barn Dance',titleSuffix:' · Plaything Sim',eyebrow:'A LITTLE WORLD / V0.1',
+    ui:{title:'Gourdling Barn Dance',titleSuffix:' · Plaything Sim',eyebrow:'A LITTLE WORLD / V0.2',
       headerNote:'No AI. Just little lives and the rules they follow.',
       noSaveTitle:'A fresh world, every time.',noSave:'No saved game: closing or reloading resets your Homestead. It starts paused.',watch:'Watch first. Intervene if you like.',
       villageStatus:'Homestead status',playback:'Playback speed',world:'The barn clearing',
@@ -937,14 +937,15 @@ export const THEME = {
       needs:{fullness:'Fullness',warmth:'Warmth',health:'Health',safety:'Safety',happiness:'Happiness'},
       units:{food:'provisions',wood:'firewood',warmth:'warmth',happiness:'happiness'},
       life:{child:'Child',adult:'Adult',elder:'Elder'},weather:{normal:'fair',rain:'rain',drought:'dry spell',cold:'cold snap'},
-      activities:{Waiting:'Waiting',Forage:'Forage','Gather wood':'Gather firewood','Warm up':'Warm up',Rest:'Rest',Newborn:'Newborn'},
-      reactions:{Sick:'Sick',Grateful:'Grateful','Learned fire':'Learned Bonfire'},
+      activities:{Waiting:'Waiting',Forage:'Forage','Gather wood':'Gather firewood','Warm up':'Warm up',Rest:'Rest',Newborn:'Newborn',Harvest:'Harvest a ripe plot',Plant:'Plant a plot'},
+      traits:{Smart:'Smart',Scatterbrained:'Scatterbrained',Brave:'Brave',Timid:'Timid',Generous:'Generous',Grabby:'Grabby',Sociable:'Sociable',Loner:'Loner',Hardy:'Hardy',Shivery:'Shivery'},
+      reactions:{Sick:'Sick',Grateful:'Grateful','Learned fire':'Learned Bonfire',Cured:'Shook it off'},
       conditions:{sick:'sick',unwell:'unwell',unhappy:'unhappy',uneasy:'uneasy'},
       // One-character marks drawn on the fallback status discs (no icon art).
       statusGlyphs:{sick_icon:'+',unhappy_icon:'~',uneasy_icon:'!',hoedown_icon:'*',warming_icon:'^'},
-      commandNames:{rain:'cloud wrangle',drought:'dry spell',bless:'hoedown',plague:'sick hex','teach fire':'teach spark',harvest:'feast drop'},
+      commandNames:{rain:'cloud wrangle',drought:'dry spell',bless:'hoedown',plague:'sick hex','teach fire':'teach spark',harvest:'feast drop',heal:'shake off','teach farming':'teach sowing'},
       causes:{hunger:'hunger',cold:'cold',illness:'illness','poor health':'poor health','old age':'old age'},
-      separators:{list:', ',detail:'; ',cause:' and ',status:' · '},powerGlyph:'⚡',
+      separators:{list:', ',detail:'; ',cause:' and ',status:' · ',traits:' and '},powerGlyph:'⚡',
       nameFallback:'Gourdling {id}',newbornName:'Neri {id}'},
     hud:{day:'Day {day}',logDay:'DAY {day}',paused:'Paused · time is still',ended:'Homestead ended',speed:'{speed}× · {seconds}s per day',
       cap:'/ {max}',population:'{count} Gourdlings',weather:'Today: {today}{remaining}',remaining:' ({days} more days)',tomorrow:'Tomorrow',tomorrowSeparator:':',
@@ -953,7 +954,7 @@ export const THEME = {
       fireUnknown:'{fire} unknown · discovery {counter}/{required} (from day {day})',
       person:'#{id} · {stage} · {age} days old',gain:' · +{amount} {unit}',
       ill:'Ill · {days} illness days left for upcoming turns',lastIllDay:'Sick today · illness ends tonight',notIll:'Not ill',
-      personStatus:'{shelter}: {places} places · Birth counter: {counter}/{required}',empty:'Nobody remains in the clearing.',
+      personStatus:'{shelter}: {places} places · Birth counter: {counter}/{required}',traits:'Traits: {traits}',empty:'Nobody remains in the clearing.',
       commandTitle:'{message} Cost {cost}. {cooldown}',once:'Once per run.',cooldown:'Cooldown {days} days.',known:'known',shortDay:'day {day}',
       friendlyCommand:'{label} — {words}',namedCommand:'{label} ({keyword})',queued:'Queued for day {day}: {command} · Enter another to replace',noneQueued:'Nothing queued.',
       milestone:'Milestone reached: through day {day}, with {population}+ lives and the knowledge of {fire}. Life goes on.',
@@ -966,15 +967,17 @@ export const THEME = {
       bless:'Give everyone +{health} health and +{happiness} happiness. Does not cure illness.',
       plague:'Make everyone ill for {duration} days: −{damage} health and −{mood} happiness each day. This can kill Gourdlings, and deaths are permanent.',
       'teach fire':'Teach permanent Bonfire knowledge; firewood is still required to learn and burn.',
-      harvest:'Add {food} provisions, up to capacity. Gourdlings still eat at the normal meal step.'},
+      harvest:'Add {food} provisions, up to capacity. Gourdlings still eat at the normal meal step.',
+      heal:'Cure everyone\'s illness. Does not restore health.',
+      'teach farming':'Teach farming: a shared field of {plots} plots appears at once. The Homestead can also discover it itself.'},
     errors:{unknown:'Unknown/unavailable command. Use: {commands}.',ended:'The Homestead has fallen quiet. Commands are no longer accepted; Restart to begin again.',
       condition:'{reason} Earliest by cooldown: day {day}; the condition must also be met.',
-      once:'Teach spark is once per run; Bonfire is already known.',cooldown:'{command} is cooling down. Next allowed: day {allowed} (not day {day}).',
+      once:'{command} is once per run, and it has already been used.',cooldown:'{command} is cooling down. Next allowed: day {allowed} (not day {day}).',
       power:'Not enough wonder: {command} needs {cost}; you have {power}. Next allowed by cooldown: day {day}; wonder is also required.',
       weather:'Already {command}; wait until it ends or use the opposite weather. Next cooldown-allowed day: {day}.',
       illness:'Someone is already ill. Next cooldown-allowed day: {day}; illness must end first.',
       foodFull:'The Pantry is already full of provisions. Wait until provisions are used.',fireKnown:'Bonfire is already known. Teaching it again has no effect; no next allowed day this run.',
-      fireWood:'teach spark needs at least {min} firewood ({learn} to learn, {burn} to burn).',blessFull:'Everyone already has full health and happiness.',
+      fireWood:'teach spark needs at least {min} firewood ({learn} to learn, {burn} to burn).',blessFull:'Everyone already has full health and happiness.',nobodyIll:'Nobody is ill, so there is nothing to shake off.',farmingKnown:'Farming is already known; teach sowing is once per run.',
       speed:'Speed must be 0 (pause), 1 or 3.',time:'Time must be a finite nonnegative number.'},
     feedback:{canApply:'{command} can apply on day {day}.',queued:'Queued {command} for day {day}. No wonder spent yet.',
       canceled:'Command canceled. No wonder spent.',reset:'A fresh Homestead. Paused at day 0; no saved game.',applied:'{command} applied on day {day}. See the journal for its effect.'},
@@ -986,7 +989,31 @@ export const THEME = {
       birth:'{name} was born. First work and meal tomorrow.',discovery:'The Homestead discovered the Bonfire! Spent {wood} firewood; first Bonfire fuel check is tomorrow.',
       fireLit:'Bonfire burned {wood} firewood.',fireOut:'Bonfire known, but unlit today.',fireUnknown:'Bonfire unknown.',
       day:'Work: +{food} provisions, +{wood} firewood. {meals} meals. {fire} Wonder +{power} (cap {cap}).',
-      milestone:'Milestone: {population} Gourdlings alive through day {day}, and Bonfire is known. Keep watching!'}
+      milestone:'Milestone: {population} Gourdlings alive through day {day}, and Bonfire is known. Keep watching!',
+      heal:'Everyone\'s illness is shaken off. No health is restored.',sow:'Farming knowledge taught: a field of {plots} plots appears.',
+      farmingDiscovery:'The Homestead discovered farming! A field of {plots} plots appears.',
+      shedPaid:'The Homestead spent {wood} firewood on a second Plank shed ({places} more places); it stands tomorrow.',
+      shedBuilt:'A second Plank shed stands: {places} places now. Copper and tin stone outcrops and an empty Tinker-shed site appear at the edge.'},
+    // Internal developer log (design section 10): one line per trait effect,
+    // at most 3 a day, plus each Gourdling's traits. Never shown to players.
+    traitLog:{start:'{name} has {traits}.',birth:'{name} was born {traits}.',
+      Smart:'{name} (Smart) {action} instead of {plain}: that stock was lower.',
+      Scatterbrained:'{name} (Scatterbrained) wandered off and {action} instead of {plain}.',
+      Brave:'{name} (Brave) {action} right through the {weather}.',
+      Timid:'{name} (Timid) stayed by the {place} instead of {plain} in the {weather}.',
+      Generous:'{name} (Generous) went without supper so others could eat.',
+      grabbyEarly:'{name} (Grabby) was first at the Pantry and ate early.',
+      grabbyOthers:'{name} (Grabby) was first at the Pantry; {other} went without.',
+      sociableTogether:'{name} (Sociable) perked right up resting with {others} others.',
+      sociableAlone:'{name} (Sociable) drooped, resting alone.',
+      lonerAlone:'{name} (Loner) slipped off for a quiet rest and came back smiling.',
+      lonerTogether:'{name} (Loner) fidgeted in the crowded resting circle.',
+      actions:{forage:'foraged',warm:'warmed up',wood:'gathered firewood',harvest:'harvested',plant:'planted',rest:'rested'}},
+    dev:{title:'Developer overlay (?dev=1)',stats:'Day {day} · seed {seed} · {population}/{cap} Gourdlings · provisions {food} · firewood {wood} · wonder {power}',
+      more:'Weather {weather} ({days} left) · tomorrow {tomorrow} · Bonfire {fire} · farming {farming} · plots {plots} · shed {shed}',
+      end:'Peak {peak} · births {births} · deaths {deaths} · Bonfire day {fireDay} · farming day {farmDay}',
+      person:'#{id} {name}: {traits} · {activity} · full {fullness} · warm {warmth} · health {health} · happy {happiness}{ill}',ill:' · ill {days}',
+      line:'D{day} {text}',none:'—',yes:'yes',no:'no',pending:'paid, stands tomorrow',built:'built'}
   }
 };
 
@@ -1043,6 +1070,81 @@ export function slotPosition(grid,slot) {
   const S=THEME.layout.slots,[x,y]=S.grids[grid];
   return {x:x+(slot%S.columns)*S.gapX,y:y+Math.floor(slot/S.columns)*S.gapY};
 }
+
+// UI switches: every HUD and panel element can be turned off from this one
+// block. Defaults show everything (the current screen). A preset only lists
+// the flags it changes; `?ui=<preset>` in the address previews one. The world
+// canvas and the command text box are never switched off. A hidden element
+// gets the `hidden` attribute (display:none), and a wrapper whose children
+// are all hidden is hidden too, so nothing leaves a gap. Rules never read this.
+THEME.ui = {
+  defaults: {
+    showHeader: true,        // eyebrow, title and header note
+    showNotice: true,        // "nothing is saved" notice strip
+    showStats: true,         // day box and the four stat counters
+    showButtons: true,       // pause/1x/3x, next day, restart, queue, cancel
+    showForecast: true,      // today's weather and tomorrow's forecast
+    showWorldTitle: true,    // the "world" heading above the canvas
+    showWorldCaption: true,  // fire line, "next day in" text, progress bar
+    showMilestone: true,     // milestone banner
+    showCommandList: true,   // command heading, command chips and help text
+    showQueueStatus: true,   // "queued: ..." line under the input
+    showFeedback: true,      // feedback line under the input
+    showDetailPanel: true,   // roster and selected Gourdling's needs
+    showJournal: true,       // day-by-day journal
+    showGoalText: true,      // goal sentence in the footer
+    showFooter: true,        // the rest of the footer text
+    showEndScreenStats: true,// end screen numbers and seed (title, text and restart stay)
+    autoPlaySpeed: null,     // null keeps the sim's start speed; a number sets it on load and restart
+    keywordCommands: false,  // false: exact names/aliases (section 6); true: keyword matcher (section 11)
+    devOverlay: false,       // developer-only stats + internal log overlay; ?dev=1 also turns it on
+  },
+  presets: {
+    minimal: {
+      showHeader:false, showNotice:false, showStats:false, showButtons:false, showForecast:false,
+      showWorldTitle:false, showWorldCaption:false, showMilestone:false, showCommandList:false,
+      showQueueStatus:false, showFeedback:false, showDetailPanel:false, showJournal:false,
+      showGoalText:false, showFooter:false, showEndScreenStats:false,
+      autoPlaySpeed: 1,      // no buttons, so days run by themselves
+      keywordCommands: true, // type anything; keywords pick the command; Enter restarts after a wipeout
+    },
+  },
+  devLogLines: 30,           // internal-log lines shown in the developer overlay
+  // Which page parts each flag hides (CSS selectors into index.html).
+  targets: {
+    showHeader: ['header'],
+    showNotice: ['#no-save'],
+    showStats: ['.day-box', '#stats'],
+    showButtons: ['.playback', '#queue', '#cancel'],
+    showForecast: ['#weather-summary', '#forecast'],
+    showWorldTitle: ['.world-panel > .panel-heading > h2'],
+    showWorldCaption: ['.world-caption', '.progress-track'],
+    showMilestone: ['#milestone'],
+    showCommandList: ['.command-panel > .panel-heading', '#command-list', '#command-help'],
+    showQueueStatus: ['#queued'],
+    showFeedback: ['#feedback'],
+    showDetailPanel: ['.details-panel'],
+    showJournal: ['.log-panel'],
+    showGoalText: ['#goal'],
+    showFooter: ['footer > [data-copy="ui.footer"]'],
+    showEndScreenStats: ['#end-stats', '#end-seed'],
+  },
+  // Wrappers hidden when every child element is hidden; each adds
+  // `ui-empty-<name>` to <html> so CSS can close the space it leaves.
+  containers: {
+    topline: '.topline', worldHeading: '.world-panel > .panel-heading',
+    weatherLine: '.weather-line', queueRow: '.queue-row', aside: 'aside', footer: 'footer',
+  },
+};
+// Resolve the switches: defaults, then a named preset (unknown names are
+// ignored), then any explicit overrides.
+export function resolveUi(preset = null, overrides = {}, ui = THEME.ui) {
+  const flags = { ...ui.defaults, ...(ui.presets[preset] || {}), ...overrides };
+  for (const key of Object.keys(flags)) if (!(key in ui.defaults)) delete flags[key];
+  return flags;
+}
+// Classes for <html>: one `ui-hide-<flag>` per flag that is off.
+export const uiHiddenClasses = flags => Object.keys(THEME.ui.targets).filter(k => flags[k] === false).map(k => 'ui-hide-' + k);
 
 THEME.fallbacks = {
   base(g) { g.fillStyle(themeColor('cream')).fillRect(0,0,THEME.layout.canvas.width,THEME.layout.canvas.height); },
@@ -1662,3 +1764,18 @@ THEME.css += `
 .art-drought_cue .forecast-icon[data-weather=drought]{background-image:var(--art-drought_cue)}
 .art-cold_cue .forecast-icon[data-weather=cold]{background-image:var(--art-cold_cue)}`;
 THEME.css += `#command-form.has-art{border:12px solid transparent;border-image:var(--command-panel-art) 20 fill / 12px stretch;background-image:none;min-height:72px}`;
+
+// UI switch layout: [hidden] always wins over a display rule, an empty aside
+// gives the world the full width, and a command panel left with only the text
+// box drops its panel frame (default screen: none of these apply).
+THEME.css += `[hidden]{display:none!important}
+.ui-empty-aside main{grid-template-columns:minmax(0,1fr)}
+.ui-empty-topline main{margin-top:18px}
+.ui-empty-topline.ui-hide-showHeader.ui-hide-showNotice main{margin-top:0}
+.ui-hide-showCommandList.ui-empty-queueRow.ui-hide-showFeedback .command-panel{border:0;background:none;overflow:visible}
+.ui-hide-showCommandList.ui-empty-queueRow.ui-hide-showFeedback #command-form{margin:0}`;
+
+// Developer overlay (?dev=1) and the traits line in the detail panel.
+THEME.css += `.dev-overlay{position:fixed;right:8px;bottom:8px;z-index:50;max-width:520px;max-height:60vh;overflow:auto;padding:8px 10px;background:rgba(36,30,24,.92);color:#f3e6c4;font:11px/1.45 ui-monospace,monospace;border-radius:6px;white-space:pre-wrap}
+.dev-overlay .dev-title{font-weight:bold;margin-bottom:4px}
+.person-traits{font-size:11px;color:var(--green);margin:-2px 0 4px}`;

@@ -4,13 +4,13 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createState, queueCommand, stepDay, restart, advanceTime, setSpeed } from '../src/sim.js';
-import { batch, summarise, playRun } from './strategies.js';
+import { batch, summarise, playRun, V01 } from './strategies.js';
 
 const PY = JSON.parse(readFileSync(new URL('./fixtures/python-seeds-0-199.json', import.meta.url)));
-const runs = { none: batch('none'), helped: batch('helped'), cruel: batch('cruel') };
+const runs = { none: batch('none', 0, 199, V01), helped: batch('helped', 0, 199, V01), cruel: batch('cruel', 0, 199, V01) };
 const result = Object.fromEntries(Object.entries(runs).map(([m, rows]) => [m, summarise(rows)]));
 
-describe('Seeded build checks (seeds 0–199)', () => {
+describe('v0.1 seeded build checks, personalities off (seeds 0–199)', () => {
   test('untouched survival: ≥88% alive, ≤10% wiped, ≥65% lose someone, ≥85% Bonfire, median ≥ day 20', () => {
     const r = result.none;
     assert.ok(r.survive60_pct >= 88, JSON.stringify(r));
@@ -43,7 +43,7 @@ describe('Seeded build checks (seeds 0–199)', () => {
 describe('Seed replay and wipeout', () => {
   test('same seed + same commands on the same days → identical day-by-day log', () => {
     const play = () => {
-      let s = createState({}, 291); const days = [];
+      let s = createState(V01, 291); const days = [];
       for (let d = 1; d <= 60 && !s.ended; d++) {
         if (d === 3) s = queueCommand(s, 'teach spark').state;
         if (d === 9) s = queueCommand(s, 'HOEDOWN').state;
@@ -53,21 +53,21 @@ describe('Seed replay and wipeout', () => {
       return days;
     };
     assert.deepEqual(play(), play());
-    assert.deepEqual(playRun(17, 'helped').history, playRun(17, 'helped').history);
-    assert.notDeepEqual(playRun(1, 'none').history, playRun(2, 'none').history);
+    assert.deepEqual(playRun(17, 'helped', 60, V01).history, playRun(17, 'helped', 60, V01).history);
+    assert.notDeepEqual(playRun(1, 'none', 60, V01).history, playRun(2, 'none', 60, V01).history);
   });
   test('exactly three rolls every night, whether or not a command overrides', () => {
-    let a = createState({}, 5), b = queueCommand(createState({}, 5), 'dry spell').state;
+    let a = createState(V01, 5), b = queueCommand(createState(V01, 5), 'dry spell').state;
     for (let i = 0; i < 5; i++) { a = stepDay(a); b = stepDay(b); assert.equal(a.rng, b.rng); }
   });
   test('all at 60 health + sick hex: everyone dies on day 3, the loop stops, stats match', () => {
-    let s = createState({ weather: { chances: { normal: 100, rain: 0, drought: 0, cold: 0 } }, illness: { chance: 0 } }, 9);
+    let s = createState({ ...V01, weather: { chances: { normal: 100, rain: 0, drought: 0, cold: 0 } }, illness: { chance: 0 } }, 9);
     for (const v of s.villagers) v.health = 60;
     s = queueCommand(s, 'sick hex').state; s = setSpeed(s, 3);
     s = stepDay(s); s = stepDay(s); assert.equal(s.ended, false);
     s = stepDay(s);
     assert.equal(s.ended, true); assert.equal(s.day, 3); assert.equal(s.villagers.length, 0);
-    assert.deepEqual(s.stats, { peak: 6, births: 0, deaths: 6, fireDay: null });
+    assert.deepEqual({ ...s.stats, farmDay: undefined, shedDay: undefined, traitEvents: undefined }, { peak: 6, births: 0, deaths: 6, fireDay: null, farmDay: undefined, shedDay: undefined, traitEvents: undefined });
     const frozen = structuredClone(s);
     assert.strictEqual(stepDay(s), s); assert.strictEqual(advanceTime(s, 1e9), s);
     assert.equal(queueCommand(s, 'hoedown').ok, false); assert.deepEqual(s, frozen); // no rolls, wonder or days
