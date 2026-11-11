@@ -1,4 +1,4 @@
-# Gourdling Barn Dance — Plaything Sim v0.1
+# Gourdling Barn Dance — Plaything Sim v0.2 (personalities)
 
 A tiny **First Age Homestead** that lives on its own. Six alien Gourdlings gather
 provisions, keep warm, rest, grow old and raise children. Vintage folk-Americana
@@ -55,6 +55,8 @@ it, or click **Cancel**. Only one command applies per day.
 | `sick hex` (`plague`) | 30 | 8 days | Everyone ill for 3 days: −20 health and −5 happiness/day. **It can kill Gourdlings.** |
 | `teach spark` (`teach fire`) | 25 | Once per run | Permanent Bonfire knowledge. Needs 3 firewood: 2 to learn, 1 to burn today. |
 | `feast drop` (`harvest`) | 20 | 5 days | Gift up to 12 provisions to the Pantry, not beyond capacity. Normal meals happen later. |
+| `shake off` (`heal`) · v0.2 | 25 | 6 days | Cure everyone's illness. Does not restore health. Refused when nobody is ill. |
+| `teach sowing` (`teach farming`) · v0.2 | 25 | Once per run | Teach farming: a 4-plot field appears at once. The Homestead can also discover it from day 40. |
 
 **Each pair is ONE command**, not two powers. Same effect, same payment, same
 restrictions and **one shared cooldown**. Hoedown on day 4 also blocks bless until
@@ -65,7 +67,7 @@ and `rain` do the same thing. `please rain` does not work.
 Rain and dry spells replace each other (and a cold snap), not stack. Their casting day counts as
 the first of 3 days. The HUD separates today's weather from upcoming affected
 days. Sick hex is unavailable and hidden under **both names** when plague is
-switched off by the developer. No later-era commands are callable in v0.1.
+switched off by the developer. No later-era commands are callable.
 
 Commands fail **without spending Wonder** if funds are insufficient, a cooldown
 is active, the same weather is already active, someone is already ill, the Pantry
@@ -88,6 +90,14 @@ get hungry and may get cold, then choose **one** activity, in this order:
 3. Forage if the shared provision reserve is low.
 4. Gather firewood if the fuel reserve is low.
 5. Otherwise rest.
+
+v0.2 adds a farming field (harvest a ripe plot, plant an empty one), a second
+Plank shed (cap 12) and **personalities**: every Gourdling has 2 of 10 traits
+(Smart/Scatterbrained, Brave/Timid, Generous/Grabby, Sociable/Loner,
+Hardy/Shivery) from its own seeded dice, shown in the detail panel. The exact
+list, with numbers, is in `docs/IMPLEMENTATION.md` ("How a Gourdling decides").
+Add `?dev=1` to the address for a developer overlay with stats and the internal
+trait log.
 
 All work finishes before meals. Turn order rotates so the same Gourdling does
 not always get scarce provisions first. Children gather less. Ill Gourdlings
@@ -162,7 +172,7 @@ CHROMIUM_PATH=/path/to/chrome node scripts/smoke.mjs
 # Also checks a changed theme, empty map, missing art and offline SVG embedding:
 PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
 CHROMIUM_PATH=/path/to/chrome node scripts/theme-smoke.mjs
-# UI switches: default screen unchanged vs 87c90b0, ?ui=minimal preview works:
+# UI switches and ?ui=minimal (keyword commands); BASE_REF=<commit> also compares pixels:
 PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
 CHROMIUM_PATH=/path/to/chrome node scripts/ui-smoke.mjs
 ```

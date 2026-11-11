@@ -1,7 +1,9 @@
-# v0.1 implementation notes
+# Implementation notes (v0.1 rules, v0.2 personalities and farming)
 
-The current design (survival rebalance) is archived in `design-v0.1-flavour.canvas.txt`.
-Nothing from the Barn/House Age roadmap is implemented. Simulation numbers live in
+The current design (survival rebalance) is archived in `design-v0.1-flavour.canvas.txt`;
+v0.2 follows the live design Page (sections 10 and 11, rule clarifications of
+11 Nov 2026) and `/workspace/sim/gourdling_v02.py`. Nothing playable from the
+Barn/House Age roadmap is implemented. Simulation numbers live in
 `src/config.js` and match the design and the reference simulator.
 
 ## Exact day sequencing
@@ -122,31 +124,62 @@ optional fallbacks. The standalone HTML needs no sidecar art folder.
 
 ## How a Gourdling decides
 
+These are the v0.2 rules with personalities (the game's default, `version:
+'v0.2'` and `traits: true` in `src/config.js`). With `version: 'v0.1'` and
+`traits: false` the farming, shed, trait and v0.2-command parts switch off and
+the v0.1 rules apply unchanged.
+
 Every day, each Gourdling (visited in the rotating number order) loses 25 fullness
 and has its warmth changed once: −10, a further −10 in rain or −40 in a cold snap,
-+10 for its Plank-shed place and +10 more if the Bonfire is lit. Then it picks the
-FIRST matching job:
++10 for its Plank-shed place and +10 more if the Bonfire is lit. A Hardy Gourdling
+loses 35 instead of 40 in a cold snap; a Shivery one loses 10 more in rain and in a
+cold snap. Then it picks the FIRST matching job:
 
 1. **Forage if starving and the Pantry is empty**: fullness below 40 and fewer
    than 1 provision. An adult brings 3 provisions (4 in rain, 1 in a dry spell,
    3 in a cold snap); a child brings 1 (2 in rain, 0 in a dry spell).
 2. **Warm up** if warmth is below 40: +20 warmth, or +40 when the Bonfire is lit.
-3. **Forage if the Pantry is low**: fewer than 4 provisions per living Gourdling.
-4. **Gather firewood** if there are fewer than 6: an adult brings 2, a child 1.
-5. **Rest** otherwise: +5 happiness.
+   In rain or a cold snap a Brave Gourdling warms up only below 20 and a Timid one
+   whenever it is below 60.
+3. **Scatterbrained wander**: a Scatterbrained Gourdling whose behaviour roll is
+   1–20 skips the rest of the list: 1–7 forage, 8–14 gather firewood, 15–20 rest.
+4. **Harvest a ripe plot** (v0.2, any age): +8 provisions, the plot is empty again.
+5. **Forage if the Pantry is low**: fewer than 4 provisions per living Gourdling.
+6. **Plant an empty plot** (v0.2, adults only) when provisions are at least 2 per
+   Gourdling plus 1. Planting costs 1 provision as seed.
+7. **Gather firewood** if there are fewer than 6: an adult brings 2, a child 1.
+   While the Homestead saves for the second shed the fuel target is 20.
+8. **Rest** otherwise: +5 happiness.
+
+A **Smart** Gourdling replaces steps 5 and 7: it compares how far each stock is
+below its target, as a share (provisions against 4 per Gourdling, firewood against
+the current fuel target), and forages or gathers firewood for the bigger gap
+(provisions win a tie). If neither is low it carries on to Plant, then Rest. Rest
+happiness is added after everyone has chosen: with 2 or more resting, a Sociable
+Gourdling gets +8 and a Loner +2; resting alone, a Sociable one gets +2 and a
+Loner +8. Everyone else gets the normal +5.
 
 **Meals and damage.** After all work, each Gourdling at 75 fullness or less eats
-1 provision (+30 fullness) if any remain. At 20 fullness or less it loses 10
+1 provision (+30 fullness) if any remain. Grabby Gourdlings eat first (in the
+rotating order) and eat at 85 fullness or less. A Generous Gourdling at 50
+fullness or more skips its meal when provisions are fewer than the hungry
+Gourdlings still waiting, itself included. At 20 fullness or less it loses 10
 health; at 20 warmth or less another 10; each illness day costs 20 health and 5
 happiness. With no damage, no illness, and fullness and warmth both at 50 or
 more, it recovers 4 health. Safety is 80 with health at least 50 and no illness,
 otherwise 40. Happiness gains 2 when fullness, warmth and safety are all 50+,
 or loses 4 if any is below 40. Health 0 or age 300 means death.
 
-**Births.** A day counts when there are fewer than 8 Gourdlings, at least 2
+**Day end, in order:** deaths (and wipeout), births, Bonfire discovery, farming
+discovery, the second-shed check, crop growth, Wonder, timers, then the nightly
+dice.
+
+**Births.** A day counts when there are fewer Gourdlings than the cap (8, or 12
+once the second shed stands), at least 2
 provisions per Gourdling plus 4, nobody is ill, and at least 2 adults (ages 20 to
 239) have health 70+, fullness 60+, warmth 50+ and happiness 50+. After 5
 eligible days in a row a child is born (the counter resets on any failed day).
+The newborn rolls its own 2 traits.
 
 **Bonfire discovery.** From day 20, a day counts when at least 2 Gourdlings are
 20 or older, average happiness is 50+, nobody is ill and there are at least 3
@@ -154,12 +187,52 @@ firewood. After 3 such days in a row the Bonfire is known (2 firewood spent);
 it first burns the next day, using 1 firewood a day. The earliest natural
 discovery is day 22.
 
+**Farming (v0.2).** From day 40, a day counts when the Bonfire is known, at least
+3 Gourdlings are 20 or older, average happiness is 55+, provisions are at least 3
+per Gourdling and nobody is ill. After 5 such days in a row farming is known (the
+earliest natural day is 44), or `teach sowing` teaches it at once. A field of 4
+plots appears. Each day end a growing plot gains 1 in fair weather, 2 in rain, 0
+in a dry spell and loses 2 in a cold snap (never below 0); it is ripe at 6. A plot
+planted today grows today too.
+
+**Second shed (v0.2).** At day end, once farming is known, with at least 7
+Gourdlings and 20 firewood, the Homestead spends the 20 firewood. The shed stands
+from the next morning with 4 more places, so the cap goes from 8 to 12 (a birth on
+the paying day still used the old cap).
+
 **The nightly dice.** Every night the game makes exactly 3 rolls from the run's
 seed: tomorrow's weather (31% fair, 30% rain, 25% dry spell, 14% cold snap),
 whether someone falls ill (13%), and who (any living Gourdling; someone already
 ill is not affected again; the illness lasts 3 days). Cloud wrangle and dry spell
 override the weather for 3 days but never skip a roll, so the same seed with the
 same commands always replays the same story.
+
+**The personality dice.** Traits use a second generator, seeded with the run seed
+XOR 0x5EED7A17 and the same 8 warm-up steps, so the nightly rolls never move. Each
+Gourdling gets 2 traits from the 5 opposite pairs (Smart/Scatterbrained,
+Brave/Timid, Generous/Grabby, Sociable/Loner, Hardy/Shivery), never both of one
+pair: one step picks 1 of 10, a second picks 1 of the 8 left. The 6 starters roll
+at the start, in number order; newborns roll at birth. At the start of work there
+is exactly 1 behaviour roll (1–100) per living Gourdling, in work order, always
+taken; only Scatterbrained reads it.
+
+**Commands.** v0.2 adds `shake off` (alias `heal`, 25 Wonder, 6-day cooldown:
+clears everyone's illness, restores no health, refused when nobody is ill) and
+`teach sowing` (alias `teach farming`, 25 Wonder, once per run, refused when
+farming is known). On the current screen commands are exact names or aliases
+(section 6). The minimal preview (`?ui=minimal`) uses the keyword matcher
+(section 11): lowercase the text, turn every character other than a–z and 0–9
+into a space (apostrophes too, so "don't" is "don t"), and look for whole words or
+two-word phrases anywhere ("brain" is not rain). If several commands match, the
+first of teach spark, teach sowing, shake off, hoedown, feast drop, cloud
+wrangle, dry spell, sick hex wins. Then the normal Wonder, cooldown and rejection
+checks run. No match queues nothing and spends nothing.
+
+**Internal log.** Every time a trait changes what happens (Smart, Scatterbrained,
+Brave, Timid, Generous, Grabby, Sociable, Loner) the sim counts it; at most 3
+lines a day go into `state.traitLog`, along with each Gourdling's traits at the
+start or at birth. Hardy and Shivery change warmth only and write no line. The
+log is shown only in the developer overlay (`?dev=1`), never to players.
 
 ## Survival rebalance (seeded dice)
 
@@ -174,9 +247,59 @@ same commands always replays the same story.
   20+ (elders included) and uses the average happiness.
 - `s.weather` is command weather only; `s.natural` holds last night's roll;
   `forecastWeather(s)` / `tomorrowWeather(s)` give what the HUD shows.
-- `tests/balance.test.js` runs seeds 0–199 × 3 strategies and compares every run
-  with `tests/fixtures/python-seeds-0-199.json`; rule tests use a fair-weather,
+- `tests/balance.test.js` runs seeds 0–199 × 3 strategies under the v0.1 rules
+  (personalities off) and compares every run with
+  `tests/fixtures/python-seeds-0-199.json`; rule tests use a fair-weather,
   no-illness config like the reference self-tests.
+
+## v0.2: personalities, farming, second shed and the minimal-UI logic
+
+- `src/sim.js` ports the RULES of `/workspace/sim/gourdling_v02.py` (v0.2 +
+  traits), not its code. `CONFIG.version` (`'v0.2'`) and `CONFIG.traits` (`true`)
+  are the switches; `{ version: 'v0.1', traits: false }` gives the v0.1 rules,
+  which the v0.1 tests (`sim.test.js`, `theme.test.js`, `balance.test.js`) use.
+- Work is chosen by a pure `chooseAction` (the list in "How a Gourdling
+  decides"); the trait-free choice is computed alongside it, and a difference is
+  a trait effect, attributed like the reference: Brave/Timid when warming up is
+  involved, else Scatterbrained when its roll fired, else Smart.
+- New state: `farming` (known, counter, plots), `shed` (pending, built),
+  `traitRng`, `traitLog`, each Gourdling's `traits`, and `stats.farmDay`,
+  `stats.shedDay`, `stats.traitEvents` (uncapped counts per trait effect).
+  `lastDay` adds `behaviourRolls`, `traitEvents`, `harvests` and `plantings`.
+  `populationCap(s)`, `shelterPlaces(s)` and `fuelTarget(s)` are exported.
+- Keyword matcher: `matchCommand` / `COMMAND_KEYWORDS` / `KEYWORD_PRIORITY` in
+  `src/commands.js`, and `matchText(state, text)` in `src/sim.js` (only this run's
+  commands). It resolves to one command key; `queueCommand` then runs the normal
+  checks.
+- The page shows each Gourdling's traits in the current detail panel ("Traits: A
+  and B"). With `THEME.ui.keywordCommands` (on in `?ui=minimal`) the command box
+  uses the keyword matcher, a refusal or no match is silent (nothing queued,
+  nothing spent), and Enter after a wipeout restarts with a new seed. The
+  minimal visuals (plank text box, day counter, state cues, end fade) are NOT
+  built. `?dev=1` (or `THEME.ui.devOverlay`) adds a developer overlay with stats,
+  every Gourdling's traits and needs, and the last 30 internal-log lines; it is
+  off by default and not in `index.html`.
+- Harvest and Plant are drawn at the provisions spot for now; the field, the
+  second shed and the copper/tin outcrops and Tinker-shed site have no art yet
+  (the shed and the outcrops appear only as journal lines). The Plank-shed
+  label in the clearing still reads 8 places. Local save/load (also in the v0.2
+  draft) is not part of this task.
+- Checks: `tests/v02.test.js` compares all 600 runs (seeds 0–199 × untouched,
+  helped, cruel; 60 days) with `tests/fixtures/python-v02-traits-seeds-0-199.json`:
+  the summary facts plus SHA-256 digests of the day-by-day history, every trait
+  effect and every Gourdling's traits. Rebuild the fixture with
+  `python3 tests/fixtures/make_v02_fixture.py` (`SIM_DIR` points at the
+  simulator). It also covers the nightly rolls not moving, the trait stream (2
+  steps per Gourdling, 1 behaviour roll per living Gourdling per day), forbidden
+  pairs (all 40 allowed pairs occur), replay with an identical log, each trait
+  effect, the v0.2 rules and every matcher case from the reference self-test.
+  `npm run report` prints the JS vs Python tables for v0.1 (seeds 0–199), v0.2 +
+  traits (seeds 0–199) and, when `/workspace/sim/results_v02_traits_500.json`
+  exists, seeds 0–499 (the design's section 7 numbers).
+- The browser smoke test (`scripts/smoke.mjs`) now expects 8 commands and uses
+  seed 48 for the wipeout (day 11 under v0.2 + traits); `scripts/ui-smoke.mjs`
+  also checks the traits line, the developer overlay and a keyword sentence in
+  the minimal preview.
 
 ## Art in the page (outside the canvas)
 
@@ -199,13 +322,16 @@ preview until its mockup and spec are approved.
   `showHeader`, `showNotice`, `showStats`, `showButtons`, `showForecast`,
   `showWorldTitle`, `showWorldCaption`, `showMilestone`, `showCommandList`,
   `showQueueStatus`, `showFeedback`, `showDetailPanel`, `showJournal`,
-  `showGoalText`, `showFooter`, `showEndScreenStats`. One more setting,
-  `autoPlaySpeed`, is `null` by default (keep the sim's paused start).
+  `showGoalText`, `showFooter`, `showEndScreenStats`. Three more settings:
+  `autoPlaySpeed` is `null` by default (keep the sim's paused start),
+  `keywordCommands` is `false` (exact names and aliases) and `devOverlay` is
+  `false` (`?dev=1` also turns the developer overlay on).
 - `THEME.ui.targets` maps each flag to the page parts it hides (CSS selectors into
   `index.html`). The world canvas, the command text box and the end screen's
   title, text and Restart button can never be switched off.
-- `THEME.ui.presets.minimal` turns every `show…` flag off and sets
-  `autoPlaySpeed: 1`, because with no buttons the days have to run by themselves.
+- `THEME.ui.presets.minimal` turns every `show…` flag off, sets
+  `autoPlaySpeed: 1`, because with no buttons the days have to run by themselves,
+  and sets `keywordCommands: true` (the section 11 matcher; see the v0.2 section).
   Open the page with `?ui=minimal` (it combines with `?seed=`) to preview it.
   Unknown preset names fall back to the defaults.
 - `src/main.js` resolves the flags once at load (`resolveUi` in `theme.js`), sets
@@ -218,19 +344,24 @@ preview until its mockup and spec are approved.
 - Render code still writes to hidden elements, which is harmless, so turning a
   flag off cannot throw. The sim and rules never read `THEME.ui`; `autoPlaySpeed`
   only calls the existing `setSpeed` at load and on Restart.
-- Commands typed into the box and sent with Enter work exactly as before in every
-  preset. In the minimal preview the feedback line is hidden, so a refused
-  command shows no message; the input text simply stays. The placeholder copy
-  still says "Type a listed command" — both are for the approved spec to settle.
+- Commands typed into the box and sent with Enter work in every preset; the
+  minimal preview matches keywords anywhere in the text. A refused command or a
+  sentence with no keyword shows no message and the input text simply stays. The
+  placeholder copy still says "Type a listed command"; the approved spec will
+  settle it.
 
 Checks: `tests/ui.test.js` (defaults all on, the minimal preset all off, every flag
 targets real parts of `index.html`, the sim never reads the switches) and
-`scripts/ui-smoke.mjs` (headless browser on `dist/index.html`). The smoke test
-compares the default page at 1440, 900 and 600 px wide with the build from commit
-`87c90b0` (before the switches): the box of every element must match on every
+`scripts/ui-smoke.mjs` (headless browser on `dist/index.html`). With default
+flags nothing is switched off and there is no developer overlay. With
+`BASE_REF=<commit>` it also compares the default page at 1440, 900 and 600 px
+wide with that commit's build: the box of every element must match on every
 load, and the screenshot must match pixel for pixel (up to 5 fresh loads per
 width, because Chrome's anti-aliasing of the input placeholder can differ between
-two loads of the same file). For `?ui=minimal` it checks that only the canvas and
-the command box are visible, with no buttons and no gaps, that Enter queues
-`cloud wrangle` and the day then applies it with no button pressed, and it saves
-`reports/ui-minimal-preview.png`.
+two loads of the same file). That check passed for commit `350ac25` against
+`87c90b0`; v0.2 changes the default page (traits line, two more commands), so it
+is off by default now. For `?ui=minimal` it checks that only the canvas and the
+command box are visible, with no buttons and no gaps, that Enter on "Please make
+it RAIN!" queues cloud wrangle and the day then applies it with no button
+pressed, and it saves `reports/ui-minimal-preview.png`,
+`reports/v02-traits-detail.png` and `reports/v02-dev-overlay.png`.

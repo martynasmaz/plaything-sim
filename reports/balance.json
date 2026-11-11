@@ -1,68 +1,471 @@
 {
-  "none": {
-    "js": {
-      "survive60_pct": 94.5,
-      "wipeout_by60_pct": 5.5,
-      "death_by60_pct": 81,
-      "bonfire_by60_pct": 96,
-      "median_bonfire_day": 22,
-      "cap_by60_pct": 47.5,
-      "mean_population60": 6.24,
-      "mean_deaths60": 1.765
+  "v0.1, traits off, seeds 0–199": {
+    "none": {
+      "js": {
+        "survive60_pct": 94.5,
+        "wipeout_by60_pct": 5.5,
+        "death_by60_pct": 81,
+        "bonfire_by60_pct": 96,
+        "median_bonfire_day": 22,
+        "cap_by60_pct": 47.5,
+        "mean_population60": 6.24,
+        "mean_deaths60": 1.765,
+        "median_wipeout_day": 33,
+        "median_cap_day": 44,
+        "farming_by60_pct": 0,
+        "median_farming_day": null,
+        "shed_by60_pct": 0,
+        "cap12_by60_pct": 0,
+        "median_cap12_day": null
+      },
+      "python": {
+        "survive60_pct": 94.5,
+        "wipeout_by60_pct": 5.5,
+        "death_by60_pct": 81,
+        "bonfire_by60_pct": 96,
+        "median_bonfire_day_among_discoverers": 22,
+        "cap_by60_pct": 47.5,
+        "mean_deaths60": 1.765,
+        "mean_population60_all_runs": 6.24
+      }
     },
-    "python": {
-      "survive60_pct": 94.5,
-      "wipeout_by60_pct": 5.5,
-      "death_by60_pct": 81,
-      "bonfire_by60_pct": 96,
-      "median_bonfire_day_among_discoverers": 22,
-      "cap_by60_pct": 47.5,
-      "mean_deaths60": 1.765,
-      "mean_population60_all_runs": 6.24
+    "helped": {
+      "js": {
+        "survive60_pct": 100,
+        "wipeout_by60_pct": 0,
+        "death_by60_pct": 8.5,
+        "bonfire_by60_pct": 100,
+        "median_bonfire_day": 1,
+        "cap_by60_pct": 97.5,
+        "mean_population60": 7.97,
+        "mean_deaths60": 0.09,
+        "median_wipeout_day": null,
+        "median_cap_day": 23,
+        "farming_by60_pct": 0,
+        "median_farming_day": null,
+        "shed_by60_pct": 0,
+        "cap12_by60_pct": 0,
+        "median_cap12_day": null
+      },
+      "python": {
+        "survive60_pct": 100,
+        "wipeout_by60_pct": 0,
+        "death_by60_pct": 8.5,
+        "bonfire_by60_pct": 100,
+        "median_bonfire_day_among_discoverers": 1,
+        "cap_by60_pct": 97.5,
+        "mean_deaths60": 0.09,
+        "mean_population60_all_runs": 7.97
+      }
+    },
+    "cruel": {
+      "js": {
+        "survive60_pct": 3,
+        "wipeout_by60_pct": 97,
+        "death_by60_pct": 100,
+        "bonfire_by60_pct": 56,
+        "median_bonfire_day": 22,
+        "cap_by60_pct": 0,
+        "mean_population60": 0.05,
+        "mean_deaths60": 5.955,
+        "median_wipeout_day": 25,
+        "median_cap_day": null,
+        "farming_by60_pct": 0,
+        "median_farming_day": null,
+        "shed_by60_pct": 0,
+        "cap12_by60_pct": 0,
+        "median_cap12_day": null
+      },
+      "python": {
+        "survive60_pct": 3,
+        "wipeout_by60_pct": 97,
+        "death_by60_pct": 100,
+        "bonfire_by60_pct": 56,
+        "median_bonfire_day_among_discoverers": 22,
+        "cap_by60_pct": 0,
+        "mean_deaths60": 5.955,
+        "mean_population60_all_runs": 0.05
+      }
     }
   },
-  "helped": {
-    "js": {
-      "survive60_pct": 100,
-      "wipeout_by60_pct": 0,
-      "death_by60_pct": 8.5,
-      "bonfire_by60_pct": 100,
-      "median_bonfire_day": 1,
-      "cap_by60_pct": 97.5,
-      "mean_population60": 7.97,
-      "mean_deaths60": 0.09
+  "v0.2 + traits, seeds 0–199": {
+    "none": {
+      "js": {
+        "survive60_pct": 94,
+        "wipeout_by60_pct": 6,
+        "death_by60_pct": 87,
+        "bonfire_by60_pct": 96.5,
+        "median_bonfire_day": 22,
+        "cap_by60_pct": 47.5,
+        "mean_population60": 5.925,
+        "mean_deaths60": 2.145,
+        "median_wipeout_day": 41.5,
+        "median_cap_day": 43,
+        "farming_by60_pct": 36.5,
+        "median_farming_day": 50,
+        "shed_by60_pct": 17.5,
+        "cap12_by60_pct": 0,
+        "median_cap12_day": null
+      },
+      "python": {
+        "survive60_pct": 94,
+        "wipeout_by60_pct": 6,
+        "death_by60_pct": 87,
+        "bonfire_by60_pct": 96.5,
+        "median_bonfire_day_among_discoverers": 22,
+        "cap_by60_pct": 47.5,
+        "median_wipeout_day_among_wiped_by60": 41.5,
+        "farming_by60_pct": 36.5,
+        "median_farming_day": 50,
+        "shed_by60_pct": 17.5,
+        "cap12_by60_pct": 0,
+        "mean_deaths60": 2.145,
+        "mean_population60_all_runs": 5.925
+      }
     },
-    "python": {
-      "survive60_pct": 100,
-      "wipeout_by60_pct": 0,
-      "death_by60_pct": 8.5,
-      "bonfire_by60_pct": 100,
-      "median_bonfire_day_among_discoverers": 1,
-      "cap_by60_pct": 97.5,
-      "mean_deaths60": 0.09,
-      "mean_population60_all_runs": 7.97
+    "helped": {
+      "js": {
+        "survive60_pct": 100,
+        "wipeout_by60_pct": 0,
+        "death_by60_pct": 13,
+        "bonfire_by60_pct": 100,
+        "median_bonfire_day": 1,
+        "cap_by60_pct": 99,
+        "mean_population60": 10.97,
+        "mean_deaths60": 0.135,
+        "median_wipeout_day": null,
+        "median_cap_day": 23,
+        "farming_by60_pct": 100,
+        "median_farming_day": 2,
+        "shed_by60_pct": 99.5,
+        "cap12_by60_pct": 49.5,
+        "median_cap12_day": 50
+      },
+      "python": {
+        "survive60_pct": 100,
+        "wipeout_by60_pct": 0,
+        "death_by60_pct": 13,
+        "bonfire_by60_pct": 100,
+        "median_bonfire_day_among_discoverers": 1,
+        "cap_by60_pct": 99,
+        "median_wipeout_day_among_wiped_by60": null,
+        "farming_by60_pct": 100,
+        "median_farming_day": 2,
+        "shed_by60_pct": 99.5,
+        "cap12_by60_pct": 49.5,
+        "mean_deaths60": 0.135,
+        "mean_population60_all_runs": 10.97
+      }
+    },
+    "cruel": {
+      "js": {
+        "survive60_pct": 0.5,
+        "wipeout_by60_pct": 99.5,
+        "death_by60_pct": 100,
+        "bonfire_by60_pct": 54.5,
+        "median_bonfire_day": 22,
+        "cap_by60_pct": 0,
+        "mean_population60": 0.015,
+        "mean_deaths60": 5.995,
+        "median_wipeout_day": 27,
+        "median_cap_day": null,
+        "farming_by60_pct": 0.5,
+        "median_farming_day": 44,
+        "shed_by60_pct": 0,
+        "cap12_by60_pct": 0,
+        "median_cap12_day": null
+      },
+      "python": {
+        "survive60_pct": 0.5,
+        "wipeout_by60_pct": 99.5,
+        "death_by60_pct": 100,
+        "bonfire_by60_pct": 54.5,
+        "median_bonfire_day_among_discoverers": 22,
+        "cap_by60_pct": 0,
+        "median_wipeout_day_among_wiped_by60": 27,
+        "farming_by60_pct": 0.5,
+        "median_farming_day": 44,
+        "shed_by60_pct": 0,
+        "cap12_by60_pct": 0,
+        "mean_deaths60": 5.995,
+        "mean_population60_all_runs": 0.015
+      }
     }
   },
-  "cruel": {
-    "js": {
-      "survive60_pct": 3,
-      "wipeout_by60_pct": 97,
-      "death_by60_pct": 100,
-      "bonfire_by60_pct": 56,
-      "median_bonfire_day": 22,
-      "cap_by60_pct": 0,
-      "mean_population60": 0.05,
-      "mean_deaths60": 5.955
+  "v0.2 + traits, seeds 0–499 (design section 7)": {
+    "none": {
+      "js": {
+        "survive60_pct": 94,
+        "wipeout_by60_pct": 6,
+        "death_by60_pct": 81,
+        "bonfire_by60_pct": 96.2,
+        "median_bonfire_day": 22,
+        "cap_by60_pct": 50.2,
+        "mean_population60": 6.044,
+        "mean_deaths60": 2.034,
+        "median_wipeout_day": 45.5,
+        "median_cap_day": 41,
+        "farming_by60_pct": 36.6,
+        "median_farming_day": 50,
+        "shed_by60_pct": 18.6,
+        "cap12_by60_pct": 0,
+        "median_cap12_day": null
+      },
+      "python": {
+        "runs": 500,
+        "death_by30_pct": 67.8,
+        "death_by60_pct": 81,
+        "wipeout_by30_pct": 1.6,
+        "wipeout_by60_pct": 6,
+        "survive60_pct": 94,
+        "median_wipeout_day_among_wiped_by60": 45.5,
+        "mean_population30_all_runs": 5.378,
+        "mean_population60_all_runs": 6.044,
+        "mean_deaths60": 2.034,
+        "mean_births60": 2.078,
+        "bonfire_by60_pct": 96.2,
+        "median_bonfire_day_among_discoverers": 22,
+        "cap_by60_pct": 50.2,
+        "median_cap_day_among_reachers": 41,
+        "recovery_episode_count": 3043,
+        "recovered90_within10_days_pct": 0,
+        "median_recovery_days_among_recovered": null,
+        "mean_casts": {
+          "rain": 0,
+          "drought": 0,
+          "bless": 0,
+          "plague": 0,
+          "fire": 0,
+          "harvest": 0
+        },
+        "farming_by60_pct": 36.6,
+        "median_farming_day": 50,
+        "shed_by60_pct": 18.6,
+        "cap12_by60_pct": 0,
+        "median_cap12_day": null,
+        "trait_fire_rates": {
+          "Brave": {
+            "per_run": 6.154,
+            "per_carrier_per_60_days": 5.844809573558742
+          },
+          "Generous": {
+            "per_run": 1.21,
+            "per_carrier_per_60_days": 1.0171201210457004
+          },
+          "Grabby-others-went-without": {
+            "per_run": 1.844,
+            "per_carrier_per_60_days": 1.5569940895018295
+          },
+          "Loner+": {
+            "per_run": 1.336,
+            "per_carrier_per_60_days": 1.1762634266596232
+          },
+          "Loner-": {
+            "per_run": 19.036,
+            "per_carrier_per_60_days": 16.759992956506427
+          },
+          "Scatterbrained": {
+            "per_run": 7.662,
+            "per_carrier_per_60_days": 6.46855213170114
+          },
+          "Smart": {
+            "per_run": 5.002,
+            "per_carrier_per_60_days": 4.217419409235266
+          },
+          "Sociable+": {
+            "per_run": 19.462,
+            "per_carrier_per_60_days": 16.91122375090514
+          },
+          "Sociable-": {
+            "per_run": 1.254,
+            "per_carrier_per_60_days": 1.089645184648805
+          },
+          "Timid": {
+            "per_run": 6.416,
+            "per_carrier_per_60_days": 5.238548839234684
+          }
+        }
+      }
     },
-    "python": {
-      "survive60_pct": 3,
-      "wipeout_by60_pct": 97,
-      "death_by60_pct": 100,
-      "bonfire_by60_pct": 56,
-      "median_bonfire_day_among_discoverers": 22,
-      "cap_by60_pct": 0,
-      "mean_deaths60": 5.955,
-      "mean_population60_all_runs": 0.05
+    "helped": {
+      "js": {
+        "survive60_pct": 100,
+        "wipeout_by60_pct": 0,
+        "death_by60_pct": 9,
+        "bonfire_by60_pct": 100,
+        "median_bonfire_day": 1,
+        "cap_by60_pct": 99,
+        "mean_population60": 11.166,
+        "mean_deaths60": 0.094,
+        "median_wipeout_day": null,
+        "median_cap_day": 19,
+        "farming_by60_pct": 100,
+        "median_farming_day": 2,
+        "shed_by60_pct": 99.8,
+        "cap12_by60_pct": 57.4,
+        "median_cap12_day": 49
+      },
+      "python": {
+        "runs": 500,
+        "death_by30_pct": 5.6,
+        "death_by60_pct": 9,
+        "wipeout_by30_pct": 0,
+        "wipeout_by60_pct": 0,
+        "survive60_pct": 100,
+        "median_wipeout_day_among_wiped_by60": null,
+        "mean_population30_all_runs": 8.684,
+        "mean_population60_all_runs": 11.166,
+        "mean_deaths60": 0.094,
+        "mean_births60": 5.26,
+        "bonfire_by60_pct": 100,
+        "median_bonfire_day_among_discoverers": 1,
+        "cap_by60_pct": 99,
+        "median_cap_day_among_reachers": 19,
+        "recovery_episode_count": 3122,
+        "recovered90_within10_days_pct": 86.19474695707879,
+        "median_recovery_days_among_recovered": 7,
+        "mean_casts": {
+          "rain": 9.678,
+          "drought": 0,
+          "bless": 5.18,
+          "plague": 0,
+          "fire": 1,
+          "harvest": 0.002
+        },
+        "farming_by60_pct": 100,
+        "median_farming_day": 2,
+        "shed_by60_pct": 99.8,
+        "cap12_by60_pct": 57.4,
+        "median_cap12_day": 49,
+        "trait_fire_rates": {
+          "Brave": {
+            "per_run": 4.256,
+            "per_carrier_per_60_days": 2.5325293557600763
+          },
+          "Loner+": {
+            "per_run": 0.564,
+            "per_carrier_per_60_days": 0.3305978898007034
+          },
+          "Loner-": {
+            "per_run": 57.96,
+            "per_carrier_per_60_days": 33.974208675263775
+          },
+          "Scatterbrained": {
+            "per_run": 14.564,
+            "per_carrier_per_60_days": 8.77102822499699
+          },
+          "Smart": {
+            "per_run": 7.19,
+            "per_carrier_per_60_days": 4.0161614657034335
+          },
+          "Sociable+": {
+            "per_run": 56.888,
+            "per_carrier_per_60_days": 33.64428498206048
+          },
+          "Sociable-": {
+            "per_run": 0.538,
+            "per_carrier_per_60_days": 0.3181800260221583
+          },
+          "Timid": {
+            "per_run": 2.872,
+            "per_carrier_per_60_days": 1.6951953724471727
+          }
+        }
+      }
+    },
+    "cruel": {
+      "js": {
+        "survive60_pct": 2.2,
+        "wipeout_by60_pct": 97.8,
+        "death_by60_pct": 100,
+        "bonfire_by60_pct": 56,
+        "median_bonfire_day": 22,
+        "cap_by60_pct": 0,
+        "mean_population60": 0.04,
+        "mean_deaths60": 5.97,
+        "median_wipeout_day": 27,
+        "median_cap_day": null,
+        "farming_by60_pct": 0.6,
+        "median_farming_day": 44,
+        "shed_by60_pct": 0,
+        "cap12_by60_pct": 0,
+        "median_cap12_day": null
+      },
+      "python": {
+        "runs": 500,
+        "death_by30_pct": 97.4,
+        "death_by60_pct": 100,
+        "wipeout_by30_pct": 60.4,
+        "wipeout_by60_pct": 97.8,
+        "survive60_pct": 2.2,
+        "median_wipeout_day_among_wiped_by60": 27,
+        "mean_population30_all_runs": 1.276,
+        "mean_population60_all_runs": 0.04,
+        "mean_deaths60": 5.97,
+        "mean_births60": 0.01,
+        "bonfire_by60_pct": 56,
+        "median_bonfire_day_among_discoverers": 22,
+        "cap_by60_pct": 0,
+        "median_cap_day_among_reachers": null,
+        "recovery_episode_count": 8332,
+        "recovered90_within10_days_pct": 0,
+        "median_recovery_days_among_recovered": null,
+        "mean_casts": {
+          "rain": 0,
+          "drought": 6.266,
+          "bless": 0,
+          "plague": 2.984,
+          "fire": 0,
+          "harvest": 0
+        },
+        "farming_by60_pct": 0.6,
+        "median_farming_day": 44,
+        "shed_by60_pct": 0,
+        "cap12_by60_pct": 0,
+        "median_cap12_day": null,
+        "trait_fire_rates": {
+          "Brave": {
+            "per_run": 0.944,
+            "per_carrier_per_60_days": 2.2868217054263567
+          },
+          "Generous": {
+            "per_run": 0.076,
+            "per_carrier_per_60_days": 0.16117630425561996
+          },
+          "Grabby-others-went-without": {
+            "per_run": 0.034,
+            "per_carrier_per_60_days": 0.07285193914720377
+          },
+          "Loner+": {
+            "per_run": 0.884,
+            "per_carrier_per_60_days": 1.8683950965196563
+          },
+          "Loner-": {
+            "per_run": 3.968,
+            "per_carrier_per_60_days": 8.386642243201353
+          },
+          "Scatterbrained": {
+            "per_run": 3.454,
+            "per_carrier_per_60_days": 7.460043196544277
+          },
+          "Smart": {
+            "per_run": 0.424,
+            "per_carrier_per_60_days": 0.9311177805431521
+          },
+          "Sociable+": {
+            "per_run": 3.932,
+            "per_carrier_per_60_days": 9.136395321818604
+          },
+          "Sociable-": {
+            "per_run": 0.626,
+            "per_carrier_per_60_days": 1.4545736193943148
+          },
+          "Timid": {
+            "per_run": 1.172,
+            "per_carrier_per_60_days": 2.4027882184104423
+          }
+        }
+      }
     }
   }
 }

@@ -12,6 +12,8 @@ test('default flags show everything and keep the sim start speed', ()=>{
   const ui=resolveUi();
   for(const k of showFlags)assert.equal(ui[k],true,k);
   assert.equal(ui.autoPlaySpeed,null);
+  assert.equal(ui.keywordCommands,false,'default screen keeps exact command names (section 6)');
+  assert.equal(ui.devOverlay,false,'developer overlay is off by default');
   assert.deepEqual(uiHiddenClasses(ui),[]);
   assert.deepEqual(resolveUi('no-such-preset'),ui);
   assert.deepEqual(resolveUi(null,{bogus:false}),ui,'unknown flags are dropped');
@@ -21,6 +23,8 @@ test('minimal preset turns off every HUD and panel flag', ()=>{
   const ui=resolveUi('minimal');
   for(const k of showFlags)assert.equal(ui[k],false,k);
   assert.equal(ui.autoPlaySpeed,1,'no buttons, so the days must run by themselves');
+  assert.equal(ui.keywordCommands,true,'minimal uses the keyword matcher');
+  assert.equal(ui.devOverlay,false);
   assert.equal(uiHiddenClasses(ui).length,Object.keys(THEME.ui.targets).length);
   assert.equal(resolveUi('minimal',{showJournal:true}).showJournal,true,'overrides win over the preset');
 });

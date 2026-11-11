@@ -1,5 +1,5 @@
 import { createState, stepDay, queueCommand, cancelCommand, setSpeed, advanceTime,
-  restart, availableCommands, validateCommand, nextAllowedDay, tomorrowWeather } from './sim.js';
+  restart, availableCommands, validateCommand, nextAllowedDay, tomorrowWeather, matchText, populationCap, shelterPlaces } from './sim.js';
 import { makeVillageScene } from './village-view.js';
 import { THEME, t, commandLabel, resolveUi, uiHiddenClasses } from './theme.js';
 
@@ -53,7 +53,7 @@ function render(){
   $('#age-label').textContent=t('labels.ages.'+state.age);
   $('#day').textContent=t('hud.day',{day:state.day});
   $('#status').textContent=state.ended?t('hud.ended'):state.speed===0?t('hud.paused'):t('hud.speed',{speed:state.speed,seconds:c.dayMs/1000/state.speed});
-  $('#stats').innerHTML=[['population',state.villagers.length,c.limits.population],['food',state.food,c.limits.stock],['wood',state.wood,c.limits.stock],['power',state.power,c.limits.power]]
+  $('#stats').innerHTML=[['population',state.villagers.length,populationCap(state)],['food',state.food,c.limits.stock],['wood',state.wood,c.limits.stock],['power',state.power,c.limits.power]]
     .map(([key,value,max])=>`<div class="stat"><small>${htmlText('labels.resources.'+key)}</small><strong>${value}</strong><em>${htmlText('hud.cap',{max})}</em></div>`).join('');
   const weather=state.weather;
   $('#weather-summary').textContent=state.lastDay?t('hud.weather',{today:t('labels.weather.'+state.lastDay.weather),remaining:weather.daysLeft?t('hud.remaining',{days:weather.daysLeft}):''}):'';
@@ -74,11 +74,11 @@ function render(){
   const v=state.villagers.find(v=>v.id===selectedId);
   if(v){
     const stage=t('labels.life.'+(v.age<c.life.adult?'child':v.age<c.life.elder?'adult':'elder'));
-    const gainKey={Forage:'food','Gather wood':'wood','Warm up':'warmth',Rest:'happiness'}[v.activity];
+    const gainKey={Forage:'food',Harvest:'food','Gather wood':'wood','Warm up':'warmth',Rest:'happiness'}[v.activity];
     const illness=v.illnessDays?t('hud.ill',{days:v.illnessDays}):t(v.illToday?'hud.lastIllDay':'hud.notIll');
-    $('#villager-detail').innerHTML=`<div class="person-title"><strong>${escapeHtml(v.name)}</strong><span>${htmlText('hud.person',{id:v.id,stage,age:v.age})}</span></div><div class="activity">${htmlText('labels.activities.'+v.activity)}${gainKey?htmlText('hud.gain',{amount:v.gained,unit:t('labels.units.'+gainKey)}):''}</div>`+
+    $('#villager-detail').innerHTML=`<div class="person-title"><strong>${escapeHtml(v.name)}</strong><span>${htmlText('hud.person',{id:v.id,stage,age:v.age})}</span></div>${v.traits.length?`<div class="person-traits">${htmlText('hud.traits',{traits:v.traits.map(tr=>t('labels.traits.'+tr)).join(t('labels.separators.traits'))})}</div>`:''}<div class="activity">${htmlText('labels.activities.'+v.activity)}${gainKey?htmlText('hud.gain',{amount:v.gained,unit:t('labels.units.'+gainKey)}):''}</div>`+
       ['fullness','warmth','health','safety','happiness'].map(key=>`<div class="need"><span>${htmlText('labels.needs.'+key)}</span><div class="need-track"><div class="need-fill" style="width:${v[key]}%;background:${v[key]<THEME.layout.needs.badBelow?'var(--red)':v[key]<THEME.layout.needs.warningBelow?'var(--mustard)':'var(--green)'}"></div></div><strong>${v[key]}</strong></div>`).join('')+
-      `<div class="person-status">${escapeHtml(illness)}<br>${htmlText('hud.personStatus',{shelter:t('labels.resources.shelter'),places:c.limits.shelter,counter:state.birthCounter,required:c.birth.consecutiveDays})}</div>`;
+      `<div class="person-status">${escapeHtml(illness)}<br>${htmlText('hud.personStatus',{shelter:t('labels.resources.shelter'),places:shelterPlaces(state),counter:state.birthCounter,required:c.birth.consecutiveDays})}</div>`;
   }else $('#villager-detail').textContent=t('hud.empty');
   $('#command-list').innerHTML=availableCommands(state).map(command=>{
     const rule=c.commands[command],check=validateCommand(state,command),next=nextAllowedDay(state,command);
@@ -89,10 +89,10 @@ function render(){
     const display=commandLabel(command);
     return `<button type="button" class="command-chip" data-command="${command}" title="${htmlText('hud.commandTitle',{message:check.message,cost:rule.cost,cooldown})}">${escapeHtml(display)}<span>${rule.cost}${htmlText('labels.powerGlyph')}</span>${next>state.day+1?` <small>${htmlText(next===Infinity?'hud.known':'hud.shortDay',{day:next})}</small>`:''}</button>`;
   }).join('');
-  $('#command-help').innerHTML=availableCommands(state).map(command=>`<p><strong>${escapeHtml(commandLabel(command))}</strong> — ${htmlText('help.'+command,{...c.commands[command],damage:c.needs.illnessDamage,mood:c.needs.illnessHappinessLoss})}</p>`).join('');
+  $('#command-help').innerHTML=availableCommands(state).map(command=>`<p><strong>${escapeHtml(commandLabel(command))}</strong> — ${htmlText('help.'+command,{...c.commands[command],damage:c.needs.illnessDamage,mood:c.needs.illnessHappinessLoss,plots:c.farming.plots})}</p>`).join('');
   for(const b of document.querySelectorAll('[data-command]'))b.onclick=()=>{$('#command-input').value=b.dataset.command;$('#command-input').focus();};
   $('#queued').textContent=state.queuedCommand?t('hud.queued',{day:state.day+1,command:commandLabel(state.queuedCommand)}):t('hud.noneQueued');
-  $('#cancel').disabled=!state.queuedCommand;$('#command-input').disabled=state.ended;$('#queue').disabled=state.ended;
+  $('#cancel').disabled=!state.queuedCommand;$('#command-input').disabled=state.ended&&!ui.keywordCommands;$('#queue').disabled=state.ended;
   $('#latest-label').textContent=t('ui.latest',{count:c.limits.log});
   $('#log').innerHTML=[...state.log].reverse().map(e=>`<li data-type="${e.type}"><small>${htmlText('hud.logDay',{day:e.day})}</small>${escapeHtml(e.text)}</li>`).join('');
   $('#milestone').hidden=!state.milestoneReached||!ui.showMilestone;
@@ -107,6 +107,25 @@ function render(){
     $('#end-seed').textContent=t('hud.endStats.seed',{seed:state.seed});
   }
   renderProgress();
+  if(dev)renderDev();
+}
+// Developer-only overlay (?dev=1): stats and the internal log. Off by default
+// and never part of the player screen; it is created only when asked for.
+const dev=new URLSearchParams(location.search).get('dev')==='1'||ui.devOverlay;
+let devNode=null;
+function renderDev(){
+  if(!devNode){devNode=document.createElement('aside');devNode.id='dev-overlay';devNode.className='dev-overlay';document.body.append(devNode);}
+  const S=state.stats,none=t('dev.none'),yn=b=>t(b?'dev.yes':'dev.no');
+  const lines=[t('dev.title'),
+    t('dev.stats',{day:state.day,seed:state.seed,population:state.villagers.length,cap:populationCap(state),food:state.food,wood:state.wood,power:state.power}),
+    t('dev.more',{weather:t('labels.weather.'+(state.lastDay?.weather??'normal')),days:state.weather.daysLeft,tomorrow:t('labels.weather.'+tomorrowWeather(state)),
+      fire:yn(state.fireKnown),farming:yn(state.farming.known),plots:state.farming.plots.map(x=>x===null?'·':x).join(' ')||none,
+      shed:state.shed.built?t('dev.built'):state.shed.pending?t('dev.pending'):none}),
+    t('dev.end',{peak:S.peak,births:S.births,deaths:S.deaths,fireDay:S.fireDay??none,farmDay:S.farmDay??none}),
+    ...state.villagers.map(v=>t('dev.person',{id:v.id,name:v.name,traits:v.traits.join('+')||none,activity:t('labels.activities.'+v.activity),
+      fullness:v.fullness,warmth:v.warmth,health:v.health,happiness:v.happiness,ill:v.illnessDays?t('dev.ill',{days:v.illnessDays}):''})),
+    ...state.traitLog.slice(-THEME.ui.devLogLines).map(e=>t('dev.line',{day:e.day,text:e.text}))];
+  devNode.innerHTML=lines.map((line,i)=>`<div${i===0?' class="dev-title"':''}>${escapeHtml(line)}</div>`).join('');
 }
 function renderProgress(){
   $('#progress').style.width=`${state.elapsedMs/state.config.dayMs*100}%`;
@@ -114,7 +133,18 @@ function renderProgress(){
   $('#day-progress').textContent=t(state.ended?'hud.stopped':state.speed?'hud.nextIn':'hud.pausedNext',{seconds});
 }
 $('#command-form').addEventListener('submit',e=>{
-  e.preventDefault();const result=queueCommand(state,$('#command-input').value);
+  e.preventDefault();
+  if(ui.keywordCommands){
+    // Minimal UI logic (design section 11): Enter after a wipeout restarts;
+    // otherwise keywords anywhere pick one command, and a refusal or no match
+    // is silent (nothing queued, no Wonder spent). The visuals are not built yet.
+    if(state.ended){reset();return;}
+    const command=matchText(state,$('#command-input').value);
+    if(command===null){render();return;}
+    const result=queueCommand(state,command);
+    state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';render();return;
+  }
+  const result=queueCommand(state,$('#command-input').value);
   state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';render();
 });
 $('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.canceled'));render();};

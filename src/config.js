@@ -2,6 +2,11 @@
 // Values below are copied from the v0.1 design (survival rebalance, matching
 // /workspace/sim/gourdling_survival.py), NOT adjusted to make tests pass.
 export const CONFIG = {
+  // v0.2 rules (farming, shake off, teach sowing, second shed) and Gourdling
+  // personalities, matching /workspace/sim/gourdling_v02.py. Tests set
+  // version 'v0.1' and traits false to check the v0.1 rules unchanged.
+  version: 'v0.2',
+  traits: true,
   enablePlague: true, // Set false, then run `npm run build` to hide/disable plague.
   dayMs: 30_000,
   speeds: [0, 1, 3],
@@ -47,7 +52,27 @@ export const CONFIG = {
     bless: { cost: 20, cooldown: 5, health: 25, happiness: 15 },
     plague: { cost: 30, cooldown: 8, duration: 3 },
     'teach fire': { cost: 25, cooldown: null },
-    harvest: { cost: 20, cooldown: 5, food: 12 }
+    harvest: { cost: 20, cooldown: 5, food: 12 },
+    // v0.2 only (hidden and refused under version 'v0.1').
+    heal: { cost: 25, cooldown: 6, since: 'v0.2' },
+    'teach farming': { cost: 25, cooldown: null, since: 'v0.2' }
+  },
+  // v0.2 farming: one shared field, natural discovery or teach sowing.
+  farming: { fromDay: 40, adults: 3, happiness: 55, foodPerPerson: 3, consecutiveDays: 5,
+    plots: 4, ripeAt: 6, growth: { normal: 1, rain: 2, drought: 0, cold: -2 },
+    harvestFood: 8, plantCost: 1, plantFoodPerPerson: 2, plantExtraFood: 1 },
+  // v0.2 second Plank shed: built once at day end, stands the next day.
+  shed: { population: 7, wood: 20, places: 4, woodTarget: 20 },
+  // Gourdling personalities (v0.2): 5 opposite pairs, in this table order.
+  personality: {
+    list: ['Smart', 'Scatterbrained', 'Brave', 'Timid', 'Generous', 'Grabby', 'Sociable', 'Loner', 'Hardy', 'Shivery'],
+    seedXor: 0x5EED7A17, perGourdling: 2,
+    scatterbrained: { chance: 20, forageUpTo: 7, woodUpTo: 14 },
+    braveWarmUpBelow: 20, timidWarmUpBelow: 60,
+    generousMinFullness: 50, grabbyEatAtOrBelow: 85,
+    restTogether: 8, restAlone: 2,
+    hardyColdLoss: 35, shiveryExtraLoss: 10,
+    logPerDay: 3
   }
 };
 

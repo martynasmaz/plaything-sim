@@ -1,6 +1,8 @@
 // Browser check for the UI switches (THEME.ui), on the built dist/index.html.
-// 1) Default flags: the page renders pixel-for-pixel and box-for-box the same
-//    as the build before the switches existed (BASE_REF, default 87c90b0).
+// 1) Default flags: every switchable part is visible, no ui-* classes, no
+//    errors, no developer overlay. With BASE_REF=<commit> it also checks that
+//    the default page renders pixel-for-pixel and box-for-box like that commit's
+//    build (used at 350ac25 against 87c90b0; later commits change the page).
 // 2) ?ui=minimal: only the world canvas and the command box are visible, no
 //    gaps, no errors, and a command typed + Enter is queued and applied.
 // Fake timers make both runs deterministic. Screenshot: reports/ui-minimal-preview.png
@@ -11,10 +13,10 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const baseRef=process.env.BASE_REF||'87c90b0';
+const baseRef=process.env.BASE_REF||null;
 const temp=await mkdtemp(path.join(os.tmpdir(),'plaything-ui-'));
 const baseFile=path.join(temp,'base.html');
-await writeFile(baseFile,execFileSync('git',['show',`${baseRef}:dist/index.html`],{cwd:root,maxBuffer:1<<28}));
+if(baseRef)await writeFile(baseFile,execFileSync('git',['show',`${baseRef}:dist/index.html`],{cwd:root,maxBuffer:1<<28}));
 const current=pathToFileURL(path.join(root,'dist/index.html')).href,base=pathToFileURL(baseFile).href;
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright-core');
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||'/usr/bin/google-chrome',args:['--disable-dev-shm-usage']});
@@ -42,7 +44,30 @@ try{
   // differs between two loads of the SAME file, so each width gets up to 5
   // fresh load pairs and must match exactly on one; the box layout must match
   // on every attempt.
-  for(const width of [1440,900,600]){
+  {
+    const {page,context,errors}=await open(current+'?seed=9');
+    const hidden=await page.evaluate(()=>[...document.querySelectorAll('[hidden]')].map(n=>n.id||n.className));
+    assert.deepEqual(hidden.filter(x=>x!=='milestone'&&x!=='ended'&&x!=='end-overlay'),[],'default: nothing switched off');
+    assert.equal(await page.locator('#dev-overlay').count(),0,'no developer overlay by default');
+    assert.match(await page.locator('.person-traits').innerText(),/^Traits: \w+ and \w+$/);
+    await page.locator('.details-panel').screenshot({path:path.join(root,'reports/v02-traits-detail.png')});
+    assert.deepEqual(errors,[]);report.defaultFlags={hidden:'none',devOverlay:false};
+    await context.close();
+  }
+  {
+    const {page,context,errors}=await open(current+'?seed=9&dev=1');
+    const text=await page.locator('#dev-overlay').innerText();
+    assert.match(text,/Developer overlay/);assert.match(text,/seed 9/);assert.match(text,/ has \w+ and \w+\./);
+    // A few days in, so the internal log has trait lines (Next day button).
+    for(let i=0;i<6;i++){await page.click('#next-day');}
+    await page.clock.runFor(300);
+    const later=await page.locator('#dev-overlay').innerText();
+    assert.match(later,/D[1-6] .*\((Smart|Scatterbrained|Brave|Timid|Generous|Grabby|Sociable|Loner)\)/);
+    await page.screenshot({path:path.join(root,'reports/v02-dev-overlay.png')});
+    assert.deepEqual(errors,[]);report.devOverlay={lines:later.split('\n').length};
+    await context.close();
+  }
+  for(const width of baseRef?[1440,900,600]:[]){
     let identical=false,attempts=0;
     while(!identical&&attempts<5){
       attempts++;
@@ -83,9 +108,9 @@ try{
     assert.equal(s.speed,1,'minimal autoplays at 1x');assert.equal(s.day,0);
     await page.click('#command-input');await page.keyboard.type('not a command');await page.keyboard.press('Enter');
     s=await page.evaluate(()=>plaything.getState());assert.equal(s.queuedCommand,null,'a bad command is refused');
-    await page.fill('#command-input','');await page.keyboard.type('cloud wrangle');await page.keyboard.press('Enter');
+    await page.fill('#command-input','');await page.keyboard.type('Please make it RAIN!');await page.keyboard.press('Enter');
     s=await page.evaluate(()=>plaything.getState());
-    assert.equal(s.queuedCommand,'rain','Enter queues the command');
+    assert.equal(s.queuedCommand,'rain','a keyword anywhere + Enter queues the command');
     assert.equal(await page.inputValue('#command-input'),'','input clears after a queued command');
     if(width===1440)await page.screenshot({path:path.join(root,'reports/ui-minimal-preview.png')});
     await page.clock.runFor(s.config.dayMs+100);

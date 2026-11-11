@@ -182,7 +182,7 @@ export function makeVillageScene(getState, onSelect) {
         });
         if(s.day!==0) {
           let grid='rest';
-          if(v.activity==='Forage')grid='food';
+          if(v.activity==='Forage'||v.activity==='Harvest'||v.activity==='Plant')grid='food'; // v0.2 field has no art yet
           else if(v.activity==='Gather wood')grid='wood';
           else if(v.activity==='Warm up'&&s.fireLit)grid='fire';
           const slot=slots.get(v.id),{x,y}=slotPosition(grid,slot);

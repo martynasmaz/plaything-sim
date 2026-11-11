@@ -8,7 +8,8 @@ import { createState as seededState, queueCommand, cancelCommand, stepDay, valid
 // natural weather is always fair and natural illness is off. The seeded dice
 // themselves are tested in balance.test.js and in 'three-day weather' below.
 const FAIR = { weather: { chances: { normal: 100, rain: 0, drought: 0, cold: 0 } }, illness: { chance: 0 } };
-const createState = (o = {}, seed = 0) => seededState({ ...o,
+// v0.1 rules with personalities off (v0.2 + traits: tests/v02.test.js).
+const createState = (o = {}, seed = 0) => seededState({ version: 'v0.1', traits: false, ...o,
   weather: { ...FAIR.weather, ...(o.weather || {}) }, illness: { ...FAIR.illness, ...(o.illness || {}) } }, seed);
 
 function cast(s, text) {
