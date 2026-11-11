@@ -177,3 +177,13 @@ same commands always replays the same story.
 - `tests/balance.test.js` runs seeds 0–199 × 3 strategies and compares every run
   with `tests/fixtures/python-seeds-0-199.json`; rule tests use a fair-weather,
   no-illness config like the reference self-tests.
+
+## Art in the page (outside the canvas)
+
+The forecast (`#forecast`) renders the live word "Tomorrow", then `tag_tomorrow`
+with the forecast cue in its icon slot, then the weather name. The wipeout end
+screen is an overlay on the clearing using `sign_endscreen` (nine-slice) and the
+Restart button images. All of this is CSS in `src/theme.js`, switched on per file
+by `art-<key>` classes after Phaser confirms the file loaded; otherwise the plain
+fallback styling applies. Icon files carry their own ink badge, so the renderer
+draws no backing behind them.

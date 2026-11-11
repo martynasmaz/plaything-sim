@@ -40,8 +40,11 @@ function render(){
   const weather=state.weather;
   $('#weather-summary').textContent=state.lastDay?t('hud.weather',{today:t('labels.weather.'+state.lastDay.weather),remaining:weather.daysLeft?t('hud.remaining',{days:weather.daysLeft}):''}):'';
   $('#forecast').hidden=state.ended;
-  $('#forecast').textContent=t('hud.tomorrowWeather',{weather:t('labels.weather.'+tomorrowWeather(state))});
-  $('#forecast').dataset.weather=tomorrowWeather(state);
+  // "Tomorrow" is live text BESIDE the tag; the forecast icon sits in the tag's
+  // icon slot (theme CSS, only when that art loaded), then the weather word.
+  const tomorrow=tomorrowWeather(state);
+  $('#forecast').dataset.weather=tomorrow;
+  $('#forecast').innerHTML=`<span class="forecast-word">${htmlText('hud.tomorrow')}</span><span class="forecast-sep">${htmlText('hud.tomorrowSeparator')}</span><span class="forecast-tag" aria-hidden="true"><span class="forecast-icon" data-weather="${tomorrow}"></span></span><span class="forecast-weather">${htmlText('labels.weather.'+tomorrow)}</span>`;
   $('#fire-summary').textContent=state.fireKnown?t('hud.fireKnown',{fire:t('labels.resources.fire'),state:t(state.fireLit?'hud.burning':'hud.unlit')}):
     t('hud.fireUnknown',{fire:t('labels.resources.fire'),counter:state.fireCounter,required:c.fire.consecutiveDays,day:c.fire.fromDay});
   for(const b of document.querySelectorAll('[data-speed]')){b.setAttribute('aria-pressed',Number(b.dataset.speed)===state.speed);b.disabled=state.ended;}
@@ -82,7 +85,7 @@ function render(){
     const S=state.stats;
     $('#end-body').textContent=t('ui.endBody',{days:state.day});
     $('#end-stats').innerHTML=[['days',state.day],['peak',S.peak],['births',S.births],['deaths',S.deaths],['fire',S.fireDay===null?t('hud.endStats.fireNo'):t('hud.endStats.fireYes',{day:S.fireDay})]]
-      .map(([key,value])=>`<div><dt>${htmlText('hud.endStats.'+key)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
+      .map(([key,value])=>`<div><dt>${htmlText('hud.endStats.'+key)}</dt><dd>${htmlText('hud.endStats.value',{value})}</dd></div>`).join('');
     $('#end-seed').textContent=t('hud.endStats.seed',{seed:state.seed});
   }
   renderProgress();

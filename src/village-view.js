@@ -77,6 +77,12 @@ export function makeVillageScene(getState, onSelect) {
       element.dataset.loadedSprites=JSON.stringify(Object.keys(this.manifest).filter(key=>this.has(key)));
       element.dataset.missingSprites=JSON.stringify(this.missing);
       if(this.has('command_panel')){document.documentElement.style.setProperty('--command-panel-art',`url("${this.manifest.command_panel}")`);document.querySelector('#command-form').classList.add('has-art');}
+      // Page (DOM) art: only files that actually loaded get a CSS variable
+      // --art-<key> and a class art-<key> on <html>; the rest keep the plain look.
+      for(const key of THEME.domArt)if(this.has(key)){
+        document.documentElement.style.setProperty('--art-'+key,`url("${this.manifest[key]}")`);
+        document.documentElement.classList.add('art-'+key);
+      }
     }
     makePerson(v,child,slot) {
       const L=THEME.layout,start=slotPosition('rest',slot);

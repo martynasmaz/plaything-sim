@@ -30,7 +30,7 @@ suite; 500–699 and 1000–1199 also checked by hand). Table: `balance-console.
 | Run | Result |
 | --- | --- |
 | Local server `http://127.0.0.1:4173/` with art (53 local requests) | PASS, 0 console errors, 0 external requests |
-| `dist/index.html` from `file://`, network offline (1 request, 44 SVGs inlined) | PASS, 0 console errors |
+| `dist/index.html` from `file://`, network offline (1 request, 50 SVGs inlined) | PASS, 0 console errors |
 | Theme swap (title, resource name, Gourdling names, log text changed by one file) | PASS |
 | Missing optional background → shape fallback | PASS |
 | Empty sprite map → plain shapes, fully playable | PASS (`fallback-shapes.png`) |

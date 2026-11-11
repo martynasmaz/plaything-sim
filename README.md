@@ -134,7 +134,7 @@ use `PORT=4174 npm start` and open that port instead.
 - `src/village-view.js` — theme-driven renderer, optional SVG loading, decorative
   travel/idle-walk frames, separate shadows and ground-contact-y sorting.
 - `src/main.js` — controls and theme-based readouts.
-- `assets/` — 44 approved provisional **SVGs only** and artist metadata.
+- `assets/` — 50 approved **SVGs only** (polish pass, incl. cold snap, forecast tag, end sign and Restart button) and the artist manifest.
 - `docs/ART-ASSETS.md` — exact filenames, sizes, anchors and icon redo guidance.
 - `docs/design-v0.1-flavour.canvas.txt` — latest full supplied design; original
   pre-flavour source is also retained. `docs/IMPLEMENTATION.md` has conventions.

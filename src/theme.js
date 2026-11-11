@@ -37,12 +37,21 @@ export const THEME = {
   "uneasy_icon": "assets/status_uneasy.svg",
   "hoedown_icon": "assets/status_hoedown.svg",
   "warming_icon": "assets/cue_warming.svg",
+  "cold": "assets/overlay_cold_snap.svg",
+  "cold_cue": "assets/cue_cold_snap.svg",
+  "tomorrow_tag": "assets/tag_tomorrow.svg",
+  "end_sign": "assets/sign_endscreen.svg",
+  "restart_button": "assets/button_restart.svg",
+  "restart_button_pressed": "assets/button_restart_pressed.svg",
   "villager": "assets/gourdling_{variant}_{state}_{frame}.svg"
 },
   creatures: { variants:['fiddler','banjo','singer','kicker','washboard','jug'],
     childVariant:'child', states:{ idle:[1], walk:[1,2] }, pattern:'gourdling_{variant}_{state}_{frame}' },
   // Source dimensions follow the artist's proposal. "size" is actual canvas px.
   // All sprite origins are explicit. Feet/ground contacts use bottom-centre.
+  // Art used by the page around the canvas (forecast tag, end sign, buttons).
+  // Words on them are always live text from copy below; none is baked in.
+  domArt: ['tomorrow_tag','end_sign','restart_button','restart_button_pressed','rain_cue','drought_cue','cold_cue'],
   assetSpecs: {
   "villager": {
     "file": "gourdling_fiddler_idle_1.svg",
@@ -372,7 +381,10 @@ export const THEME = {
       40,
       13.3333
     ],
-    "childSize": [30,10],
+    "childSize": [
+      30,
+      10
+    ],
     "origin": [
       0.5,
       0.5
@@ -521,8 +533,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      32,
+      32
     ],
     "pivot": [
       16.0,
@@ -547,8 +559,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      32,
+      32
     ],
     "pivot": [
       16.0,
@@ -573,8 +585,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -598,8 +610,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -623,8 +635,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -648,8 +660,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -673,8 +685,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -688,6 +700,164 @@ export const THEME = {
       0.5,
       0.5
     ]
+  },
+  "cold": {
+    "file": "overlay_cold_snap.svg",
+    "source": [
+      64,
+      64
+    ],
+    "viewBox": [
+      0,
+      0,
+      64,
+      64
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      64,
+      64
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "tile": true,
+    "alpha": 0.6,
+    "layer": "weather"
+  },
+  "cold_cue": {
+    "file": "cue_cold_snap.svg",
+    "source": [
+      32,
+      32
+    ],
+    "viewBox": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "pivot": [
+      16.0,
+      16.0
+    ],
+    "size": [
+      24,
+      24
+    ],
+    "origin": [
+      0.5,
+      0.5
+    ],
+    "layer": "labels"
+  },
+  "tomorrow_tag": {
+    "file": "tag_tomorrow.svg",
+    "source": [
+      56,
+      32
+    ],
+    "viewBox": [
+      0,
+      0,
+      56,
+      32
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      56,
+      32
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "ui": true
+  },
+  "end_sign": {
+    "file": "sign_endscreen.svg",
+    "source": [
+      420,
+      240
+    ],
+    "viewBox": [
+      0,
+      0,
+      420,
+      240
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      420,
+      240
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "ui": true
+  },
+  "restart_button": {
+    "file": "button_restart.svg",
+    "source": [
+      140,
+      40
+    ],
+    "viewBox": [
+      0,
+      0,
+      140,
+      40
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      140,
+      40
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "ui": true
+  },
+  "restart_button_pressed": {
+    "file": "button_restart_pressed.svg",
+    "source": [
+      140,
+      40
+    ],
+    "viewBox": [
+      0,
+      0,
+      140,
+      40
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      140,
+      40
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "ui": true
   },
   "background": {
     "file": "background.svg",
@@ -777,8 +947,8 @@ export const THEME = {
       separators:{list:', ',detail:'; ',cause:' and ',status:' · '},powerGlyph:'⚡',
       nameFallback:'Gourdling {id}',newbornName:'Neri {id}'},
     hud:{day:'Day {day}',logDay:'DAY {day}',paused:'Paused · time is still',ended:'Homestead ended',speed:'{speed}× · {seconds}s per day',
-      cap:'/ {max}',population:'{count} Gourdlings',weather:'Today: {today}{remaining}',remaining:' ({days} more days)',tomorrow:'Tomorrow',tomorrowWeather:'Tomorrow: {weather}',
-      endStats:{days:'Days lasted',peak:'Peak population',births:'Births',deaths:'Deaths',fire:'Bonfire discovered',fireYes:'yes, on day {day}',fireNo:'no',seed:'Run seed {seed}'},
+      cap:'/ {max}',population:'{count} Gourdlings',weather:'Today: {today}{remaining}',remaining:' ({days} more days)',tomorrow:'Tomorrow',tomorrowSeparator:':',
+      endStats:{days:'Days lasted',peak:'Peak population',births:'Births',deaths:'Deaths',fire:'Bonfire discovered',fireYes:'yes, on day {day}',fireNo:'no',seed:'Run seed {seed}',value:': {value}'},
       fireKnown:'{fire} known · {state}',burning:'burning today',unlit:'unlit today',
       fireUnknown:'{fire} unknown · discovery {counter}/{required} (from day {day})',
       person:'#{id} · {stage} · {age} days old',gain:' · +{amount} {unit}',
@@ -1466,4 +1636,29 @@ THEME.css += `button{background:var(--ink);color:var(--cream)}.command-chip{back
 .command-help p{margin:0}.command-help strong{color:var(--ink);font-weight:600}
 @media(max-width:600px){.command-help{grid-template-columns:1fr}}`;
 
+THEME.css += `
+/* Wipeout end screen: an overlay on the clearing (mockup: endscreen_mockup.png). */
+.world-stage{position:relative}
+.end-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(43,33,28,.55);padding:12px}
+.end-overlay[hidden]{display:none}
+.end-overlay .end-panel{margin:0;width:min(460px,100%);text-align:center;color:var(--cream);background:var(--green);border:3px double var(--cream);outline:3px solid var(--ink);border-radius:6px;padding:22px 26px}
+.end-overlay .end-panel h2{color:var(--cream);font:26px var(--heading-font);margin:0 0 6px}
+.end-overlay .end-panel p{color:var(--cream);font-size:13px;margin:0 0 6px}
+.end-overlay .end-stats{display:block;margin:6px 0 12px}
+.end-overlay .end-stats div{display:block;border:0;padding:1px 0;font-size:14px}
+.end-overlay .end-stats dt,.end-overlay .end-stats dd{display:inline;margin:0;font:14px var(--body-font);letter-spacing:0;text-transform:none}
+.end-overlay .end-seed{color:var(--cream)}
+#restart-ended{background:var(--mustard);color:var(--ink);border:3px solid var(--ink);border-radius:5px;min-width:140px;min-height:40px;font:bold 16px var(--heading-font)}
+.art-end_sign .end-overlay .end-panel{border:40px solid transparent;border-image:var(--art-end_sign) 40 fill / 40px stretch;outline:0;border-radius:0;background:none;padding:4px 10px}
+.art-restart_button #restart-ended{background:var(--art-restart_button) center/100% 100% no-repeat;border:0;border-radius:0;width:140px;height:40px;padding:0 0 4px}
+.art-restart_button_pressed #restart-ended:hover,.art-restart_button_pressed #restart-ended:active{background-image:var(--art-restart_button_pressed);padding:3px 0 1px}
+/* Tomorrow's weather: word, tag (with the weather icon in its slot), weather name. */
+.forecast{display:inline-flex;align-items:center;gap:6px}
+.forecast-tag{display:none}
+.art-tomorrow_tag .forecast-sep{display:none}
+.art-tomorrow_tag .forecast-tag{display:inline-block;position:relative;width:56px;height:32px;background:var(--art-tomorrow_tag) center/100% 100% no-repeat}
+.forecast-icon{position:absolute;left:28px;top:4px;width:24px;height:24px;background:center/contain no-repeat}
+.art-rain_cue .forecast-icon[data-weather=rain]{background-image:var(--art-rain_cue)}
+.art-drought_cue .forecast-icon[data-weather=drought]{background-image:var(--art-drought_cue)}
+.art-cold_cue .forecast-icon[data-weather=cold]{background-image:var(--art-cold_cue)}`;
 THEME.css += `#command-form.has-art{border:12px solid transparent;border-image:var(--command-panel-art) 20 fill / 12px stretch;background-image:none;min-height:72px}`;

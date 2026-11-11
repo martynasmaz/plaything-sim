@@ -34,13 +34,18 @@ trim sprites or put their anchor at the SVG edge instead of the actual feet.
 | `command_panel` | `sign_ui.svg` | 480×72 → flexible-width, minimum 72px-high command sign | 0,0; CSS nine-slice border; **live serif text** |
 | `rain` | `overlay_rain.svg` | 64×64 → 64×64 tile over 900×480 | 0,0; renderer opacity **16%** so rain does not obscure Gourdlings |
 | `drought` | `overlay_drought.svg` | 64×64 → 64×64 tile over 900×480 | 0,0; renderer alpha 65% of file's own reduced opacity |
-| `rain_cue` | `cue_rain.svg` | logical 32×32 / current viewBox 64² → **24×24** | 16,16; weather cue, with text |
-| `drought_cue` | `cue_drought.svg` | logical 32×32 / current viewBox 64² → **24×24** | 16,16; dry-spell cue, with text |
-| `sick_icon` | `status_sick.svg` | logical 24×24 / current viewBox 64² → **18×18** | 12,12; sick/unwell |
+| `cold` | `overlay_cold_snap.svg` | 64×64 → 64×64 tile over 900×480 | 0,0; renderer opacity **60%** of the file's 55% frost |
+| `rain_cue` | `cue_rain.svg` | 32×32 (native viewBox) → **24×24** | 16,16; ink badge built in; canvas cue + forecast tag |
+| `drought_cue` | `cue_drought.svg` | 32×32 → **24×24** | 16,16; dry-spell cue, ink badge built in |
+| `cold_cue` | `cue_cold_snap.svg` | 32×32 → **24×24** | 16,16; cold-snap cue, ink badge built in |
+| `sick_icon` | `status_sick.svg` | 24×24 (native viewBox) → **18×18** | 12,12; sick/unwell, ink badge built in |
 | `unhappy_icon` | `status_unhappy.svg` | same → **18×18** | 12,12; unhappy |
 | `uneasy_icon` | `status_uneasy.svg` | same → **18×18** | 12,12; uneasy |
 | `hoedown_icon` | `status_hoedown.svg` | same → **18×18** | 12,12; grateful reaction, no music mechanic |
 | `warming_icon` | `cue_warming.svg` | same → **18×18** | 12,12; warm-up activity |
+| `tomorrow_tag` | `tag_tomorrow.svg` | 56×32 → 56×32 (page) | 0,0; the word "Tomorrow" is live text BESIDE it; the forecast cue (24×24) sits in its slot at 28,4 |
+| `end_sign` | `sign_endscreen.svg` | 420×240 → ≥420 wide, stretched by CSS nine-slice (40px corners) | 0,0; all end-screen words are live text |
+| `restart_button` / `restart_button_pressed` | `button_restart.svg` / `button_restart_pressed.svg` | 140×40 → 140×40 | 0,0; live "Restart" text; pressed image on hover/press |
 | `background` (optional, **not shipped or required**) | `background.svg` | 900×480 → 900×480 | 0,0; ground/paths only, no actors, props or UI |
 
 Only creatures use frames: **idle_1** when standing; **walk_1/walk_2** alternate
@@ -58,21 +63,26 @@ The pack's three `gourdling_base_*` files are unused, so not copied.
   keep species body, long neck, sprout and dot eyes unchanged. No more detail.
 - Mobile fitting shrinks adults to roughly 16×24 on a 390px phone. It is an
   overview there; the accessible name buttons and needs panel carry detail.
-- **Icons need a redo, not larger files.** Current viewBox-64 drawings scaled
-  into 24px logical files lose their thin internal marks. Use native-coordinate
-  viewBoxes below, fewer marks, strong silhouette and ink/cream contrast.
+- **Icons: done.** The polish pass redrew every cue/status icon at its native
+  viewBox with its own ink badge (circle) built in; the game draws NO circle or
+  backing behind icon art (a cream disc + glyph is drawn only for the plain-shape
+  fallback when an icon file is missing). Variants now have distinct hats and
+  instruments and sprouts are green.
 
-### Updated cue/status icon spec
+### Cue/status icon spec (for future replacements)
 
-Keep existing filenames and transparent backgrounds. **Weather:** 32×32 SVG,
+Keep existing filenames; replacing a file needs no code change as long as the
+name, logical size and pivot stay the same (sizes come from `src/theme.js`
+`assetSpecs`, checked against `assets/manifest.json` by `npm test`). Outside the
+built-in badge, backgrounds stay transparent. **Weather:** 32×32 SVG,
 `viewBox="0 0 32 32"`, pivot 16,16, displayed 24×24. **Status/reaction/warming:**
 24×24 SVG, `viewBox="0 0 24 24"`, pivot 12,12, displayed 18×18. One static image
 per icon, no atlas or text. Uniform **3px native ink outline**, 2px safe margin;
 avoid tiny face features or multiple little symbols. Suggested distinct shapes:
 cloud + two rain strokes; cracked sun; sick bent sprout + cross; unhappy broken
 music note; uneasy sign/exclamation; grateful star/note; warming rising waves.
-Orange only on warming/fire/magic. Keep matching word labels: icons are never the
-only explanation. No extra v0.1 assets are blocking; optional background can wait.
+Orange only on warming/fire/magic. On the canvas the icons are the status marks;
+the words are in the selected Gourdling's detail panel. No extra v0.1 assets are blocking; optional background can wait.
 
 ## Export rules
 
@@ -103,3 +113,17 @@ the offline build embeds present files as data URIs and drops missing requests.
   grid at y=76, with a `fence_vertical` under each corner; post feet land on the
   green. Fence art must keep rails at tile y 24–31 / 40–47 and the corner's
   downward rails at x 24–31 / 40–47 so mirrored pieces join.
+
+## Polish pass and new UI art (current)
+
+- 50 SVGs in `assets/` (no PNGs): the 44 above, updated in place, plus
+  `cue_cold_snap`, `overlay_cold_snap`, `tag_tomorrow`, `sign_endscreen`,
+  `button_restart`, `button_restart_pressed`. `assets/manifest.json` is the
+  artist's current manifest.
+- Page art (forecast tag, end sign, Restart button and the forecast cue) is only
+  used when the file actually loaded: the view sets `--art-<key>` and an
+  `art-<key>` class on the page (`THEME.domArt`). Missing → the plain look (text
+  forecast "Tomorrow: rain", green panel, mustard button).
+- No words are baked into any image. End screen copy, "Tomorrow" and all stats
+  come from `THEME.copy`.
+- Single-file build inlines all 50 as data URIs.

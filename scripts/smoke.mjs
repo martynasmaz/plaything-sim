@@ -68,6 +68,8 @@ try{
     // Weather is observable, and advances only when a day does. Tomorrow is a
     // natural cold snap; a queued cloud wrangle shows as tomorrow's weather.
     assert.equal(await page.getAttribute('#forecast','data-weather'),'cold');
+    if(name==='local-server')assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('.forecast-icon')).backgroundImage.startsWith('url(')),true,'cold snap icon in the tag');
+    await page.locator('.world-panel .panel-heading').screenshot({path:path.join(root,`reports/${name}-hud-forecast-cold.png`)});
     await page.fill('#command-input','CLOUD   WRANGLE');await page.press('#command-input','Enter');
     assert.equal(await page.getAttribute('#forecast','data-weather'),'rain');
     await page.locator('.world-panel .panel-heading').screenshot({path:path.join(root,`reports/${name}-hud-forecast.png`)});
@@ -115,7 +117,7 @@ try{
     assert.equal(await page.textContent('#end-seed'),`Run seed ${CRUEL_SEED}`);
     assert.equal(await page.isDisabled('#command-input'),true);assert.equal(await page.isDisabled('#next-day'),true);
     await page.screenshot({path:path.join(root,`reports/${name}-end-screen.png`),fullPage:true});
-    await page.locator('#ended').screenshot({path:path.join(root,`reports/${name}-end-panel.png`)});
+    await page.locator('#ended .end-panel').screenshot({path:path.join(root,`reports/${name}-end-panel.png`)});
     await page.click('#restart-ended');
     s=await page.evaluate(()=>window.plaything.getState());
     assert.equal(s.day,0);assert.equal(s.ended,false);assert.notEqual(s.seed,CRUEL_SEED);

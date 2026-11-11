@@ -407,7 +407,7 @@
         70.7
       ],
       "category": "creature",
-      "notes": "Provisional 48x72 canvas; adult torso at70%, head132%, neck shortened8 canonical units, tiny65% sprout. Shared template."
+      "notes": "48x72; adult torso at 70%, head 132%, neck shortened 8 canonical units, leaf sprout 90%. Shared template."
     },
     "gourdling_child_walk_1": {
       "logical_size": [
@@ -425,7 +425,7 @@
         70.7
       ],
       "category": "creature",
-      "notes": "Provisional 48x72 canvas; adult torso at70%, head132%, neck shortened8 canonical units, tiny65% sprout. Shared template."
+      "notes": "48x72; adult torso at 70%, head 132%, neck shortened 8 canonical units, leaf sprout 90%. Shared template."
     },
     "gourdling_child_walk_2": {
       "logical_size": [
@@ -443,7 +443,7 @@
         70.7
       ],
       "category": "creature",
-      "notes": "Provisional 48x72 canvas; adult torso at70%, head132%, neck shortened8 canonical units, tiny65% sprout. Shared template."
+      "notes": "48x72; adult torso at 70%, head 132%, neck shortened 8 canonical units, leaf sprout 90%. Shared template."
     },
     "shed": {
       "logical_size": [
@@ -705,15 +705,15 @@
       "viewBox": [
         0,
         0,
-        64,
-        64
+        32,
+        32
       ],
       "anchor": [
         16.0,
         16.0
       ],
       "category": "icon",
-      "notes": ""
+      "notes": "Cloud + two rain strokes. Native 32 viewBox."
     },
     "overlay_rain": {
       "logical_size": [
@@ -741,15 +741,15 @@
       "viewBox": [
         0,
         0,
-        64,
-        64
+        32,
+        32
       ],
       "anchor": [
         16.0,
         16.0
       ],
       "category": "icon",
-      "notes": ""
+      "notes": "Dry spell: cracked mustard sun. Filename kept as drought."
     },
     "overlay_drought": {
       "logical_size": [
@@ -767,7 +767,43 @@
         0.0
       ],
       "category": "overlay",
-      "notes": "64px periodic edge ports; ink at25% requested reduced opacity. No fill."
+      "notes": "Dry spell overlay; 64px periodic edge ports; ink at 25%. No fill."
+    },
+    "cue_cold_snap": {
+      "logical_size": [
+        32,
+        32
+      ],
+      "viewBox": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "anchor": [
+        16.0,
+        16.0
+      ],
+      "category": "icon",
+      "notes": "Cold snap: bold six-arm cream snowflake, ink edge."
+    },
+    "overlay_cold_snap": {
+      "logical_size": [
+        64,
+        64
+      ],
+      "viewBox": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "anchor": [
+        0.0,
+        0.0
+      ],
+      "category": "overlay",
+      "notes": "64px periodic cream frost crystals at 55%; transparent; suggest renderer opacity like rain."
     },
     "status_sick": {
       "logical_size": [
@@ -777,15 +813,15 @@
       "viewBox": [
         0,
         0,
-        64,
-        64
+        24,
+        24
       ],
       "anchor": [
         12.0,
         12.0
       ],
       "category": "icon",
-      "notes": "Drooping sprout and small plus mark; not a creature face."
+      "notes": "Sick: mustard gourd face turning green from the chin up, pinched eyes, wilted leaf; on ink disc."
     },
     "status_unhappy": {
       "logical_size": [
@@ -795,15 +831,15 @@
       "viewBox": [
         0,
         0,
-        64,
-        64
+        24,
+        24
       ],
       "anchor": [
         12.0,
         12.0
       ],
       "category": "icon",
-      "notes": ""
+      "notes": "Unhappy: cream frown face (no green, so never confused with sick); on ink disc."
     },
     "status_uneasy": {
       "logical_size": [
@@ -813,15 +849,15 @@
       "viewBox": [
         0,
         0,
-        64,
-        64
+        24,
+        24
       ],
       "anchor": [
         12.0,
         12.0
       ],
       "category": "icon",
-      "notes": ""
+      "notes": "Uneasy: red warning sign with cream exclamation."
     },
     "status_hoedown": {
       "logical_size": [
@@ -831,15 +867,15 @@
       "viewBox": [
         0,
         0,
-        64,
-        64
+        24,
+        24
       ],
       "anchor": [
         12.0,
         12.0
       ],
       "category": "icon",
-      "notes": "Happy / hoedown reaction: cream star and mustard music note."
+      "notes": "Hoedown / grateful: orange star (god blessing = magic accent)."
     },
     "cue_warming": {
       "logical_size": [
@@ -849,15 +885,87 @@
       "viewBox": [
         0,
         0,
-        64,
-        64
+        24,
+        24
       ],
       "anchor": [
         12.0,
         12.0
       ],
       "category": "icon",
-      "notes": "Warming cue; orange is permitted for fire/energy only."
+      "notes": "Warming: chunky orange flame, one mustard core."
+    },
+    "tag_tomorrow": {
+      "logical_size": [
+        56,
+        32
+      ],
+      "viewBox": [
+        0,
+        0,
+        56,
+        32
+      ],
+      "anchor": [
+        0.0,
+        0.0
+      ],
+      "category": "ui",
+      "notes": "No baked text. Icon slot x27.5-52 y5-27 (place 24x24 icon at 28,4); text area x12-25 is small, so render \"Tomorrow\" beside or widen SIZES."
+    },
+    "sign_endscreen": {
+      "logical_size": [
+        420,
+        240
+      ],
+      "viewBox": [
+        0,
+        0,
+        420,
+        240
+      ],
+      "anchor": [
+        0.0,
+        0.0
+      ],
+      "category": "ui",
+      "notes": "Wipeout end screen. No baked text. Suggested: title y40-80, stats y96-160, Restart button 140x40 at (140,180)."
+    },
+    "button_restart": {
+      "logical_size": [
+        140,
+        40
+      ],
+      "viewBox": [
+        0,
+        0,
+        140,
+        40
+      ],
+      "anchor": [
+        0.0,
+        0.0
+      ],
+      "category": "ui",
+      "notes": "No baked text; live ink serif \"Restart\" centred on y18.5. Flat 25% ink lip below."
+    },
+    "button_restart_pressed": {
+      "logical_size": [
+        140,
+        40
+      ],
+      "viewBox": [
+        0,
+        0,
+        140,
+        40
+      ],
+      "anchor": [
+        0.0,
+        0.0
+      ],
+      "category": "ui",
+      "notes": "Pressed/hover: plank drops 3px onto its lip; text centre y21.5."
     }
   }
 }
