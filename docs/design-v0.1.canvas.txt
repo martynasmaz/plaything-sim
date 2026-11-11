@@ -1,0 +1,190 @@
+<cursor_untrusted_data_1337 source="ReadCanvas">
+
+Canvas "Plaything Sim: Game Design Doc" (https://cursor.com/canvas/store-b54dad48-5d63-43af-9f15-fab64489a32e/2b97ccee-3d31-4da2-8d15-979c61556739):
+
+import { Page, Section, Text, Table, TableOfContents, Properties, Steps, NumberedList, Callout } from "grok/canvas";
+
+export default function App() {
+  return (
+    <Page title="Plaything Sim: Game Design Doc" width="column" summary="v0.1 design proposal: one small Stone Age village that lives by simple rules, with six typed god commands. Concrete starting values for a first playable build; later ages are plans, not part of this build.">
+      <Properties items={[
+        { label: "Status", value: "First design draft · decisions awaiting Martynas’s feedback" },
+        { label: "Owner", value: "Martynas · solo side project" },
+        { label: "First build", value: "6 starting villagers · 8 maximum · one fixed village · Stone Age only" },
+        { label: "Technology and visuals", value: "Game engine and final art style undecided. Temporary simple shapes are enough to test the rules." }
+      ]} />
+      <Callout lead="Build the living village first.">Every number below is a starting value to tune through testing, not a proven balance. Use needs, timers and clear conditions; no real AI, language models or freely interpreted text.</Callout>
+      <TableOfContents items={[
+        { label: "1. Pitch and design pillars", id: "pitch" },
+        { label: "2. Core loop and day order", id: "loop" },
+        { label: "3. Villagers: needs and life cycle", id: "villagers" },
+        { label: "4. Village resources and work", id: "resources" },
+        { label: "5. Ages and discoveries", id: "ages" },
+        { label: "6. God commands", id: "commands" },
+        { label: "7. Small-step roadmap and build checks", id: "roadmap" },
+        { label: "8. Out of scope", id: "scope" },
+        { label: "9. Questions for Martynas", id: "questions" }
+      ]} />
+
+      <Section heading="1. Pitch and design pillars" id="pitch">
+        <Text>Watch a tiny tribe gather food, keep warm, raise children and eventually discover new ways to live. Act as a god by typing a small set of known commands, then watch ordinary rules turn each intervention into visible consequences. The broad inspiration is the digital-life premise of Black Mirror’s “Plaything”; this is an original game, not a recreation of its characters, creatures or story.</Text>
+        <NumberedList items={[
+          { text: "The village lives without orders.", items: ["Villagers choose one daily activity using a fixed priority list. Helpful god commands are optional, including teaching fire."] },
+          { text: "Cause and effect stay readable.", items: ["Show what changed, why it changed and how long it lasts. Villagers react with a short label or simple animation, not generated dialogue."] },
+          { text: "Small before clever.", items: ["One village, shared supplies, no individual inventories, no complicated personalities and no map expansion in v0.1."] },
+          { text: "Observation is the reward.", items: ["The first goal is to keep at least 5 villagers alive through day 30 and discover fire. Show a milestone message, then allow play to continue; this is not a hard win screen."] }
+        ]} />
+      </Section>
+
+      <Section heading="2. Core loop and day order" id="loop">
+        <Properties items={[
+          { label: "Tick", value: "One simulation update, equal to one game day. Moving pictures between updates do not change the rules." },
+          { label: "Pace", value: "30 real seconds per game day at normal speed; pause and 3× speed are available. Day 30 takes 15 minutes at normal speed." },
+          { label: "Starting state", value: "Day 0, paused; 6 adults; 18 food; 12 wood; 50 divine power; normal weather; fire unknown." },
+          { label: "Player’s job", value: "Watch needs and supplies, type a listed command, and see its result. There are no direct work orders." }
+        ]} />
+        <Steps steps={[
+          { title: "1. Apply the queued command", detail: "At the start of the next day, check its cost and conditions. If valid, pay once and apply it; otherwise explain the failure and change nothing. Only one command can take effect per day." },
+          { title: "2. Set today’s conditions", detail: "Read the active weather and illness. If fire is known and at least 1 wood remains, spend 1 wood and light the shared campfire for this day; otherwise it is out." },
+          { title: "3. Lower needs and choose work", detail: "Apply daily fullness and warmth changes, then let each villager take one action. Recheck shared stocks after every action so the whole tribe does not do the same job unnecessarily." },
+          { title: "4. Eat and resolve wellbeing", detail: "Each villager may eat one meal, then update health, safety and happiness using the rules below. No eating during work; food gathered today is available for today’s meal." },
+          { title: "5. Resolve lives and discoveries", detail: "Add 1 day of age, remove deaths, then check the birth counter and natural fire discovery. Newborns begin taking daily turns tomorrow. If nobody remains, end the run now." },
+          { title: "6. Close the day", detail: "Restore divine power, reduce weather and illness timers by 1, check milestones, and write the day’s important changes into a short event log." }
+        ]} />
+        <Text>Use a permanent number for each villager. Visit them in number order, but move the first place to the next living villager each day; use the same order for work and meals. This keeps scarce supplies from always favoring the same person, without adding randomness.</Text>
+        <Text>The screen needs the day and age, population, food, wood, power, weather and its days remaining, fire state, a command box and visible command list. Selecting a villager shows needs, age and today’s activity. Keep the latest 10 important log entries; do not log every meal. At zero population, pause with “The village has ended” and offer Restart.</Text>
+      </Section>
+
+      <Section heading="3. Villagers: needs and life cycle" id="villagers">
+        <Table columns={["Value", "Daily rule", "Low-value response"]} align={["start", "start", "start"]} rows={[
+          ["Fullness · 0–100", "Start 75. Lose 25/day. After work, if at 75 or below and food is available, eat 1 food for +30.", "Below 40 and food below 1: forage before other work. At 20 or below after meals: lose 10 health."],
+          ["Warmth · 0–100", "Start 70. Lose 10/day, plus 10 during rain. A shelter place gives +10/day; a lit campfire gives another +5/day.", "Below 40: take the warm-up action if not emergency-foraging. At 20 or below after actions: lose 10 health."],
+          ["Health · 0–100", "Start 100. Apply hunger, cold and illness damage together. Recover 4/day only if there was no damage, no illness, and fullness and warmth both finish at 50 or above.", "At 0: die at day end. Below 50: visibly unwell; no separate injury system."],
+          ["Safety · 0–100", "A displayed condition, not another draining need: 80 with a shelter place, health at least 50 and no illness; otherwise 40.", "Show an uneasy label at 40. No enemies or separate safety action in v0.1."],
+          ["Happiness · 0–100", "Start 60. After meals, gain 2 if fullness, warmth and safety are all at least 50; otherwise lose 4 if any is below 40. Otherwise no change. Illness also costs 5/day.", "Below 40: show unhappy. Below 50: cannot contribute to a birth or natural fire discovery. No rebellion." ]
+        ]} />
+        <Text>Higher always means better. Keep every 0–100 value within that range after each change. Warmth’s shelter and fire gains happen with its daily loss, before choosing work. Update safety after health changes; apply daily happiness changes before birth and discovery checks.</Text>
+        <Table columns={["Life rule", "Starting design"]} align={["start", "start"]} rows={[
+          ["Identity", "A short name and permanent number, age in game days, current activity, and an illness-days counter. No skills, sex, relationships or hereditary traits."],
+          ["Starting ages", "The 6 adults begin at ages 40, 50, 60, 70, 80 and 90 days. Age is deliberately compressed, not a realistic human calendar."],
+          ["Child", "Age 0–19 days. Forages less food and gathers less wood, but eats 1 food/day like everyone else. Cannot count toward births or discoveries."],
+          ["Adult and elder", "Adult at 20 days. Elder at 240 days; same work and needs in v0.1 to avoid another system. Dies on reaching 300 days."],
+          ["Birth eligibility", "After deaths, require population below 8, food at least twice the population plus 4, no living villager ill, and at least 2 adults aged 20–239 with health ≥70, fullness ≥60, warmth ≥50 and happiness ≥50."],
+          ["Birth timer", "Add 1 to a village-wide counter on each eligible day; reset to 0 on any ineligible day. At 15, add one child and reset the counter. This abstracts family life; no pairing or pregnancy simulation."],
+          ["Newborn", "Age 0, health 100, fullness 80, warmth 60, happiness 60. No birth resource cost beyond the reserve requirement. The child consumes and works from the following day."],
+          ["Death", "At day end remove anyone with health 0 or age 300. Keep a brief cause in the log; record multiple causes if applicable. No bodies, burial or resource refund." ]
+        ]} />
+        <Text>Meal rule: nobody eats more than once per day, and nobody eats automatically above 75 fullness. When food runs out, skip the meal without allowing stocks to become negative. Newborns receive the same shelter access as everyone else; the village already has space for 8.</Text>
+      </Section>
+
+      <Section heading="4. Village resources and work" id="resources">
+        <Table columns={["Resource", "Supply and use", "Limit"]} align={["start", "start", "start"]} rows={[
+          ["Food", "Shared wild food. One meal costs 1. Adult foraging yields 3 normally, 4 in rain, 1 in drought; child yields 1 normally, 2 in rain, 0 in drought.", "0–100; starting 18."],
+          ["Wood", "Adult gathering yields 2; child yields 1. Teaching/discovering fire uses 2 once; a known campfire uses 1 each day it burns.", "0–100; starting 12."],
+          ["Shelter", "One already-built shared shelter with 8 places. No maintenance or construction in this build.", "8 places; no item stock."],
+          ["Divine power", "Player-only command budget. Start 50; gain 3 each day, plus 2 more if living villagers’ average happiness is at least 60.", "0–100; no faith system yet." ]
+        ]} />
+        <Text>Food and wood spots are fixed and unlimited in v0.1. They represent nearby land, not farms or tree-by-tree resources. There is no thirst, water stock, tool stock, walking-time cost or carrying inventory. Show a villager near the relevant spot for their daily action; travel is decorative.</Text>
+        <Steps steps={[
+          { title: "Emergency food", detail: "If this villager’s fullness is below 40 and village food is below 1, forage. In drought a child may bring back 0; show that outcome honestly." },
+          { title: "Warm up", detail: "Otherwise, if warmth is below 40, warm up at the shelter for +20 warmth, or +40 when the campfire is lit. This spends the daily action, not extra wood." },
+          { title: "Build the food reserve", detail: "Otherwise, if food is below 4 times the living population, forage. Count all ages in the population." },
+          { title: "Build the fuel reserve", detail: "Otherwise, if wood is below 6, gather wood." },
+          { title: "Rest", detail: "Otherwise, rest for +5 happiness. Rest does not increase health directly; normal daily recovery still applies." }
+        ]} />
+        <Text>Stop at the first matching action. Add gathered supplies immediately, up to the storage limit; discard excess and show the actual amount gained. All villagers use the same decision list. Initial food is below the target on purpose, so gathering is visible on the first day.</Text>
+      </Section>
+
+      <Section heading="5. Ages and discoveries" id="ages">
+        <Table columns={["Stage", "Condition", "Result"]} align={["start", "start", "start"]} rows={[
+          ["Stone · v0.1", "Starting age. Gathering, shared shelter, births, ageing and six god commands.", "The only playable age in the first build."],
+          ["Discover fire · v0.1", "From day 10 onward: at least 2 adults, average village happiness ≥50, no illness and wood ≥3 for 3 consecutive day-end checks. Reset the counter whenever a condition fails.", "Fire knowledge becomes permanent; spend 2 wood once. Its first naturally discovered campfire burns on the next day’s fuel check. `teach fire` can skip this wait."],
+          ["Stone → Bronze · proposed v0.3", "Fire known; population ≥8; food ≥16; and a workshop produces the first bronze tool using 2 copper ore, 1 tin ore and 2 wood. Check together after production.", "Enter Bronze permanently. Unlock a small metalworking task and improved gathering. Ore, workshop and tool rules must be specified before building this version."],
+          ["Bronze → Iron · proposed v0.4", "Bronze reached; population ≥10; food ≥20; and a furnace produces the first iron tool using 3 iron ore and 3 wood. Check together after production.", "Enter Iron permanently. Add one production improvement rather than a large technology tree. Furnace rules are a later design task."],
+          ["Iron → later era · beyond roadmap", "Provisional gate: population ≥12, food ≥24, iron tools available, and average happiness ≥60 for 20 consecutive days; reset the day counter on failure.", "A later-era milestone only until its content is designed. No later-era implementation promised." ]
+        ]} />
+        <Text>Later thresholds are a direction for future design, not complete production rules or historical claims. v0.2 proposes raising housing and the population limit to 12 so later conditions become reachable. Ages never go backward, and a player command must not be the only path to progress.</Text>
+        <Text>v0.1 ends its technology work at fire. Keep the age label at Stone, show the fire-discovery milestone, and do not display a Bronze progress bar for systems that do not exist yet.</Text>
+      </Section>
+
+      <Section heading="6. God commands" id="commands">
+        <Text>Commands affect the whole village; there is no target selection. Accept only the exact listed words after removing leading/trailing spaces, reducing repeated spaces to one and ignoring letter case. Unknown text has no effect and displays the six valid commands. This is a fixed command reader, not a conversation.</Text>
+        <Table columns={["Keyword", "Rule effect", "Visible reaction"]} align={["start", "start", "start"]} rows={[
+          ["`rain`", "Set rain for 3 days, including the day it applies. Use rain’s foraging yields and extra warmth loss. Replaces drought; does not stack.", "Rain over the village; foragers show gathering in rain, and cold villagers seek the shelter."],
+          ["`drought`", "Set drought for 3 days, including today. Use drought’s foraging yields. No extra warmth effect. Replaces rain; does not stack.", "Dry ground cue; the log explains smaller food gains. Villagers follow normal survival priorities."],
+          ["`bless`", "Immediately add 15 health and 15 happiness to every living villager, within their limits. Does not remove illness.", "Brief grateful reaction; show actual health and happiness changes."],
+          ["`plague`", "Give each currently living villager 3 illness days, including today. Each illness day costs 8 health and 5 happiness; no natural health recovery while ill. No spreading or random infections.", "Sick label and a simple unwell reaction. Villagers still work; weakened villagers may die."],
+          ["`teach fire`", "If fire is unknown and wood ≥3, permanently unlock it and spend 2 wood. Today’s fuel check then spends 1 more wood to light it. Natural discovery is no longer needed.", "Villagers gather briefly around the campfire; warming becomes more effective. Logs distinguish knowledge from an unlit fire."],
+          ["`harvest`", "Immediately add 12 food, up to capacity. This is a direct gift of wild food, not farming; normal meals still happen later today.", "Food appears at the shared store; villagers eat at the normal meal step." ]
+        ]} />
+        <Table columns={["Keyword", "Power", "Cooldown", "Ships"]} align={["start", "end", "start", "start"]} rows={[
+          ["`rain`", "10", "4 days", "v0.1"],
+          ["`drought`", "10", "4 days", "v0.1"],
+          ["`bless`", "20", "5 days", "v0.1"],
+          ["`plague`", "30", "8 days", "v0.1"],
+          ["`teach fire`", "25", "Once per run", "v0.1"],
+          ["`harvest`", "20", "5 days", "v0.1"]
+        ]} />
+        <Text>A cooldown is the minimum wait before repeating that command. If accepted on day 4 with a 5-day cooldown, it is next allowed on day 9. Cooldowns are separate for each keyword and do not advance while paused.</Text>
+        <NumberedList items={[
+          "While paused or between days, keep at most one queued command. Let the player cancel or replace it before the next update. Queuing never spends power; the day-start check does.",
+          "Reject with no cost and no cooldown if power is insufficient, its cooldown is active, or the village has ended. Check again at application time, not just when typed.",
+          "Also reject rain during rain, drought during drought, plague while any villager is already ill, harvest at full food, teach fire when known or wood is below 3, and bless if everybody already has both full health and full happiness.",
+          "A successful opposite weather command replaces the old weather immediately and starts a fresh 3-day timer. Other effects keep running. Bless adds values but is not a cure; an already-ill villager still takes that day’s illness damage.",
+          "A 3-day effect applies on its casting day and the next 2 days; reduce its remaining-days counter after each affected day. Display any failure reason and the next allowed day. Invalid commands never silently do nothing."
+        ]} />
+        <Table columns={["Later keyword", "Possible effect", "Earliest version"]} align={["start", "start", "start"]} rows={[
+          ["`heal`", "Clear illness from everyone; keep distinct from bless. Cost and cooldown need a later balance pass.", "v0.2 candidate"],
+          ["`teach farming`", "Give an early route to the same farming knowledge the village can discover itself.", "v0.2 candidate"],
+          ["`teach bronze`", "Give knowledge only; ore and workshop requirements still apply, so it cannot create free tools.", "v0.3 candidate"],
+          ["`storm`", "A stronger weather disruption only if the simpler weather system proves fun.", "Beyond v0.3 candidate"]
+        ]} />
+        <Text>Later commands are suggestions, not approved scope or implemented rules. Favor adding one useful command at a time rather than expanding the vocabulary before the village works.</Text>
+      </Section>
+
+      <Section heading="7. Small-step roadmap and build checks" id="roadmap">
+        <Table columns={["Version", "Small deliverable", "Done when"]} align={["start", "start", "start"]} rows={[
+          ["v0.1 · living Stone village", "The rules in this document: 6 starting villagers, cap 8, shared food and wood, shelter, fire, births/age/death, six commands, basic readouts, log, pause, speed and restart.", "A new player can follow one day’s decisions and understand why supplies or health changed. Run the checks below before expanding."],
+          ["v0.2 · sustainable growth", "First add a local save/load and a simple housing upgrade to cap 12. Then add one small farming loop with an autonomous discovery gate. Consider heal and teach farming only after that loop works.", "Reload restores the same village, and growth does not outrun food by accident. This version needs its own short rules update first."],
+          ["v0.3 · first Bronze milestone", "Add copper, tin, one workshop task and the first bronze tool; apply the draft age gate. Keep one village and only one tool improvement.", "The tribe can reach Bronze without a god command; the benefit is visible."],
+          ["v0.4 · optional Iron milestone", "Only after Bronze is enjoyable: iron ore, one furnace task, one iron tool and the draft Iron gate.", "A short extra step, not a new sprawling game. Reassess scope before starting."]
+        ]} />
+        <Text>v0.1 has no saved game: show a plain notice before starting that closing or reloading resets the run. Restart returns every value, timer and discovery to day 0. Do not promise dates until the first village has been tested.</Text>
+        <Table columns={["Build check", "Expected result"]} align={["start", "start"]} rows={[
+          ["No-command run", "From the exact starting state, reach day 30 with at least 5 living villagers and fire discovered. This tests whether god intervention is truly optional."],
+          ["One normal day", "With food available, fullness 75 becomes 50 before the meal and 80 afterward. Food decreases by exactly 1 per eater; no stock goes below 0 or above 100."],
+          ["Three-day weather", "Cast rain on day 2: its yield and cold effects apply on days 2, 3 and 4, then normal weather resumes on day 5 unless replaced."],
+          ["Command validation", "An unknown phrase, early repeat or unaffordable command changes no state and explains why. A cooldown of 5 from day 4 allows day 9, not day 8."],
+          ["Fire in both routes", "Teach fire with 3 wood: spend 2 to learn and 1 to burn today. Natural discovery spends 2 at day end and first burns tomorrow. With no fuel, knowledge remains but warming uses the shelter value."],
+          ["Illness and death", "With full food/warmth and no bless, plague causes 24 health damage over 3 days, not 3 days plus a fourth. Health reaching 0 removes the villager once."],
+          ["Birth and population cap", "15 consecutive eligible day-end checks create exactly one child; one failed day resets the counter. Population never exceeds 8 in v0.1."],
+          ["Pause and reset", "Pausing freezes days, effects and cooldowns. Restart clears queued commands, counters, power changes and discoveries. Zero population ends the run cleanly."]
+        ]} />
+        <Text>Handoff: the developer builds the daily rules before visual polish. The artist first supplies only readable villagers, gathering spots, shelter, fire and weather/illness cues; final art direction remains open. The project manager keeps later-version ideas out of the first-build task list.</Text>
+      </Section>
+
+      <Section heading="8. Out of scope" id="scope">
+        <NumberedList items={[
+          "No real AI, language models, free conversation or interpretation of arbitrary player wishes.",
+          "No multiple villages, large generated worlds, borders, war, trade, diplomacy or multiplayer.",
+          "No individual inventories, job assignment menus, complex travel, building placement or detailed crafting in v0.1.",
+          "No relationship simulation, genetics, realistic pregnancy, contagious disease model or elaborate death scenes.",
+          "No seasons, water economy, farming, metal resources or playable Bronze/Iron content in v0.1.",
+          "No final engine choice, final art style, paid assets, monetization, cloud saves or elaborate story yet."
+        ]} />
+        <Text>The initial tone is a neutral observation toy: consequences are clear, deaths are brief and non-graphic, and there is no moral score. Rain helps food but chills villagers; harmful commands exist for experimentation, not as required play.</Text>
+      </Section>
+
+      <Section heading="9. Questions for Martynas" id="questions">
+        <NumberedList items={[
+          { text: "Should this feel mostly cozy, unsettling, or somewhere between?", items: ["In particular, do you want plague and permanent death in the very first playable build, or should those wait?"] },
+          { text: "Where do you want to play the first version: in a web browser or as a desktop app?", items: ["That will help choose a beginner-friendly game engine—the tool used to build and run the game. Neither the engine nor the final art style is chosen here."] },
+          { text: "Do you prefer a calm living toy or a survival challenge that needs frequent intervention?", items: ["This draft starts with optional god commands and a 15-minute, 30-day observation goal; your answer determines how harsh the numbers should become."] }
+        ]} />
+      </Section>
+    </Page>
+  );
+}
+
+
+</cursor_untrusted_data_1337>
