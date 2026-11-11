@@ -295,3 +295,20 @@ describe('Keyword matcher (Minimal UI, section 11)', () => {
       assert.equal(queueText(calm({ version: 'v0.2' }), word).matched, true, word);
   });
 });
+
+describe('Unmatched-input hook (section 11)', () => {
+  test('onUnmatched fires for text with no keyword, never for a matched command (accepted or refused)', () => {
+    const calls = [], hooks = { onUnmatched: text => calls.push(text) };
+    let s = seededState({}, 4);
+    assert.equal(queueText(s, 'make a dragon', hooks).matched, false);
+    assert.equal(queueText(s, 'brain', hooks).matched, false);
+    assert.deepEqual(calls, ['make a dragon', 'brain']);
+    const accepted = queueText(s, 'drop us a feast', hooks);
+    assert.ok(accepted.ok && accepted.matched);
+    s = { ...s, power: 0 };
+    const refused = queueText(s, 'hoedown', hooks);
+    assert.ok(!refused.ok && refused.matched);
+    assert.deepEqual(calls, ['make a dragon', 'brain'], 'matched input never fires the hook');
+    assert.doesNotThrow(() => queueText(s, 'nothing here')); // hooks are optional
+  });
+});

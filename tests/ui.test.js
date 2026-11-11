@@ -16,6 +16,7 @@ test('default flags show everything (but the removed no-save notice) and keep th
   assert.equal(ui.autoPlaySpeed,null);
   assert.equal(ui.enterRestarts,false,'the full screen restarts with its Restart button');
   assert.equal(ui.devOverlay,false,'developer overlay is off by default');
+  assert.equal(ui.unmatchedFeedback,'none','no answer to unmatched input on the full screen');
   assert.deepEqual(uiHiddenClasses(ui),['ui-hide-showNotice']);
   assert.deepEqual(resolveUi('no-such-preset'),ui);
   assert.deepEqual(resolveUi(null,{bogus:false}),ui,'unknown flags are dropped');
@@ -26,6 +27,7 @@ test('minimal preset turns off every HUD and panel flag', ()=>{
   for(const k of showFlags)assert.equal(ui[k],false,k);
   assert.equal(ui.autoPlaySpeed,1,'no buttons, so the days must run by themselves');
   assert.equal(ui.enterRestarts,true,'minimal: Enter restarts after a wipeout');
+  assert.equal(ui.unmatchedFeedback,'gust','minimal: unmatched input gets the placeholder gust');
   assert.equal(ui.devOverlay,false);
   assert.equal(uiHiddenClasses(ui).length,Object.keys(THEME.ui.targets).length);
   assert.equal(resolveUi('minimal',{showJournal:true}).showJournal,true,'overrides win over the preset');

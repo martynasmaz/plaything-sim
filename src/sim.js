@@ -199,9 +199,11 @@ export function queueCommand(s, text) {
 // command, then the normal checks run. No match → { matched: false } and the
 // state is untouched. A refusal or no match never clears the queued command;
 // only a newly accepted command replaces it.
-export function queueText(s, text) {
+// `hooks.onUnmatched(text)` fires only when no keyword matched (section 11:
+// the screen may answer with a gust); a match, accepted or refused, never fires it.
+export function queueText(s, text, hooks = {}) {
   const command = matchText(s, text);
-  if (command === null) return { ok: false, matched: false, command: null, message: '', state: s };
+  if (command === null) { hooks.onUnmatched?.(text); return { ok: false, matched: false, command: null, message: '', state: s }; }
   return { ...queueCommand(s, command), matched: true };
 }
 export function cancelCommand(s) {

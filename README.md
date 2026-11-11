@@ -205,7 +205,10 @@ The survival rebalance matches the reference simulator
 500–699 and 1000–1199. Seeds 0–199, 60 days: untouched 94.5% alive (5.5% wiped
 out, 81% lose someone, Bonfire 96%, median day 22); helped 100% alive, 97.5%
 reach 8, 8.5% lose someone; cruel 97% wiped out. `npm run report` prints the
-table. See `reports/verification.md` for current unit/browser results.
+table. v0.2 + traits, 60 days, JS equals Python seed for seed: seeds 0–199
+untouched 94.0% alive, helped 100%, cruel 99.5% wiped out; seeds 0–499 (design
+section 7) the same except cruel 97.8% wiped out. The cruel difference is only
+the seed range. See `reports/verification.md` for current unit/browser results.
 
 This follow-up used **local git only: no fetch, pull, rebase or push**. The parent
 will handle its fresh archive and GitHub history alignment separately.

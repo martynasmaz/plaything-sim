@@ -52,7 +52,11 @@ try{
     assert.equal(await page.locator('#dev-overlay').count(),0,'no developer overlay by default');
     assert.match(await page.locator('.person-traits').innerText(),/^Traits: \w+ and \w+$/);
     await page.locator('.details-panel').screenshot({path:path.join(root,'reports/v02-traits-detail.png')});
-    assert.deepEqual(errors,[]);report.defaultFlags={hidden:'none',devOverlay:false};
+    // Full screen: unmatched input fires the hook but unmatchedFeedback is 'none'.
+    await page.evaluate(()=>{window.unmatchedCount=0;addEventListener('plaything:unmatched',()=>window.unmatchedCount++);});
+    await page.fill('#command-input','make a dragon');await page.press('#command-input','Enter');
+    assert.deepEqual(await page.evaluate(()=>[window.unmatchedCount,document.querySelector('#village').dataset.gusts??'0']),[1,'0'],'default: hook fires, no gust');
+    assert.deepEqual(errors,[]);report.defaultFlags={hidden:'no-save notice only',devOverlay:false,unmatchedFeedback:'none'};
     await context.close();
   }
   {
@@ -107,12 +111,20 @@ try{
     assert.ok(visible.main.top-visible.app.top<=30,'no gap above the world');
     let s=await page.evaluate(()=>plaything.getState());
     assert.equal(s.speed,1,'minimal autoplays at 1x');assert.equal(s.day,0);
+    await page.evaluate(()=>{window.unmatchedCount=0;addEventListener('plaything:unmatched',()=>window.unmatchedCount++);});
+    const gusts=()=>page.evaluate(()=>[window.unmatchedCount,document.querySelector('#village').dataset.gusts??'0']);
     await page.click('#command-input');await page.keyboard.type('not a command');await page.keyboard.press('Enter');
     s=await page.evaluate(()=>plaything.getState());assert.equal(s.queuedCommand,null,'a bad command is refused');
+    assert.deepEqual(await gusts(),[1,'1'],'unmatched input fires the hook and the placeholder gust');
+    if(width===1440){await page.clock.runFor(220);await page.locator('#village canvas').screenshot({path:path.join(root,'reports/ui-minimal-gust.png')});}
     await page.fill('#command-input','');await page.keyboard.type('Please make it RAIN!');await page.keyboard.press('Enter');
     s=await page.evaluate(()=>plaything.getState());
     assert.equal(s.queuedCommand,'rain','a keyword anywhere + Enter queues the command');
     assert.equal(await page.inputValue('#command-input'),'','input clears after a queued command');
+    await page.keyboard.type('shake off');await page.keyboard.press('Enter'); // refused: nobody is ill
+    assert.equal((await page.evaluate(()=>plaything.getState())).queuedCommand,'rain','a refused command keeps the queue');
+    assert.deepEqual(await gusts(),[1,'1'],'matched input (accepted or refused) never gusts');
+    await page.fill('#command-input','');
     if(width===1440)await page.screenshot({path:path.join(root,'reports/ui-minimal-preview.png')});
     await page.clock.runFor(s.config.dayMs+100);
     s=await page.evaluate(()=>plaything.getState());

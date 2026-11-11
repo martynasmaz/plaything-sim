@@ -75,7 +75,7 @@ function clearFaint(){
 }
 function select(id){selectedId=id;render();}
 const Scene=makeVillageScene(()=>state,select);
-new Phaser.Game({type:Phaser.CANVAS,...THEME.layout.canvas,parent:'village',
+const game=new Phaser.Game({type:Phaser.CANVAS,...THEME.layout.canvas,parent:'village',
   backgroundColor:THEME.palette.cream,banner:false,audio:{noAudio:true},
   scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:Scene});
 
@@ -175,13 +175,19 @@ $('#command-form').addEventListener('submit',e=>{
   // Keyword matcher on every screen (design section 11). No keyword: nothing
   // queued, nothing spent, no message. A match runs the normal checks and the
   // feedback line shows the queued message or the refusal reason as before.
-  const result=queueText(state,$('#command-input').value);
+  const result=queueText(state,$('#command-input').value,{onUnmatched});
   if(!result.matched){render();return;}
   const queued=state.queuedCommand;
   state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';
   if(state.queuedCommand!==queued)slot.save(state);
   render();
 });
+// Unmatched input (no keyword): a 'plaything:unmatched' event always, and with
+// THEME.ui.unmatchedFeedback 'gust' (minimal preset) the placeholder gust.
+function onUnmatched(text){
+  window.dispatchEvent(new CustomEvent('plaything:unmatched',{detail:{text}}));
+  if(ui.unmatchedFeedback==='gust')game.scene.getScene('village')?.gust?.();
+}
 // The end screen also restarts on Enter when the command box is switched off.
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&state.ended&&!ui.enterRestarts&&!(e.target instanceof HTMLButtonElement)){e.preventDefault();reset();}
