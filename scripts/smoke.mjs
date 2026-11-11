@@ -52,9 +52,17 @@ try{
     const ada=slotPosition('rest',0);await page.mouse.click(box.x+ada.x/THEME.layout.canvas.width*box.width,box.y+(ada.y-17)/THEME.layout.canvas.height*box.height);
     assert.ok((await page.textContent('#villager-detail')).includes('Ada'));
     // Invalid command is visible and never alters state.
+    // Keyword matcher on the full screen: a sentence with no keyword shows no
+    // message and changes nothing; a matched but refused command shows its reason.
+    const before=await page.textContent('#feedback');
     await page.fill('#command-input','make a dragon');await page.press('#command-input','Enter');
-    assert.ok((await page.textContent('#feedback')).includes('Unknown/unavailable'));
+    assert.equal(await page.textContent('#feedback'),before);
     assert.equal((await page.evaluate(()=>window.plaything.getState())).power,50);
+    await page.fill('#command-input','please cure everyone');await page.press('#command-input','Enter');
+    assert.ok((await page.textContent('#feedback')).includes('Nobody is ill'));
+    assert.equal(await page.inputValue('#command-input'),'please cure everyone');
+    await page.fill('#command-input','Please make it RAIN!');await page.press('#command-input','Enter');
+    assert.ok((await page.textContent('#queued')).includes('rain'));await page.click('#cancel');
     // Queue, replace and cancel, all through visible controls.
     await page.fill('#command-input','rain');await page.press('#command-input','Enter');
     await page.fill('#command-input','harvest');await page.press('#command-input','Enter');

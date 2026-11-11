@@ -32,7 +32,7 @@ export function chooseCommand(mode, s) {
 export function playRun(seed, mode, days = 60, overrides = {}) {
   let s = createState(overrides, seed);
   const row = { seed, wipeout_day: null, deaths30: 0, deaths60: 0, population30: 0, population60: 0,
-    births60: 0, peak_population: 6, bonfire_day: null, cap_day: null, cap12_day: null, history: [], events: [], traitsById: {} };
+    births60: 0, peak_population: 6, bonfire_day: null, cap_day: null, cap12_day: null, history: [], events: [], lines: [], traitsById: {} };
   for (const v of s.villagers) row.traitsById[v.id] = v.traits;
   for (let d = 0; d < days && !s.ended; d++) {
     const command = chooseCommand(mode, s);
@@ -42,6 +42,7 @@ export function playRun(seed, mode, days = 60, overrides = {}) {
     if (s.villagers.length === 8 && row.cap_day === null) row.cap_day = s.day;
     if (s.villagers.length === 12 && row.cap12_day === null) row.cap12_day = s.day;
     for (const e of s.lastDay.traitEvents) row.events.push(`${s.day}:${e.id}:${e.trait}`);
+    for (const e of s.traitLog) if (e.day === s.day && e.trait !== 'start' && e.trait !== 'birth') row.lines.push(`${s.day}:${e.id}:${e.trait}`);
     if (s.day <= 30) row.deaths30 = s.stats.deaths;
     if (s.day <= 60) row.deaths60 = s.stats.deaths;
     if (s.day === 30) row.population30 = s.villagers.length;
@@ -65,7 +66,7 @@ export function digests(row) {
   // Every Gourdling that ever lived (the dead ones too) and its two traits.
   const traits = Object.keys(row.traitsById).map(Number).sort((a, b) => a - b)
     .map(id => `${id}:${row.traitsById[id].join('+')}`).join(';');
-  return { history: sha(history), events: sha(row.events.join(';')), traits: sha(traits) };
+  return { history: sha(history), events: sha(row.events.join(';')), lines: sha(row.lines.join(';')), traits: sha(traits) };
 }
 
 const pct = (rows, f) => 100 * rows.filter(f).length / rows.length;

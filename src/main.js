@@ -1,5 +1,5 @@
 import { createState, stepDay, queueCommand, cancelCommand, setSpeed, advanceTime,
-  restart, availableCommands, validateCommand, nextAllowedDay, tomorrowWeather, matchText, populationCap, shelterPlaces } from './sim.js';
+  restart, availableCommands, validateCommand, nextAllowedDay, tomorrowWeather, queueText, populationCap, shelterPlaces } from './sim.js';
 import { makeVillageScene } from './village-view.js';
 import { THEME, t, commandLabel, resolveUi, uiHiddenClasses } from './theme.js';
 
@@ -92,7 +92,7 @@ function render(){
   $('#command-help').innerHTML=availableCommands(state).map(command=>`<p><strong>${escapeHtml(commandLabel(command))}</strong> — ${htmlText('help.'+command,{...c.commands[command],damage:c.needs.illnessDamage,mood:c.needs.illnessHappinessLoss,plots:c.farming.plots})}</p>`).join('');
   for(const b of document.querySelectorAll('[data-command]'))b.onclick=()=>{$('#command-input').value=b.dataset.command;$('#command-input').focus();};
   $('#queued').textContent=state.queuedCommand?t('hud.queued',{day:state.day+1,command:commandLabel(state.queuedCommand)}):t('hud.noneQueued');
-  $('#cancel').disabled=!state.queuedCommand;$('#command-input').disabled=state.ended&&!ui.keywordCommands;$('#queue').disabled=state.ended;
+  $('#cancel').disabled=!state.queuedCommand;$('#command-input').disabled=state.ended&&!ui.enterRestarts;$('#queue').disabled=state.ended;
   $('#latest-label').textContent=t('ui.latest',{count:c.limits.log});
   $('#log').innerHTML=[...state.log].reverse().map(e=>`<li data-type="${e.type}"><small>${htmlText('hud.logDay',{day:e.day})}</small>${escapeHtml(e.text)}</li>`).join('');
   $('#milestone').hidden=!state.milestoneReached||!ui.showMilestone;
@@ -134,17 +134,13 @@ function renderProgress(){
 }
 $('#command-form').addEventListener('submit',e=>{
   e.preventDefault();
-  if(ui.keywordCommands){
-    // Minimal UI logic (design section 11): Enter after a wipeout restarts;
-    // otherwise keywords anywhere pick one command, and a refusal or no match
-    // is silent (nothing queued, no Wonder spent). The visuals are not built yet.
-    if(state.ended){reset();return;}
-    const command=matchText(state,$('#command-input').value);
-    if(command===null){render();return;}
-    const result=queueCommand(state,command);
-    state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';render();return;
-  }
-  const result=queueCommand(state,$('#command-input').value);
+  // Minimal preset: Enter after a wipeout starts a fresh run with a new seed.
+  if(state.ended&&ui.enterRestarts){reset();return;}
+  // Keyword matcher on every screen (design section 11). No keyword: nothing
+  // queued, nothing spent, no message. A match runs the normal checks and the
+  // feedback line shows the queued message or the refusal reason as before.
+  const result=queueText(state,$('#command-input').value);
+  if(!result.matched){render();return;}
   state=result.state;feedback(result.message,!result.ok);if(result.ok)$('#command-input').value='';render();
 });
 $('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.canceled'));render();};

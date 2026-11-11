@@ -118,7 +118,7 @@ const CHECKS = [
   [/alias `heal`, (\d+) Wonder/, K.heal.cost],
   [/Wonder, (\d+)-day cooldown:/, K.heal.cooldown],
   [/alias `teach farming`, (\d+) Wonder/, K['teach farming'].cost],
-  [/at most (\d+)\s+lines a day/, P.logPerDay],
+  [/at most (\d+)\s+lines a day/i, P.logPerDay],
 ];
 
 test('"How a Gourdling decides" exists and every quoted number matches config', () => {

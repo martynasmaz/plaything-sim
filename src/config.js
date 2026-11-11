@@ -72,7 +72,9 @@ export const CONFIG = {
     generousMinFullness: 50, grabbyEatAtOrBelow: 85,
     restTogether: 8, restAlone: 2,
     hardyColdLoss: 35, shiveryExtraLoss: 10,
-    logPerDay: 3
+    logPerDay: 3,
+    // Internal-log priority when more than 3 lines compete (lower is kept first).
+    logPriority: { Generous: 0, Grabby: 1, Smart: 2, Scatterbrained: 3, Brave: 4, Timid: 4, Sociable: 5, Loner: 5 }
   }
 };
 

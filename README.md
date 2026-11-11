@@ -62,7 +62,10 @@ it, or click **Cancel**. Only one command applies per day.
 restrictions and **one shared cooldown**. Hoedown on day 4 also blocks bless until
 day 9. The plain aliases remain accepted; parentheses are help formatting, not
 part of what you type. Extra spaces and capital letters are fine: `CLOUD  WRANGLE`
-and `rain` do the same thing. `please rain` does not work.
+and `rain` do the same thing. Keywords also work anywhere in a sentence
+(`Please make it RAIN!` is cloud wrangle; `brain` is not). The full keyword list
+and tie order are in `docs/IMPLEMENTATION.md`. A sentence with no keyword does
+nothing and shows no message; a refused command explains why.
 
 Rain and dry spells replace each other (and a cold snap), not stack. Their casting day counts as
 the first of 3 days. The HUD separates today's weather from upcoming affected
