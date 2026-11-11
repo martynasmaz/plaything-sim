@@ -1,0 +1,68 @@
+{
+  "none": {
+    "js": {
+      "survive60_pct": 94.5,
+      "wipeout_by60_pct": 5.5,
+      "death_by60_pct": 81,
+      "bonfire_by60_pct": 96,
+      "median_bonfire_day": 22,
+      "cap_by60_pct": 47.5,
+      "mean_population60": 6.24,
+      "mean_deaths60": 1.765
+    },
+    "python": {
+      "survive60_pct": 94.5,
+      "wipeout_by60_pct": 5.5,
+      "death_by60_pct": 81,
+      "bonfire_by60_pct": 96,
+      "median_bonfire_day_among_discoverers": 22,
+      "cap_by60_pct": 47.5,
+      "mean_deaths60": 1.765,
+      "mean_population60_all_runs": 6.24
+    }
+  },
+  "helped": {
+    "js": {
+      "survive60_pct": 100,
+      "wipeout_by60_pct": 0,
+      "death_by60_pct": 8.5,
+      "bonfire_by60_pct": 100,
+      "median_bonfire_day": 1,
+      "cap_by60_pct": 97.5,
+      "mean_population60": 7.97,
+      "mean_deaths60": 0.09
+    },
+    "python": {
+      "survive60_pct": 100,
+      "wipeout_by60_pct": 0,
+      "death_by60_pct": 8.5,
+      "bonfire_by60_pct": 100,
+      "median_bonfire_day_among_discoverers": 1,
+      "cap_by60_pct": 97.5,
+      "mean_deaths60": 0.09,
+      "mean_population60_all_runs": 7.97
+    }
+  },
+  "cruel": {
+    "js": {
+      "survive60_pct": 3,
+      "wipeout_by60_pct": 97,
+      "death_by60_pct": 100,
+      "bonfire_by60_pct": 56,
+      "median_bonfire_day": 22,
+      "cap_by60_pct": 0,
+      "mean_population60": 0.05,
+      "mean_deaths60": 5.955
+    },
+    "python": {
+      "survive60_pct": 3,
+      "wipeout_by60_pct": 97,
+      "death_by60_pct": 100,
+      "bonfire_by60_pct": 56,
+      "median_bonfire_day_among_discoverers": 22,
+      "cap_by60_pct": 0,
+      "mean_deaths60": 5.955,
+      "mean_population60_all_runs": 0.05
+    }
+  }
+}

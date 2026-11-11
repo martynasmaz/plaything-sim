@@ -19,16 +19,26 @@ Open with → your web browser.
 
 ## How to play
 
-- Goal: reach **day 30 with at least 5 Gourdlings alive and Bonfire known**.
-  That is a milestone, not the end. Keep watching afterward.
-- Commands are optional: Gourdlings can discover the Bonfire on their own.
+- Left alone, the Homestead can usually survive, but it struggles: weather and
+  illness are rolled by dice each night, and deaths are permanent. Your help can
+  make it flourish. Reaching **day 30 with at least 5 Gourdlings and Bonfire
+  known** shows a milestone message; play goes on.
+- Commands are optional: Gourdlings can discover the Bonfire on their own
+  (from day 20).
+- **Tomorrow's weather** is shown above the clearing as soon as it is rolled. If
+  you queue cloud wrangle or dry spell, it shows the weather you called instead.
+- If the last Gourdling dies, **The Homestead Falls Quiet**: time stops, no more
+  commands, and a summary shows days lasted, peak population, births, deaths,
+  when the Bonfire was found and the run's **seed**.
 - Click a Gourdling, or its name in **Little lives**, for its age, activity and
   five needs. Higher numbers are better. The name buttons also work on a phone.
 - Read the **Homestead journal** for important changes; it keeps the latest 10.
 - **1×:** one day every 30 seconds. **3×:** one day every 10 seconds.
 - **Pause** freezes simulation time. **Next day →** deliberately resolves one
   complete day even while paused; it helps you learn the rules.
-- **Restart** immediately returns to a new Homestead at day 0, paused.
+- **Restart** immediately returns to a new Homestead at day 0, paused, with a
+  new seed. To replay a run exactly, add `?seed=123` to the page address (the
+  same seed with the same commands on the same days gives the same story).
 
 ### A word from above
 
@@ -41,8 +51,8 @@ it, or click **Cancel**. Only one command applies per day.
 |---|---:|---|---|
 | `cloud wrangle` (`rain`) | 10 | 4 days | Call 3 days of rain: more gathered provisions, extra cold. |
 | `dry spell` (`drought`) | 10 | 4 days | Call 3 days of drought: fewer gathered provisions. |
-| `hoedown` (`bless`) | 20 | 5 days | Everyone gains up to 15 health and 15 happiness. **Does not cure illness.** |
-| `sick hex` (`plague`) | 30 | 8 days | Everyone ill for 3 days: −8 health and −5 happiness/day. **It can kill Gourdlings.** |
+| `hoedown` (`bless`) | 20 | 5 days | Everyone gains up to 25 health and 15 happiness. **Does not cure illness.** |
+| `sick hex` (`plague`) | 30 | 8 days | Everyone ill for 3 days: −20 health and −5 happiness/day. **It can kill Gourdlings.** |
 | `teach spark` (`teach fire`) | 25 | Once per run | Permanent Bonfire knowledge. Needs 3 firewood: 2 to learn, 1 to burn today. |
 | `feast drop` (`harvest`) | 20 | 5 days | Gift up to 12 provisions to the Pantry, not beyond capacity. Normal meals happen later. |
 
@@ -52,7 +62,7 @@ day 9. The plain aliases remain accepted; parentheses are help formatting, not
 part of what you type. Extra spaces and capital letters are fine: `CLOUD  WRANGLE`
 and `rain` do the same thing. `please rain` does not work.
 
-Rain and dry spells replace each other, not stack. Their casting day counts as
+Rain and dry spells replace each other (and a cold snap), not stack. Their casting day counts as
 the first of 3 days. The HUD separates today's weather from upcoming affected
 days. Sick hex is unavailable and hidden under **both names** when plague is
 switched off by the developer. No later-era commands are callable in v0.1.
@@ -64,6 +74,11 @@ health and happiness for hoedown, or the Homestead has ended. Reasons and cooldo
 availability are shown. Conditions are checked again when the command applies.
 
 ### How the little lives work
+
+Each night three dice are rolled: tomorrow's weather (31% fair, 30% rain, 25% dry
+spell, 14% **cold snap**: −40 extra warmth, no command creates it), whether
+someone falls ill (13%: one Gourdling, 3 days, the same illness as sick hex) and
+who. Nothing else is random.
 
 Commands happen first, then a known Bonfire uses 1 firewood if available. Gourdlings
 get hungry and may get cold, then choose **one** activity, in this order:
@@ -80,13 +95,14 @@ still work. One **Plank shed** has room for all 8 possible Gourdlings.
 
 Provisions, firewood and Wonder each hold up to 100. Wonder returns daily. Bonfire
 knowledge is permanent, but no fuel means an **unlit** Bonfire. A healthy, happy
-Homestead can discover it after 3 qualifying evenings, starting day 10. A
-comfortable, well-fed Homestead can have a child after 15 qualifying evenings.
+Homestead can discover it after 3 qualifying evenings, starting day 20. A lit
+Bonfire gives +10 warmth a day. A comfortable, well-fed Homestead with nobody ill
+has a child after 5 qualifying evenings in a row.
 The **Pantry** is the existing supply spot, not a new building. Corn and musical
 instruments are decoration, not farming or extra jobs.
 
 Gourdlings can die from poor health or old age; deaths are brief and non-graphic.
-At zero population, time stops and **Restart Homestead** is offered.
+At zero population, time stops and **Restart** is offered.
 
 ## Run the editable version
 
@@ -113,11 +129,12 @@ use `PORT=4174 npm start` and open that port instead.
   Theme labels cannot change parser vocabulary; help always retains actual words.
 - `src/config.js` — **all rule/balance numbers**, unchanged from the design.
   `enablePlague: false` hides/rejects both `sick hex` and `plague`.
-- `src/sim.js` — immutable deterministic simulation; no browser, Phaser or randomness.
+- `src/sim.js` — immutable simulation; no browser or Phaser. Its only dice are a
+  seeded generator kept in the state (3 rolls per night), so runs replay exactly.
 - `src/village-view.js` — theme-driven renderer, optional SVG loading, decorative
   travel/idle-walk frames, separate shadows and ground-contact-y sorting.
 - `src/main.js` — controls and theme-based readouts.
-- `assets/` — 44 approved provisional **SVGs only** and artist metadata.
+- `assets/` — 50 approved **SVGs only** (polish pass, incl. cold snap, forecast tag, end sign and Restart button) and the artist manifest.
 - `docs/ART-ASSETS.md` — exact filenames, sizes, anchors and icon redo guidance.
 - `docs/design-v0.1-flavour.canvas.txt` — latest full supplied design; original
   pre-flavour source is also retained. `docs/IMPLEMENTATION.md` has conventions.
@@ -152,12 +169,18 @@ The optional theme test reads the artist SVG directory by default; override with
 `npm test`. It launches its own temporary headless browser, never your desktop
 browser or a signed-in account.
 
+`npm test` also checks the docs: every number quoted in
+`docs/IMPLEMENTATION.md` → "How a Gourdling decides" must match `src/config.js`.
+Change a number in config, update that section in the same commit.
+
 ## Verified result
 
-All rule values are unchanged: unassisted Bonfire discovery at **day 12 end**,
-first lit **day 13**, births **days 15 and 30**, **8 alive with 21 provisions and
-6 firewood on day 30; no deaths**. See `reports/verification.md` for current
-unit/browser results. `screenshot.png` shows the integrated art at real UI size.
+The survival rebalance matches the reference simulator
+(`/workspace/sim/gourdling_survival.py`) **seed for seed** on seeds 0–199,
+500–699 and 1000–1199. Seeds 0–199, 60 days: untouched 94.5% alive (5.5% wiped
+out, 81% lose someone, Bonfire 96%, median day 22); helped 100% alive, 97.5%
+reach 8, 8.5% lose someone; cruel 97% wiped out. `npm run report` prints the
+table. See `reports/verification.md` for current unit/browser results.
 
 This follow-up used **local git only: no fetch, pull, rebase or push**. The parent
 will handle its fresh archive and GitHub history alignment separately.

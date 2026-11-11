@@ -1,5 +1,5 @@
 import { createState, stepDay, queueCommand, cancelCommand, setSpeed, advanceTime,
-  restart, availableCommands, validateCommand, nextAllowedDay } from './sim.js';
+  restart, availableCommands, validateCommand, nextAllowedDay, tomorrowWeather } from './sim.js';
 import { makeVillageScene } from './village-view.js';
 import { THEME, t, commandLabel } from './theme.js';
 
@@ -18,7 +18,11 @@ for(const attr of ['copy','copy-aria','copy-placeholder'])for(const node of docu
   if(attr==='copy')node.textContent=value;else node.setAttribute(attr==='copy-aria'?'aria-label':'placeholder',value);
 }
 document.title=t('ui.title')+t('ui.titleSuffix');
-let state=createState(),selectedId=1;
+// Each run has a seed (the dice's starting number). ?seed=123 in the address
+// replays a run exactly; otherwise the page picks a fresh one.
+const randomSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
+const seedParam=new URLSearchParams(location.search).get('seed');
+let state=createState({},seedParam!==null&&/^\d+$/.test(seedParam)?Number(seedParam)>>>0:randomSeed()),selectedId=1;
 function feedback(text,error=false){$('#feedback').textContent=text;$('#feedback').classList.toggle('error',error);}
 function select(id){selectedId=id;render();}
 const Scene=makeVillageScene(()=>state,select);
@@ -34,7 +38,13 @@ function render(){
   $('#stats').innerHTML=[['population',state.villagers.length,c.limits.population],['food',state.food,c.limits.stock],['wood',state.wood,c.limits.stock],['power',state.power,c.limits.power]]
     .map(([key,value,max])=>`<div class="stat"><small>${htmlText('labels.resources.'+key)}</small><strong>${value}</strong><em>${htmlText('hud.cap',{max})}</em></div>`).join('');
   const weather=state.weather;
-  $('#weather-summary').textContent=t('hud.weather',{today:t('labels.weather.'+(state.lastDay?.weather||'normal')),next:t('labels.weather.'+weather.type),remaining:weather.daysLeft?t('hud.remaining',{days:weather.daysLeft}):''});
+  $('#weather-summary').textContent=state.lastDay?t('hud.weather',{today:t('labels.weather.'+state.lastDay.weather),remaining:weather.daysLeft?t('hud.remaining',{days:weather.daysLeft}):''}):'';
+  $('#forecast').hidden=state.ended;
+  // "Tomorrow" is live text BESIDE the tag; the forecast icon sits in the tag's
+  // icon slot (theme CSS, only when that art loaded), then the weather word.
+  const tomorrow=tomorrowWeather(state);
+  $('#forecast').dataset.weather=tomorrow;
+  $('#forecast').innerHTML=`<span class="forecast-word">${htmlText('hud.tomorrow')}</span><span class="forecast-sep">${htmlText('hud.tomorrowSeparator')}</span><span class="forecast-tag" aria-hidden="true"><span class="forecast-icon" data-weather="${tomorrow}"></span></span><span class="forecast-weather">${htmlText('labels.weather.'+tomorrow)}</span>`;
   $('#fire-summary').textContent=state.fireKnown?t('hud.fireKnown',{fire:t('labels.resources.fire'),state:t(state.fireLit?'hud.burning':'hud.unlit')}):
     t('hud.fireUnknown',{fire:t('labels.resources.fire'),counter:state.fireCounter,required:c.fire.consecutiveDays,day:c.fire.fromDay});
   for(const b of document.querySelectorAll('[data-speed]')){b.setAttribute('aria-pressed',Number(b.dataset.speed)===state.speed);b.disabled=state.ended;}
@@ -61,7 +71,7 @@ function render(){
     const display=commandLabel(command);
     return `<button type="button" class="command-chip" data-command="${command}" title="${htmlText('hud.commandTitle',{message:check.message,cost:rule.cost,cooldown})}">${escapeHtml(display)}<span>${rule.cost}${htmlText('labels.powerGlyph')}</span>${next>state.day+1?` <small>${htmlText(next===Infinity?'hud.known':'hud.shortDay',{day:next})}</small>`:''}</button>`;
   }).join('');
-  $('#command-help').innerHTML=availableCommands(state).map(command=>`<p><strong>${escapeHtml(commandLabel(command))}</strong> — ${htmlText('help.'+command,c.commands[command])}</p>`).join('');
+  $('#command-help').innerHTML=availableCommands(state).map(command=>`<p><strong>${escapeHtml(commandLabel(command))}</strong> — ${htmlText('help.'+command,{...c.commands[command],damage:c.needs.illnessDamage,mood:c.needs.illnessHappinessLoss})}</p>`).join('');
   for(const b of document.querySelectorAll('[data-command]'))b.onclick=()=>{$('#command-input').value=b.dataset.command;$('#command-input').focus();};
   $('#queued').textContent=state.queuedCommand?t('hud.queued',{day:state.day+1,command:commandLabel(state.queuedCommand)}):t('hud.noneQueued');
   $('#cancel').disabled=!state.queuedCommand;$('#command-input').disabled=state.ended;$('#queue').disabled=state.ended;
@@ -70,7 +80,15 @@ function render(){
   $('#milestone').hidden=!state.milestoneReached;
   $('#milestone').textContent=t('hud.milestone',{day:c.milestone.day,population:c.milestone.population,fire:t('labels.resources.fire')});
   $('#goal').textContent=t('ui.goal',{day:c.milestone.day,population:c.milestone.population,fire:t('labels.resources.fire')});
-  $('#ended').hidden=!state.ended;renderProgress();
+  $('#ended').hidden=!state.ended;
+  if(state.ended){
+    const S=state.stats;
+    $('#end-body').textContent=t('ui.endBody',{days:state.day});
+    $('#end-stats').innerHTML=[['days',state.day],['peak',S.peak],['births',S.births],['deaths',S.deaths],['fire',S.fireDay===null?t('hud.endStats.fireNo'):t('hud.endStats.fireYes',{day:S.fireDay})]]
+      .map(([key,value])=>`<div><dt>${htmlText('hud.endStats.'+key)}</dt><dd>${htmlText('hud.endStats.value',{value})}</dd></div>`).join('');
+    $('#end-seed').textContent=t('hud.endStats.seed',{seed:state.seed});
+  }
+  renderProgress();
 }
 function renderProgress(){
   $('#progress').style.width=`${state.elapsedMs/state.config.dayMs*100}%`;
@@ -84,7 +102,7 @@ $('#command-form').addEventListener('submit',e=>{
 $('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.canceled'));render();};
 for(const b of document.querySelectorAll('[data-speed]'))b.onclick=()=>{state=setSpeed(state,Number(b.dataset.speed));render();};
 $('#next-day').onclick=()=>{state=stepDay(state);showCommandResult();render();};
-function reset(){state=restart(state);selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
+function reset(){state=restart(state,randomSeed());selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
 $('#restart').onclick=reset;$('#restart-ended').onclick=reset;
 function showCommandResult(){const r=state.lastDay?.command;if(r)feedback(r.ok?t('feedback.applied',{command:commandLabel(r.command),day:state.day}):r.message,!r.ok);}
 let lastTime=performance.now();

@@ -37,12 +37,21 @@ export const THEME = {
   "uneasy_icon": "assets/status_uneasy.svg",
   "hoedown_icon": "assets/status_hoedown.svg",
   "warming_icon": "assets/cue_warming.svg",
+  "cold": "assets/overlay_cold_snap.svg",
+  "cold_cue": "assets/cue_cold_snap.svg",
+  "tomorrow_tag": "assets/tag_tomorrow.svg",
+  "end_sign": "assets/sign_endscreen.svg",
+  "restart_button": "assets/button_restart.svg",
+  "restart_button_pressed": "assets/button_restart_pressed.svg",
   "villager": "assets/gourdling_{variant}_{state}_{frame}.svg"
 },
   creatures: { variants:['fiddler','banjo','singer','kicker','washboard','jug'],
     childVariant:'child', states:{ idle:[1], walk:[1,2] }, pattern:'gourdling_{variant}_{state}_{frame}' },
   // Source dimensions follow the artist's proposal. "size" is actual canvas px.
   // All sprite origins are explicit. Feet/ground contacts use bottom-centre.
+  // Art used by the page around the canvas (forecast tag, end sign, buttons).
+  // Words on them are always live text from copy below; none is baked in.
+  domArt: ['tomorrow_tag','end_sign','restart_button','restart_button_pressed','rain_cue','drought_cue','cold_cue'],
   assetSpecs: {
   "villager": {
     "file": "gourdling_fiddler_idle_1.svg",
@@ -372,7 +381,10 @@ export const THEME = {
       40,
       13.3333
     ],
-    "childSize": [30,10],
+    "childSize": [
+      30,
+      10
+    ],
     "origin": [
       0.5,
       0.5
@@ -521,8 +533,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      32,
+      32
     ],
     "pivot": [
       16.0,
@@ -547,8 +559,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      32,
+      32
     ],
     "pivot": [
       16.0,
@@ -573,8 +585,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -598,8 +610,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -623,8 +635,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -648,8 +660,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -673,8 +685,8 @@ export const THEME = {
     "viewBox": [
       0,
       0,
-      64,
-      64
+      24,
+      24
     ],
     "pivot": [
       12.0,
@@ -688,6 +700,164 @@ export const THEME = {
       0.5,
       0.5
     ]
+  },
+  "cold": {
+    "file": "overlay_cold_snap.svg",
+    "source": [
+      64,
+      64
+    ],
+    "viewBox": [
+      0,
+      0,
+      64,
+      64
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      64,
+      64
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "tile": true,
+    "alpha": 0.6,
+    "layer": "weather"
+  },
+  "cold_cue": {
+    "file": "cue_cold_snap.svg",
+    "source": [
+      32,
+      32
+    ],
+    "viewBox": [
+      0,
+      0,
+      32,
+      32
+    ],
+    "pivot": [
+      16.0,
+      16.0
+    ],
+    "size": [
+      24,
+      24
+    ],
+    "origin": [
+      0.5,
+      0.5
+    ],
+    "layer": "labels"
+  },
+  "tomorrow_tag": {
+    "file": "tag_tomorrow.svg",
+    "source": [
+      56,
+      32
+    ],
+    "viewBox": [
+      0,
+      0,
+      56,
+      32
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      56,
+      32
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "ui": true
+  },
+  "end_sign": {
+    "file": "sign_endscreen.svg",
+    "source": [
+      420,
+      240
+    ],
+    "viewBox": [
+      0,
+      0,
+      420,
+      240
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      420,
+      240
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "ui": true
+  },
+  "restart_button": {
+    "file": "button_restart.svg",
+    "source": [
+      140,
+      40
+    ],
+    "viewBox": [
+      0,
+      0,
+      140,
+      40
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      140,
+      40
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "ui": true
+  },
+  "restart_button_pressed": {
+    "file": "button_restart_pressed.svg",
+    "source": [
+      140,
+      40
+    ],
+    "viewBox": [
+      0,
+      0,
+      140,
+      40
+    ],
+    "pivot": [
+      0.0,
+      0.0
+    ],
+    "size": [
+      140,
+      40
+    ],
+    "origin": [
+      0.0,
+      0.0
+    ],
+    "ui": true
   },
   "background": {
     "file": "background.svg",
@@ -717,19 +887,34 @@ export const THEME = {
 },
   layout: {
     canvas:{width:900,height:480},
-    spots:{shelter:{x:185,y:160},fire:{x:445,y:255},food:{x:755,y:140},wood:{x:738,y:280},rest:{x:235,y:280}},
-    props:{shelter:[185,204],campfire_lit:[445,278],campfire_out:[445,278],food_spot:[755,166],pantry:[655,202],wood_spot:[745,370],lantern:[505,276]},
-    corn:[[58,122],[96,62],[830,93],[855,262],[63,391],[112,467],[800,477],[660,62]],
-    fence:[{key:'fence_corner',x:290,y:85,angle:90},{key:'fence_tile',x:354,y:85,angle:0},{key:'fence_tile',x:418,y:85,angle:0},{key:'fence_tile',x:482,y:85,angle:0},{key:'fence_tile',x:546,y:85,angle:0},{key:'fence_corner',x:610,y:85,angle:0},{key:'fence_vertical',x:610,y:149,angle:0}],
-    labels:{pantry:[655,225],shelter:[185,48],shelterPlaces:[185,63],food:[755,56],wood:[745,448],rest:[235,432],fire:[445,301],weather:[450,24],hint:[22,451]},
-    initial:{x:400,y:325,columns:3,gapX:52,gapY:68},
-    people:{columns:4,offsetX:-72,offsetY:48,gapX:48,gapY:60,footOffset:13,childFootOffset:10},
+    // Green clearing (rounded rectangle). The fence's posts stand on its top edge.
+    ground:{x:30,y:60,width:840,height:405,radius:110},
+    // Cream path ends; every path starts at the Bonfire spot.
+    spots:{shelter:{x:185,y:200},fire:{x:445,y:236},food:{x:700,y:200},wood:{x:700,y:360},rest:{x:185,y:330},pantry:{x:360,y:166}},
+    props:{shelter:[185,204],campfire_lit:[445,222],campfire_out:[445,222],food_spot:[820,180],pantry:[360,160],wood_spot:[830,380],lantern:[500,218]},
+    corn:[[70,58],[640,58],[760,58],[18,210],[18,440],[884,250],[884,470],[300,480]],
+    // Fence pieces are 64x64 tiles centred on (x,y), laid edge to edge on a
+    // 64 px grid so rails join. flipX mirrors a corner/vertical for the left end.
+    // y=76 puts post feet (tile y 56) at 100, on the green; tops poke above the edge.
+    fence:[{key:'fence_corner',x:290,y:76,flipX:true},{key:'fence_tile',x:354,y:76},{key:'fence_tile',x:418,y:76},{key:'fence_tile',x:482,y:76},{key:'fence_corner',x:546,y:76},
+      {key:'fence_vertical',x:290,y:140,flipX:true},{key:'fence_vertical',x:546,y:140}],
+    labels:{pantry:[360,182],shelter:[185,48],shelterPlaces:[185,63],food:[820,92],wood:[830,404],rest:[185,424],fire:[445,246],weather:[450,24],hint:[22,451]},
+    // Where Gourdlings stand. Each living Gourdling gets ONE slot number = its
+    // place in villager-number order (0..7), and uses that same slot in every
+    // grid, so up to 8 never overlap. A cell (50x84) fits an adult sprite
+    // (40x60) plus a name label up to 48 px wide; the four grids never overlap.
+    // Shelter-side activities (newborns, warming without a Bonfire) use the
+    // rest grid beside the Plank shed.
+    slots:{columns:4,gapX:50,gapY:84,grids:{rest:[110,290],fire:[370,310],food:[600,150],wood:[600,320]}},
+    people:{footOffset:13,childFootOffset:10},
     animation:{walkMs:1000,learnMs:600,learnWaitMs:350,idleFrameMs:450,walkFrameMs:250,minTravel:.5,motionThreshold:.001,ease:'Sine.easeInOut'},
     canvasText:{color:'ink',background:'cream',padding:{x:2,y:1}},
-    text:{base:12,small:10,status:9,weather:11,hint:9,labelY:19,statusY:-76,statusSeparator:"\n"},
+    text:{base:12,small:10,status:9,weather:11,hint:9,labelY:19,labelMaxWidth:48,glyph:11},
     needs:{badBelow:40,warningBelow:60},
     fallback:{adultRadius:13,childRadius:10,outline:3,buildingOutline:4,eyeRadius:1.5},
-    icons:{x:-20,y:-61,gap:20},
+    // Status icons stack down the right side of the Gourdling's own sprite,
+    // so they never reach a neighbour's slot.
+    icons:{x:14,y:-36,gap:17,fallbackRadius:7},
     depth:{world:100,weather:1000,labels:2000},
     weatherCue:{x:865,y:27},
     propShadow:{width:.8,height:.2},
@@ -742,25 +927,28 @@ export const THEME = {
       villageStatus:'Homestead status',playback:'Playback speed',world:'The barn clearing',
       villageAria:'A little Homestead. Select a creature or its name below to inspect it.',
       pause:'Pause',normal:'1×',fast:'3×',nextDay:'Next day →',restart:'Restart',
-      endTitle:'The Homestead has ended',endBody:'Every little world has a story. Start another?',restartVillage:'Restart Homestead',
+      endTitle:'The Homestead Falls Quiet',endBody:'The last Gourdling is gone. The Homestead lasted {days} days.',restartVillage:'Restart',
       commandTitle:'A word from above',oneCommand:'One command per day',commandInput:'God command',prompt:'>',
       placeholder:'Type a listed command, then press Enter',queue:'Queue',cancel:'Cancel',
       feedback:'Queuing is free. Wonder is spent only when the next day starts.',
       lives:'Little lives',journal:'Homestead journal',latest:'Latest {count}',
-      goal:'Goal: reach day {day} with {population}+ Gourdlings and {fire}.',footer:'A gourd-shaped world, living on its own.'},
+      goal:'Left alone, the Homestead can survive, but it struggles. Your help can make it flourish.',footer:'A gourd-shaped world, living on its own.'},
     labels:{ages:{Stone:'First Age'},resources:{population:'Gourdlings',food:'Provisions',wood:'Firewood',power:'Wonder',shelter:'Plank shed',fire:'Bonfire'},
       needs:{fullness:'Fullness',warmth:'Warmth',health:'Health',safety:'Safety',happiness:'Happiness'},
       units:{food:'provisions',wood:'firewood',warmth:'warmth',happiness:'happiness'},
-      life:{child:'Child',adult:'Adult',elder:'Elder'},weather:{normal:'normal',rain:'rain',drought:'drought'},
+      life:{child:'Child',adult:'Adult',elder:'Elder'},weather:{normal:'fair',rain:'rain',drought:'dry spell',cold:'cold snap'},
       activities:{Waiting:'Waiting',Forage:'Forage','Gather wood':'Gather firewood','Warm up':'Warm up',Rest:'Rest',Newborn:'Newborn'},
       reactions:{Sick:'Sick',Grateful:'Grateful','Learned fire':'Learned Bonfire'},
       conditions:{sick:'sick',unwell:'unwell',unhappy:'unhappy',uneasy:'uneasy'},
+      // One-character marks drawn on the fallback status discs (no icon art).
+      statusGlyphs:{sick_icon:'+',unhappy_icon:'~',uneasy_icon:'!',hoedown_icon:'*',warming_icon:'^'},
       commandNames:{rain:'cloud wrangle',drought:'dry spell',bless:'hoedown',plague:'sick hex','teach fire':'teach spark',harvest:'feast drop'},
       causes:{hunger:'hunger',cold:'cold',illness:'illness','poor health':'poor health','old age':'old age'},
       separators:{list:', ',detail:'; ',cause:' and ',status:' · '},powerGlyph:'⚡',
       nameFallback:'Gourdling {id}',newbornName:'Neri {id}'},
     hud:{day:'Day {day}',logDay:'DAY {day}',paused:'Paused · time is still',ended:'Homestead ended',speed:'{speed}× · {seconds}s per day',
-      cap:'/ {max}',population:'{count} Gourdlings',weather:'Today: {today} · Next: {next}{remaining}',remaining:' ({days} days left)',
+      cap:'/ {max}',population:'{count} Gourdlings',weather:'Today: {today}{remaining}',remaining:' ({days} more days)',tomorrow:'Tomorrow',tomorrowSeparator:':',
+      endStats:{days:'Days lasted',peak:'Peak population',births:'Births',deaths:'Deaths',fire:'Bonfire discovered',fireYes:'yes, on day {day}',fireNo:'no',seed:'Run seed {seed}',value:': {value}'},
       fireKnown:'{fire} known · {state}',burning:'burning today',unlit:'unlit today',
       fireUnknown:'{fire} unknown · discovery {counter}/{required} (from day {day})',
       person:'#{id} · {stage} · {age} days old',gain:' · +{amount} {unit}',
@@ -771,15 +959,15 @@ export const THEME = {
       milestone:'Milestone reached: through day {day}, with {population}+ lives and the knowledge of {fire}. Life goes on.',
       stopped:'Time has stopped.',nextIn:'Next day in {seconds}s',pausedNext:'Paused · next day in {seconds}s at 1×'},
     scene:{shelter:'PLANK SHED',shelterPlaces:'{places} places · always open',pantry:'PANTRY',food:'WILD PROVISIONS',wood:'FIREWOOD GROVE',rest:'RESTING PLACE',
-      hint:'SELECT A LITTLE LIFE TO SEE ITS NEEDS',rain:'RAIN · GOOD FOR PROVISIONS, COLD FOR LITTLE LIVES',drought:'DROUGHT · A SMALLER GATHERING',normal:'A QUIET DAY IN THE CLEARING',
+      hint:'SELECT A LITTLE LIFE TO SEE ITS NEEDS',rain:'RAIN · GOOD FOR PROVISIONS, COLD FOR LITTLE LIVES',drought:'DRY SPELL · A SMALLER GATHERING',cold:'COLD SNAP · BITTER COLD, STAY WARM',normal:'A FAIR DAY IN THE CLEARING',
       fireUnknown:'BONFIRE · NOT YET KNOWN',fireLit:'BONFIRE · BURNING TODAY',fireOut:'BONFIRE KNOWN · UNLIT TODAY'},
-    help:{rain:'Call {duration} days of rain: more gathered provisions, but extra cold.',
-      drought:'Call {duration} days of drought: fewer gathered provisions.',
+    help:{rain:'Call {duration} days of rain: more gathered provisions, a little extra cold. Replaces a dry spell or cold snap.',
+      drought:'Call {duration} days of drought: far fewer gathered provisions. Replaces rain or a cold snap.',
       bless:'Give everyone +{health} health and +{happiness} happiness. Does not cure illness.',
-      plague:'Make everyone ill for {duration} days. Illness causes health and happiness loss and can kill Gourdlings.',
+      plague:'Make everyone ill for {duration} days: −{damage} health and −{mood} happiness each day. This can kill Gourdlings, and deaths are permanent.',
       'teach fire':'Teach permanent Bonfire knowledge; firewood is still required to learn and burn.',
       harvest:'Add {food} provisions, up to capacity. Gourdlings still eat at the normal meal step.'},
-    errors:{unknown:'Unknown/unavailable command. Use: {commands}.',ended:'The Homestead has ended. Restart to begin again.',
+    errors:{unknown:'Unknown/unavailable command. Use: {commands}.',ended:'The Homestead has fallen quiet. Commands are no longer accepted; Restart to begin again.',
       condition:'{reason} Earliest by cooldown: day {day}; the condition must also be met.',
       once:'Teach spark is once per run; Bonfire is already known.',cooldown:'{command} is cooling down. Next allowed: day {allowed} (not day {day}).',
       power:'Not enough wonder: {command} needs {cost}; you have {power}. Next allowed by cooldown: day {day}; wonder is also required.',
@@ -790,11 +978,11 @@ export const THEME = {
       speed:'Speed must be 0 (pause), 1 or 3.',time:'Time must be a finite nonnegative number.'},
     feedback:{canApply:'{command} can apply on day {day}.',queued:'Queued {command} for day {day}. No wonder spent yet.',
       canceled:'Command canceled. No wonder spent.',reset:'A fresh Homestead. Paused at day 0; no saved game.',applied:'{command} applied on day {day}. See the journal for its effect.'},
-    log:{start:'Six Gourdlings begin a First Age Homestead. Paused. No saved game.',rejected:'Command rejected: {reason}',
+    log:{start:'Six Gourdlings begin a First Age Homestead (seed {seed}). Paused. No saved game.',naturalIllness:'{name} fell ill for {days} days.',rejected:'Command rejected: {reason}',
       weather:'{command} for {duration} days including today; replaces previous weather. {effect}',rain:'More provisions, extra cold.',drought:'Lower foraging yields.',
       plague:'Everyone is ill for {duration} days including today.',blessPerson:'{name} +{health} health/+{happiness} happiness',blessEnd:'. Illness is not cured.',
       harvest:'Gift: +{food} provisions (meals still happen after work).',teach:'Bonfire knowledge learned; {wood} firewood spent. Today\'s fuel check is next.',
-      command:'{command} (−{cost} wonder). {details}',death:'{name} (#{id}) died: {causes}.',ended:'The Homestead has ended. Restart to begin a new Homestead.',
+      command:'{command} (−{cost} wonder). {details}',death:'{name} (#{id}) died: {causes}.',ended:'The last Gourdling is gone. The Homestead falls quiet.',
       birth:'{name} was born. First work and meal tomorrow.',discovery:'The Homestead discovered the Bonfire! Spent {wood} firewood; first Bonfire fuel check is tomorrow.',
       fireLit:'Bonfire burned {wood} firewood.',fireOut:'Bonfire known, but unlit today.',fireUnknown:'Bonfire unknown.',
       day:'Work: +{food} provisions, +{wood} firewood. {meals} meals. {fire} Wonder +{power} (cap {cap}).',
@@ -844,75 +1032,104 @@ export function villagerTextureCandidates(v, child, walking, time) {
 
 // Geometric placeholders. These are THEME callbacks, not simulation or renderer
 // code: a future one-file reskin can replace every primitive as well as sprites.
+// Fallback props were drawn around these points; at() shifts each drawing to
+// wherever THEME.layout.props puts that prop (call g.restore() when done).
+const FALLBACK_ANCHORS={shelter:[185,204],pantry:[655,202],food_spot:[755,166],wood_spot:[745,370],campfire_out:[445,278],campfire_lit:[445,278],lantern:[505,276]};
+function at(g,key){const [x,y]=THEME.layout.props[key],[ax,ay]=FALLBACK_ANCHORS[key];g.save();g.translateCanvas(x-ax,y-ay);}
+function fenceBar(g,x,y,w,h){g.fillStyle(themeColor('mustard')).fillRect(x,y,w,h).lineStyle(3,themeColor('ink')).strokeRect(x,y,w,h);}
+
+// Slot number -> canvas point in one of THEME.layout.slots.grids.
+export function slotPosition(grid,slot) {
+  const S=THEME.layout.slots,[x,y]=S.grids[grid];
+  return {x:x+(slot%S.columns)*S.gapX,y:y+Math.floor(slot/S.columns)*S.gapY};
+}
+
 THEME.fallbacks = {
   base(g) { g.fillStyle(themeColor('cream')).fillRect(0,0,THEME.layout.canvas.width,THEME.layout.canvas.height); },
-  groundMask(g) { g.fillStyle(themeColor('ink')).fillEllipse(444,252,770,385); },
-  paths(g) { const L=THEME.layout;g.lineStyle(20,themeColor('cream'));for(const key of ['shelter','food','wood','rest'])g.beginPath().moveTo(445,255).lineTo(L.spots[key].x,L.spots[key].y).strokePath(); },
+  groundMask(g) { const G=THEME.layout.ground;g.fillStyle(themeColor('ink')).fillRoundedRect(G.x,G.y,G.width,G.height,G.radius); },
+  paths(g) { const L=THEME.layout;g.lineStyle(20,themeColor('cream'));for(const key of ['shelter','food','wood','rest','pantry'])g.beginPath().moveTo(L.spots.fire.x,L.spots.fire.y).lineTo(L.spots[key].x,L.spots[key].y).strokePath(); },
   terrain(g) {
-    const c=themeColor,L=THEME.layout;
+    const c=themeColor,L=THEME.layout,G=L.ground;
     g.fillStyle(c('cream')).fillRect(0,0,L.canvas.width,L.canvas.height);
-    g.fillStyle(c('green')).fillEllipse(444,252,770,385);
-    g.lineStyle(20,c('cream'));
-    for(const key of ['shelter','food','wood','rest'])g.beginPath().moveTo(445,255).lineTo(L.spots[key].x,L.spots[key].y).strokePath();
+    g.fillStyle(c('green')).fillRoundedRect(G.x,G.y,G.width,G.height,G.radius);
+    THEME.fallbacks.paths(g);
   },
   shelter(g) {
-    const c=themeColor;
+    const c=themeColor;at(g,'shelter');
     g.fillStyle(c('mustard')).fillRoundedRect(122,140,126,63,4);
     g.lineStyle(THEME.layout.fallback.buildingOutline,c('ink')).strokeRoundedRect(122,140,126,63,4);
     g.fillStyle(c('red')).fillTriangle(103,147,185,95,267,147);
     g.strokeTriangle(103,147,185,95,267,147);
     g.fillStyle(c('ink')).fillRoundedRect(165,159,40,45,{tl:20,tr:20,bl:0,br:0});
     for(const x of [143,164,206,227])g.lineBetween(x,149,x,199);
+    g.restore();
   },
   pantry(g) {
-    const c=themeColor;g.lineStyle(3,c('ink')).fillStyle(c('mustard')).fillRoundedRect(627,174,56,28,4).strokeRoundedRect(627,174,56,28,4);
+    const c=themeColor;at(g,'pantry');g.lineStyle(3,c('ink')).fillStyle(c('mustard')).fillRoundedRect(627,174,56,28,4).strokeRoundedRect(627,174,56,28,4);
     g.fillStyle(c('red')).fillCircle(643,176,8).fillCircle(663,173,9);
+    g.restore();
   },
-  fence_vertical(g,x,y) {const c=themeColor;g.lineStyle(3,c('ink')).fillStyle(c('mustard')).fillRoundedRect(x-4,y-32,8,64,2).strokeRoundedRect(x-4,y-32,8,64,2);},
-  fence_corner(g,x,y) {THEME.fallbacks.fence_tile(g,x-32,y-32);},
+  // Fence fallbacks match the SVG geometry (centre x,y; rails at tile y 24-31
+  // and 40-47; posts at tile x 12-19 and 46-53) so pieces join on a 64 grid.
+  fence_vertical(g,x,y,flip=false) {const s=flip?-1:1;fenceBar(g,x+s*(-8)-(flip?7:0),y-36,7,72);fenceBar(g,x+s*8-(flip?7:0),y-36,7,72);},
+  fence_corner(g,x,y,flip=false) {
+    const s=flip?-1:1;
+    fenceBar(g,Math.min(x-36*s,x-1*s),y-8,35,7);fenceBar(g,Math.min(x-36*s,x+15*s),y+8,51,7);
+    fenceBar(g,x+s*(-8)-(flip?7:0),y-8,7,44);fenceBar(g,x+s*8-(flip?7:0),y+8,7,28);
+    fenceBar(g,x+s*(-20)-(flip?7:0),y-17,7,41);
+  },
   rain_cue(g,x,y) {g.lineStyle(2,themeColor('ink')).fillStyle(themeColor('cream')).fillEllipse(x,y,26,16).strokeEllipse(x,y,26,16).lineBetween(x-6,y+12,x-9,y+18).lineBetween(x+6,y+12,x+3,y+18);},
+  cold_cue(g,x,y) {g.lineStyle(2,themeColor('ink'));for(let i=0;i<3;i++){const a=i*Math.PI/3;g.lineBetween(x-Math.cos(a)*10,y-Math.sin(a)*10,x+Math.cos(a)*10,y+Math.sin(a)*10);}},
   drought_cue(g,x,y) {g.lineStyle(2,themeColor('ink')).fillStyle(themeColor('mustard')).fillCircle(x,y,10).strokeCircle(x,y,10);},
   food_spot(g) {
-    const c=themeColor;
+    const c=themeColor;at(g,'food_spot');
     g.lineStyle(THEME.layout.fallback.outline,c('ink'));
     for(const [x,y,r] of [[697,132,23],[733,126,29],[758,142,21]])g.fillStyle(c('green')).fillCircle(x,y,r).strokeCircle(x,y,r);
     for(const [x,y] of [[687,130],[705,140],[725,117],[740,137],[750,151]])g.fillStyle(c('mustard')).fillCircle(x,y,4);
     g.fillStyle(c('mustard')).fillRoundedRect(700,164,50,22,4).strokeRoundedRect(700,164,50,22,4);
     g.fillCircle(711,166,7).fillCircle(728,164,8).fillCircle(740,167,6);
+    g.restore();
   },
   wood_spot(g) {
-    const c=themeColor;g.lineStyle(THEME.layout.fallback.outline,c('ink'));
+    const c=themeColor;at(g,'wood_spot');g.lineStyle(THEME.layout.fallback.outline,c('ink'));
     for(let i=0;i<3;i++)g.fillStyle(c('mustard')).fillRoundedRect(703+i*3,332+i*12,80-i*8,12,6).strokeRoundedRect(703+i*3,332+i*12,80-i*8,12,6);
+    g.restore();
   },
   campfire_out(g) {
-    const c=themeColor;
+    const c=themeColor;at(g,'campfire_out');
     g.lineStyle(3,c('ink')).strokeEllipse(445,267,84,47);
     for(let i=0;i<8;i++){const a=i*Math.PI/4;g.fillStyle(c('cream')).fillEllipse(445+Math.cos(a)*41,267+Math.sin(a)*23,13,9);}
     g.lineStyle(6,c('ink')).lineBetween(426,272,464,253).lineBetween(428,254,462,272);
+    g.restore();
   },
   campfire_lit(g) {
-    THEME.fallbacks.campfire_out(g);const c=themeColor;
+    THEME.fallbacks.campfire_out(g);const c=themeColor;at(g,'campfire_lit');
     g.fillStyle(c('orange')).fillTriangle(426,266,446,219,464,266);
     g.lineStyle(3,c('ink')).strokeTriangle(426,266,446,219,464,266);
     g.fillStyle(c('mustard')).fillTriangle(436,266,446,238,454,266);
+    g.restore();
   },
   lantern(g) {
-    const c=themeColor;g.lineStyle(3,c('ink')).lineBetween(501,277,501,216).lineBetween(501,216,516,220);
+    const c=themeColor;at(g,'lantern');g.lineStyle(3,c('ink')).lineBetween(501,277,501,216).lineBetween(501,216,516,220);
     g.fillStyle(c('mustard')).fillRoundedRect(509,229,14,20,3).strokeRoundedRect(509,229,14,20,3);
     g.lineBetween(516,220,516,229);
+    g.restore();
   },
   corn(g,x,y) {
     const c=themeColor;g.lineStyle(3,c('ink')).lineBetween(x,y,x,y-36).lineBetween(x,y-10,x-12,y-22);
     g.fillStyle(c('mustard')).fillEllipse(x,y-40,12,24).strokeEllipse(x,y-40,12,24);
   },
   fence_tile(g,x,y) {
-    const c=themeColor;g.lineStyle(3,c('ink'));
-    g.fillStyle(c('mustard')).fillRoundedRect(x,y+20,64,8,2).strokeRoundedRect(x,y+20,64,8,2);
-    g.fillRoundedRect(x+4,y+7,8,42,3).strokeRoundedRect(x+4,y+7,8,42,3);
+    fenceBar(g,x-36,y-8,72,7);fenceBar(g,x-36,y+8,72,7);
+    fenceBar(g,x-20,y-17,7,41);fenceBar(g,x+14,y-16,7,40);
   },
   rain(g) {
     const c=themeColor;g.lineStyle(1,c('cream'),.6);
     for(let i=0;i<60;i++){const x=(i*139)%900,y=(i*79)%470;g.lineBetween(x,y,x-4,y+13);}
+  },
+  cold(g) {
+    const c=themeColor;g.fillStyle(c('cream'),.75);
+    for(let i=0;i<70;i++){const x=(i*127)%900,y=(i*61)%470;g.fillCircle(x,y,2);}
   },
   drought(g) {
     const c=themeColor;g.fillStyle(c('mustard')).fillCircle(825,40,16);g.lineStyle(2,c('ink')).strokeCircle(825,40,16);
@@ -927,9 +1144,10 @@ THEME.fallbacks = {
     const eyes=scene.add.graphics().fillStyle(c('ink')).fillCircle(-4,-1,F.eyeRadius).fillCircle(4,-1,F.eyeRadius);
     return {body,eyes};
   },
-  statusIcon(g,index) {
-    // Status words remain visible even without these optional small images.
-    g.lineStyle(2,themeColor('ink')).strokeCircle(index*14,0,5);
+  statusIcon(g) {
+    // Without icon art: a cream disc; the view writes copy.labels.statusGlyphs on it.
+    const r=THEME.layout.icons.fallbackRadius;
+    g.fillStyle(themeColor('cream')).fillCircle(0,0,r).lineStyle(2,themeColor('ink')).strokeCircle(0,0,r);
   }
 };
 
@@ -1268,6 +1486,33 @@ h2{
   font-size:13px}
 .end-panel h2{
   font:25px var(--heading-font)}
+.end-stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:8px;
+  margin:10px 0}
+.end-stats div{
+  border-top:1px solid var(--ink);
+  padding-top:4px}
+.end-stats dt{
+  font-size:11px;
+  letter-spacing:.06em;
+  text-transform:uppercase}
+.end-stats dd{
+  margin:0;
+  font:20px var(--heading-font)}
+.end-seed{
+  display:block;
+  margin-top:8px;
+  font-size:10px;
+  opacity:.75}
+.weather-line{
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap}
+.forecast{
+  font-weight:bold}
 .end-panel p{
   font-size:12px;
   color:var(--muted)}
@@ -1391,4 +1636,29 @@ THEME.css += `button{background:var(--ink);color:var(--cream)}.command-chip{back
 .command-help p{margin:0}.command-help strong{color:var(--ink);font-weight:600}
 @media(max-width:600px){.command-help{grid-template-columns:1fr}}`;
 
+THEME.css += `
+/* Wipeout end screen: an overlay on the clearing (mockup: endscreen_mockup.png). */
+.world-stage{position:relative}
+.end-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(43,33,28,.55);padding:12px}
+.end-overlay[hidden]{display:none}
+.end-overlay .end-panel{margin:0;width:min(460px,100%);text-align:center;color:var(--cream);background:var(--green);border:3px double var(--cream);outline:3px solid var(--ink);border-radius:6px;padding:22px 26px}
+.end-overlay .end-panel h2{color:var(--cream);font:26px var(--heading-font);margin:0 0 6px}
+.end-overlay .end-panel p{color:var(--cream);font-size:13px;margin:0 0 6px}
+.end-overlay .end-stats{display:block;margin:6px 0 12px}
+.end-overlay .end-stats div{display:block;border:0;padding:1px 0;font-size:14px}
+.end-overlay .end-stats dt,.end-overlay .end-stats dd{display:inline;margin:0;font:14px var(--body-font);letter-spacing:0;text-transform:none}
+.end-overlay .end-seed{color:var(--cream)}
+#restart-ended{background:var(--mustard);color:var(--ink);border:3px solid var(--ink);border-radius:5px;min-width:140px;min-height:40px;font:bold 16px var(--heading-font)}
+.art-end_sign .end-overlay .end-panel{border:40px solid transparent;border-image:var(--art-end_sign) 40 fill / 40px stretch;outline:0;border-radius:0;background:none;padding:4px 10px}
+.art-restart_button #restart-ended{background:var(--art-restart_button) center/100% 100% no-repeat;border:0;border-radius:0;width:140px;height:40px;padding:0 0 4px}
+.art-restart_button_pressed #restart-ended:hover,.art-restart_button_pressed #restart-ended:active{background-image:var(--art-restart_button_pressed);padding:3px 0 1px}
+/* Tomorrow's weather: word, tag (with the weather icon in its slot), weather name. */
+.forecast{display:inline-flex;align-items:center;gap:6px}
+.forecast-tag{display:none}
+.art-tomorrow_tag .forecast-sep{display:none}
+.art-tomorrow_tag .forecast-tag{display:inline-block;position:relative;width:56px;height:32px;background:var(--art-tomorrow_tag) center/100% 100% no-repeat}
+.forecast-icon{position:absolute;left:28px;top:4px;width:24px;height:24px;background:center/contain no-repeat}
+.art-rain_cue .forecast-icon[data-weather=rain]{background-image:var(--art-rain_cue)}
+.art-drought_cue .forecast-icon[data-weather=drought]{background-image:var(--art-drought_cue)}
+.art-cold_cue .forecast-icon[data-weather=cold]{background-image:var(--art-cold_cue)}`;
 THEME.css += `#command-form.has-art{border:12px solid transparent;border-image:var(--command-panel-art) 20 fill / 12px stretch;background-image:none;min-height:72px}`;

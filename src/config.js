@@ -1,5 +1,6 @@
 // The one place to tune the simulation. All display choices live in theme.js.
-// Values below are copied from the v0.1 design, NOT adjusted to make tests pass.
+// Values below are copied from the v0.1 design (survival rebalance, matching
+// /workspace/sim/gourdling_survival.py), NOT adjusted to make tests pass.
 export const CONFIG = {
   enablePlague: true, // Set false, then run `npm run build` to hide/disable plague.
   dayMs: 30_000,
@@ -13,11 +14,11 @@ export const CONFIG = {
   limits: { need: 100, stock: 100, power: 100, population: 8, shelter: 8, log: 10 },
   life: { adult: 20, elder: 240, death: 300 },
   needs: {
-    fullnessLoss: 25, warmthLoss: 10, rainWarmthLoss: 10,
-    shelterWarmth: 10, fireWarmth: 5,
+    fullnessLoss: 25, warmthLoss: 10, rainWarmthLoss: 10, coldWarmthLoss: 40,
+    shelterWarmth: 10, fireWarmth: 10,
     emergencyFullness: 40, warmUpBelow: 40, warmUp: 20, warmUpWithFire: 40,
     eatAtOrBelow: 75, mealCost: 1, mealFullness: 30,
-    damageAtOrBelow: 20, hungerDamage: 10, coldDamage: 10, illnessDamage: 8,
+    damageAtOrBelow: 20, hungerDamage: 10, coldDamage: 10, illnessDamage: 20,
     recovery: 4, recoveryMin: 50,
     safeHealth: 50, safe: 80, unsafe: 40,
     happyMin: 50, happyGain: 2, unhappyBelow: 40, unhappyLoss: 4,
@@ -25,20 +26,25 @@ export const CONFIG = {
   },
   work: {
     foodTargetPerPerson: 4, woodTarget: 6,
-    adultFood: { normal: 3, rain: 4, drought: 1 },
-    childFood: { normal: 1, rain: 2, drought: 0 },
+    adultFood: { normal: 3, rain: 4, drought: 1, cold: 3 },
+    childFood: { normal: 1, rain: 2, drought: 0, cold: 1 },
     adultWood: 2, childWood: 1
   },
-  fire: { minWood: 3, discoveryCost: 2, dailyFuel: 1, fromDay: 10,
+  fire: { minWood: 3, discoveryCost: 2, dailyFuel: 1, fromDay: 20,
     adults: 2, happiness: 50, consecutiveDays: 3 },
   birth: { adults: 2, health: 70, fullness: 60, warmth: 50, happiness: 50,
-    foodPerPerson: 2, extraFood: 4, consecutiveDays: 15 },
+    foodPerPerson: 2, extraFood: 4, consecutiveDays: 5 },
+  // Seeded dice: exactly 3 rolls every night (weather, illness, who falls ill).
+  // Chances are percentages of a 100-sided die, checked in this order.
+  weather: { chances: { normal: 31, rain: 30, drought: 25, cold: 14 } },
+  illness: { chance: 13, duration: 3 },
+  rng: { warmupSteps: 8 },
   power: { daily: 3, happyBonus: 2, happyAverage: 60 },
   milestone: { day: 30, population: 5 },
   commands: {
     rain: { cost: 10, cooldown: 4, duration: 3 },
     drought: { cost: 10, cooldown: 4, duration: 3 },
-    bless: { cost: 20, cooldown: 5, health: 15, happiness: 15 },
+    bless: { cost: 20, cooldown: 5, health: 25, happiness: 15 },
     plague: { cost: 30, cooldown: 8, duration: 3 },
     'teach fire': { cost: 25, cooldown: null },
     harvest: { cost: 20, cooldown: 5, food: 12 }

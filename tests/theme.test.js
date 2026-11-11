@@ -5,7 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import {THEME,t,spriteManifest,villagerTextureCandidates,commandLabel} from '../src/theme.js';
 import {COMMAND_WORDS,resolveCommand} from '../src/commands.js';
-import {createState,queueCommand,stepDay,availableCommands,validateCommand} from '../src/sim.js';
+import {createState as seededState,queueCommand,stepDay,availableCommands,validateCommand} from '../src/sim.js';
+// Alias tests isolate the parser/cooldown rules: fair weather, no natural illness.
+const createState=(o={})=>seededState({...o,weather:{chances:{normal:100,rain:0,drought:0,cold:0}},illness:{chance:0}});
 import {inlineAssets} from '../scripts/build.mjs';
 const cast=(s,word)=>{const r=queueCommand(s,word);assert.equal(r.ok,true,r.message);return stepDay(r.state);};
 
@@ -78,8 +80,9 @@ describe('Single-file theme, zero assets and offline inlining',()=>{
     assert.deepEqual(Object.values(THEME.palette),['#EFE3C8','#2B211C','#3E5B3A','#A8432F','#D2A23A','#C4692C']);
     assert.match(THEME.fonts.body,/serif/);assert.deepEqual(THEME.layout.canvas,{width:900,height:480});
     assert.deepEqual(spriteManifest({...THEME,sprites:{}}),{});
-    assert.ok(Object.keys(spriteManifest()).length>=40);
-    for(const key of ['villager','villager_child','shelter','campfire_lit','campfire_out','food_spot','wood_spot','rain','drought','sick_icon','unhappy_icon','uneasy_icon','background','shadow','lantern','ground_tile','fence_tile','corn','command_panel'])assert.ok(THEME.assetSpecs[key],key);
+    assert.ok(Object.keys(spriteManifest()).length>=50);
+    for(const key of THEME.domArt)assert.ok(THEME.sprites[key],key);
+    for(const key of ['villager','villager_child','shelter','campfire_lit','campfire_out','food_spot','wood_spot','rain','drought','sick_icon','unhappy_icon','uneasy_icon','background','shadow','lantern','ground_tile','fence_tile','corn','command_panel','cold','cold_cue','tomorrow_tag','end_sign','restart_button','restart_button_pressed'])assert.ok(THEME.assetSpecs[key],key);
     assert.equal(typeof THEME.fallbacks.villager,'function');assert.equal(typeof THEME.css,'string');
   });
   test('variant/state/frame patterns expand separately, child and static maps supported',()=>{

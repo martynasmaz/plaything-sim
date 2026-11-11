@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 64 64" stroke-linecap="round" stroke-linejoin="round">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" stroke-linecap="round" stroke-linejoin="round">
   <title>cue rain</title>
-  <path d="M12 39 C1 38 3 24 13 24 C10 10 29 6 34 19 C43 11 54 18 52 27 C64 27 62 41 51 41 L13 41 Z" fill="#EFE3C8" stroke="#2B211C" stroke-width="3"/><path d="M20 48 L16 55 M34 48 L30 55 M48 48 L44 55" fill="none" stroke="#2B211C" stroke-width="3"/>
+  <path d="M30.0 16.0 C30.0 19.3 28.3 23.7 26.0 26.0 C23.7 28.3 19.3 29.9 16.0 29.9 C12.7 29.9 8.3 28.3 6.0 26.0 C3.7 23.7 2.1 19.3 2.1 16.0 C2.1 12.7 3.7 8.3 6.0 6.0 C8.3 3.7 12.7 2.1 16.0 2.1 C19.3 2.1 23.7 3.7 26.0 6.0 C28.3 8.3 30.0 12.7 30.0 16.0 Z" fill="#2B211C" stroke="none"/><g transform="translate(0 -1)"><path d="M9.6 19.0 C5.4 19.0 5.4 12.6 10.1 12.6 C10.1 7.5 16.4 6.2 18.6 10.1 C21.5 7.9 25.8 9.6 24.9 13.4 C27.5 13.9 27.5 19.0 24.1 19.0 Z" fill="#EFE3C8" stroke="#2B211C" stroke-width="3"/></g><path d="M13.0 21.5 L11.8 24.1 M20.7 21.5 L19.4 24.1" fill="none" stroke="#2B211C" stroke-width="9" data-role="outline-pair"/><path d="M13.0 21.5 L11.8 24.1 M20.7 21.5 L19.4 24.1" fill="none" stroke="#EFE3C8" stroke-width="3" data-role="outline-pair"/>
 </svg>

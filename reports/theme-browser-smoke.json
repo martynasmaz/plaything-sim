@@ -1,6 +1,6 @@
 {
   "passed": true,
-  "inlinedImages": 44,
+  "inlinedImages": 50,
   "missingFallback": {
     "key": "background",
     "path": "assets/background.svg",

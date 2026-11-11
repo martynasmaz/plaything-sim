@@ -1,7 +1,8 @@
 # v0.1 implementation notes
 
-The full supplied design is archived in `design-v0.1.canvas.txt`. Nothing from the
-Bronze/Iron roadmap is implemented. All default simulation numbers are unchanged.
+The current design (survival rebalance) is archived in `design-v0.1-flavour.canvas.txt`.
+Nothing from the Barn/House Age roadmap is implemented. Simulation numbers live in
+`src/config.js` and match the design and the reference simulator.
 
 ## Exact day sequencing
 
@@ -11,14 +12,14 @@ report as well as the latest 10 journal entries. Births and fire discovery check
 illness **before** the closing timer decrement. Newborns are not in the work/meal
 order and do not age on their birthday. A dead villager never returns.
 
-Needs clamp after each separate change: warmth loses its base amount, then any
-rain loss, then gains shelter warmth and any fire warmth, before work. Health
-damage is deliberately combined before applying it, as specified.
+All of a day's warmth changes (base loss, rain or cold-snap loss, shelter and
+Bonfire warmth) are summed, then clamped once, before work. Health damage is
+combined before applying it, as specified.
 
 Resource changes are immediate during work. All work finishes before any meals;
 work and meals share the same rotated order. Permanent IDs are never recycled.
-The order starts with ID 1 on day 1, then the next living ID each day, wrapping.
-If tomorrow's intended first person has died, the next greater living ID starts.
+The order is the living IDs sorted, rotated left by (day − 1) modulo the living
+population (the reference simulator's rule).
 With the population cap of 8, everyone has a shelter place. For diagnostic or
 future configurations exceeding capacity, the lowest permanent IDs get places.
 
@@ -118,3 +119,71 @@ Build-time inlining embeds present local images as data URIs and makes missing
 paths null (no broken file:// requests). External/outside-project images and
 SVG scripts, raster embeds, foreignObject or remote links/fonts are refused as
 optional fallbacks. The standalone HTML needs no sidecar art folder.
+
+## How a Gourdling decides
+
+Every day, each Gourdling (visited in the rotating number order) loses 25 fullness
+and has its warmth changed once: −10, a further −10 in rain or −40 in a cold snap,
++10 for its Plank-shed place and +10 more if the Bonfire is lit. Then it picks the
+FIRST matching job:
+
+1. **Forage if starving and the Pantry is empty**: fullness below 40 and fewer
+   than 1 provision. An adult brings 3 provisions (4 in rain, 1 in a dry spell,
+   3 in a cold snap); a child brings 1 (2 in rain, 0 in a dry spell).
+2. **Warm up** if warmth is below 40: +20 warmth, or +40 when the Bonfire is lit.
+3. **Forage if the Pantry is low**: fewer than 4 provisions per living Gourdling.
+4. **Gather firewood** if there are fewer than 6: an adult brings 2, a child 1.
+5. **Rest** otherwise: +5 happiness.
+
+**Meals and damage.** After all work, each Gourdling at 75 fullness or less eats
+1 provision (+30 fullness) if any remain. At 20 fullness or less it loses 10
+health; at 20 warmth or less another 10; each illness day costs 20 health and 5
+happiness. With no damage, no illness, and fullness and warmth both at 50 or
+more, it recovers 4 health. Safety is 80 with health at least 50 and no illness,
+otherwise 40. Happiness gains 2 when fullness, warmth and safety are all 50+,
+or loses 4 if any is below 40. Health 0 or age 300 means death.
+
+**Births.** A day counts when there are fewer than 8 Gourdlings, at least 2
+provisions per Gourdling plus 4, nobody is ill, and at least 2 adults (ages 20 to
+239) have health 70+, fullness 60+, warmth 50+ and happiness 50+. After 5
+eligible days in a row a child is born (the counter resets on any failed day).
+
+**Bonfire discovery.** From day 20, a day counts when at least 2 Gourdlings are
+20 or older, average happiness is 50+, nobody is ill and there are at least 3
+firewood. After 3 such days in a row the Bonfire is known (2 firewood spent);
+it first burns the next day, using 1 firewood a day. The earliest natural
+discovery is day 22.
+
+**The nightly dice.** Every night the game makes exactly 3 rolls from the run's
+seed: tomorrow's weather (31% fair, 30% rain, 25% dry spell, 14% cold snap),
+whether someone falls ill (13%), and who (any living Gourdling; someone already
+ill is not affected again; the illness lasts 3 days). Cloud wrangle and dry spell
+override the weather for 3 days but never skip a roll, so the same seed with the
+same commands always replays the same story.
+
+## Survival rebalance (seeded dice)
+
+- `src/sim.js` ports the RULES of `/workspace/sim/gourdling_survival.py` (not its code):
+  the same unsigned 32-bit LCG (8 warm-up steps), exactly 3 draws every night
+  (weather, illness chance, illness target), cold snap (−40 warmth), illness 20/day,
+  hoedown +25 health, lit Bonfire +10 warmth, birth after 5 eligible evenings,
+  natural Bonfire from day 20, permanent wipeout with stats, new seed on restart.
+- Rules aligned with the reference while porting: warmth changes are summed then
+  clamped once; the visit order is the sorted living numbers rotated by
+  (day − 1) mod population; natural Bonfire discovery counts every Gourdling aged
+  20+ (elders included) and uses the average happiness.
+- `s.weather` is command weather only; `s.natural` holds last night's roll;
+  `forecastWeather(s)` / `tomorrowWeather(s)` give what the HUD shows.
+- `tests/balance.test.js` runs seeds 0–199 × 3 strategies and compares every run
+  with `tests/fixtures/python-seeds-0-199.json`; rule tests use a fair-weather,
+  no-illness config like the reference self-tests.
+
+## Art in the page (outside the canvas)
+
+The forecast (`#forecast`) renders the live word "Tomorrow", then `tag_tomorrow`
+with the forecast cue in its icon slot, then the weather name. The wipeout end
+screen is an overlay on the clearing using `sign_endscreen` (nine-slice) and the
+Restart button images. All of this is CSS in `src/theme.js`, switched on per file
+by `art-<key>` classes after Phaser confirms the file loaded; otherwise the plain
+fallback styling applies. Icon files carry their own ink badge, so the renderer
+draws no backing behind them.

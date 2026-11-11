@@ -1,8 +1,15 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { t } from '../src/theme.js';
-import { createState, queueCommand, cancelCommand, stepDay, validateCommand, availableCommands,
-  setSpeed, advanceTime, restart, normalizeCommand } from '../src/sim.js';
+import { createState as seededState, queueCommand, cancelCommand, stepDay, validateCommand, availableCommands,
+  setSpeed, advanceTime, restart, normalizeCommand, forecastWeather, tomorrowWeather } from '../src/sim.js';
+
+// Rule tests isolate one rule at a time, like the reference sim's self-tests:
+// natural weather is always fair and natural illness is off. The seeded dice
+// themselves are tested in balance.test.js and in 'three-day weather' below.
+const FAIR = { weather: { chances: { normal: 100, rain: 0, drought: 0, cold: 0 } }, illness: { chance: 0 } };
+const createState = (o = {}, seed = 0) => seededState({ ...o,
+  weather: { ...FAIR.weather, ...(o.weather || {}) }, illness: { ...FAIR.illness, ...(o.illness || {}) } }, seed);
 
 function cast(s, text) {
   const r = queueCommand(s, text);
@@ -21,26 +28,17 @@ function checkLimits(s) {
     assert.ok(v[key]>=0&&v[key]<=100,`${key} ${v[key]}`);
 }
 
-describe('Build check 1 · no-command run', () => {
+describe('Starting state and replay', () => {
   test('exact starting state and independent state/config objects', () => {
     const s=createState();
     assert.equal(s.day,0); assert.equal(s.speed,0); assert.equal(s.age,'Stone');
     assert.deepEqual([s.food,s.wood,s.power],[18,12,50]);
     assert.deepEqual(s.villagers.map(v=>v.age),[40,50,60,70,80,90]);
     assert.equal(s.fireKnown,false); assert.deepEqual(s.weather,{type:'normal',daysLeft:0});
+    assert.equal(s.natural.weather,'normal'); // day 1's weather is already rolled
     assert.ok(s.villagers.every(v=>v.fullness===75&&v.warmth===70&&v.health===100&&v.happiness===60&&v.safety===80));
     s.config.start.food=99;
     assert.equal(createState().config.start.food,18);
-  });
-  test('day 30 has ≥5 alive and natural fire; original balance unchanged', () => {
-    let s=createState(); const rows=[];
-    for(let i=0;i<30;i++) {s=stepDay(s);rows.push({day:s.day,population:s.villagers.length,food:s.food,deaths:s.lastDay.deaths});checkLimits(s);}
-    assert.ok(s.villagers.length>=5,JSON.stringify(rows));
-    assert.equal(s.fireKnown,true,JSON.stringify(rows));
-    assert.equal(s.milestoneReached,true);
-    assert.equal(s.villagers.length,8); assert.equal(s.food,21);
-    assert.equal(s.lastUsed['teach fire'],undefined);
-    assert.equal(rows.flatMap(r=>r.deaths).length,0);
   });
   test('same inputs produce identical outputs without mutating any input', () => {
     const original=createState(), before=structuredClone(original);
@@ -108,14 +106,15 @@ describe('Build check 2 · one normal day / priorities / rotation', () => {
     let s=createState();s.food=0;s.weather={type:'drought',daysLeft:3};
     s.villagers=[s.villagers[0]];Object.assign(s.villagers[0],{age:0,health:65,fullness:0,warmth:0,illnessDays:2,happiness:60});
     s=stepDay(s);
-    // Emergency forage yields 0 and leaves warmth at 0: 10 hunger + 10 cold + 8 illness.
-    assert.equal(s.villagers[0].health,37);assert.equal(s.lastDay.damage[0].amount,28);
+    // Emergency forage yields 0 and leaves warmth at 0: 10 hunger + 10 cold + 20 illness.
+    assert.equal(s.villagers[0].health,25);assert.equal(s.lastDay.damage[0].amount,40);
     assert.equal(s.villagers[0].safety,40);assert.equal(s.villagers[0].happiness,51);
     s=healthy(createState());s.villagers[0].health=48;s=stepDay(s);
     assert.equal(s.villagers[0].health,52);assert.equal(s.villagers[0].safety,80);
     s=createState();s.food=80;s.villagers[0].warmth=0;s=stepDay(s);
-    // Daily loss clamps to 0, shelter adds 10, then warm-up adds 20.
-    assert.equal(s.villagers[0].warmth,30);assert.equal(s.villagers[0].health,100);
+    // Warmth changes are SUMMED then clamped (−10 +10 = 0), then warm-up adds 20;
+    // 20 is still at the cold-damage line, so health drops 10.
+    assert.equal(s.villagers[0].warmth,20);assert.equal(s.villagers[0].health,90);
   });
   test('power bonus uses living average happiness and caps at 100', () => {
     let s=createState();s=stepDay(s);assert.equal(s.power,55);
@@ -125,7 +124,31 @@ describe('Build check 2 · one normal day / priorities / rotation', () => {
   });
 });
 
-describe('Build check 3 · three-day weather', () => {
+describe('Build check · three-day weather', () => {
+  test('cloud wrangle on day 2 over a forecast cold snap: rain days 2–4, day 5 uses its natural roll', () => {
+    // Find a seed whose natural day-2 weather is a cold snap (real dice).
+    let seed=0,plain;
+    for(;;seed++){plain=stepDay(seededState({},seed));if(plain.natural.weather==='cold')break;}
+    assert.equal(forecastWeather(plain),'cold');
+    let s=queueCommand(plain,'cloud wrangle').state;assert.equal(tomorrowWeather(s),'rain');
+    const weathers=[];let untouched=plain;
+    for(let i=0;i<4;i++){s=stepDay(s);untouched=stepDay(untouched);weathers.push(s.lastDay.weather);
+      assert.equal(s.lastDay.naturalWeather,untouched.lastDay.naturalWeather,'commands never shift the dice');}
+    assert.deepEqual(weathers.slice(0,3),['rain','rain','rain']);
+    assert.equal(weathers[3],untouched.lastDay.weather);assert.equal(s.rng,untouched.rng);
+    assert.equal(untouched.lastDay.weather,untouched.lastDay.naturalWeather);
+  });
+  test('cold snap: −40 extra warmth, normal yields; natural rain blocks cloud wrangle', () => {
+    let s=createState({weather:{chances:{normal:0,rain:0,drought:0,cold:100}}});s.food=0;s=stepDay(s);
+    assert.equal(s.lastDay.weather,'cold');
+    // 70 −10 −40 +10 shelter = 30 → warm up +20 = 50.
+    assert.equal(s.villagers[0].warmth,50);
+    s=createState({weather:{chances:{normal:0,rain:0,drought:0,cold:100}}});s.food=0;for(const v of s.villagers)v.warmth=100;s=stepDay(s);
+    assert.ok(s.lastDay.actions.filter(a=>a.action==='Forage').every(a=>a.gained===3));
+    s=createState({weather:{chances:{normal:0,rain:100,drought:0,cold:0}}});
+    assert.match(queueCommand(s,'rain').message,/Already cloud wrangle \(rain\)/);
+    assert.equal(queueCommand(s,'dry spell').ok,true);
+  });
   test('rain cast day 2 affects yields/cold on 2, 3, 4 only; day 5 is normal', () => {
     let s=stepDay(createState());s=cast(s,'rain');
     for(const [day,warmth,left] of [[2,60,2],[3,50,1],[4,40,0]]) {
@@ -209,7 +232,7 @@ describe('Build check 4 · command validation and effects', () => {
   test('bless clamps, reports actual gains, and does not cure illness', () => {
     let s=healthy(createState());s.villagers[0].health=95;s.villagers[0].happiness=94;s.villagers[0].illnessDays=2;
     s=cast(s,'bless');
-    assert.equal(s.villagers[0].health,92);assert.equal(s.villagers[0].illnessDays,1);
+    assert.equal(s.villagers[0].health,80); // 95 +5 (cap) −20 illnessassert.equal(s.villagers[0].illnessDays,1);
     assert.ok(s.log.some(e=>e.text.includes('Ada +5 health/+6 happiness')));
   });
   test('harvest clamps at capacity and uses actual stock gain in log', () => {
@@ -227,18 +250,18 @@ describe('Build check 5 · fire in both routes', () => {
   test('teach with 3 wood spends 2 to learn, 1 to burn today', () => {
     let s=createState();s.wood=3;s.food=0;s=cast(s,'teach fire');
     assert.equal(s.fireKnown,true);assert.equal(s.fireLit,true);assert.equal(s.wood,0);
-    assert.equal(s.lastDay.burnedWood,1);assert.equal(s.villagers[0].warmth,75);
+    assert.equal(s.lastDay.burnedWood,1);assert.equal(s.villagers[0].warmth,80); // 70 −10 +10 +10
     assert.equal(queueCommand(s,'teach fire').ok,false);
   });
-  test('natural discovery uses consecutive days 10–12, costs 2, first burns on 13', () => {
-    let s=days(createState(),9);assert.equal(s.fireCounter,0);
+  test('natural discovery uses consecutive days 20–22, costs 2, first burns on 23', () => {
+    let s=days(createState(),19);assert.equal(s.fireCounter,0);
     s=stepDay(s);assert.equal(s.fireCounter,1);s=stepDay(s);assert.equal(s.fireCounter,2);
     const wood=s.wood;s=stepDay(s);assert.equal(s.fireKnown,true);assert.equal(s.fireLit,false);assert.equal(s.wood,wood-2);
     assert.equal(s.lastDay.discoveredFire,true);
     s=stepDay(s);assert.equal(s.fireLit,true);assert.equal(s.lastDay.burnedWood,1);
   });
   test('a failed discovery check resets the counter', () => {
-    let s=days(createState(),11);assert.equal(s.fireCounter,2);
+    let s=days(createState(),21);assert.equal(s.fireCounter,2);
     s.villagers[0].illnessDays=1;s=stepDay(s);assert.equal(s.fireKnown,false);assert.equal(s.fireCounter,0);
     s=days(s,3);assert.equal(s.fireKnown,true);
   });
@@ -248,20 +271,20 @@ describe('Build check 5 · fire in both routes', () => {
     s=stepDay(s);assert.equal(s.fireKnown,true);assert.equal(s.fireLit,false);
     assert.equal(s.villagers[0].warmth,45);assert.equal(s.lastDay.actions[0].gained,20);
   });
-  test('lit fire warms +5 before work and boosts warm-up to +40', () => {
+  test('lit fire warms +10 before work and boosts warm-up to +40', () => {
     let s=createState();s.fireKnown=true;s.wood=10;for(const v of s.villagers)v.warmth=25;
-    s=stepDay(s);assert.equal(s.villagers[0].warmth,70);assert.equal(s.lastDay.actions[0].gained,40);
+    s=stepDay(s);assert.equal(s.villagers[0].warmth,75);assert.equal(s.lastDay.actions[0].gained,40);
   });
 });
 
 describe('Build check 6 · illness and death', () => {
-  test('plague deals exactly 24 over 3 days, never a fourth; no recovery while ill', () => {
-    let s=healthy(createState());s=cast(s,'plague');
-    assert.equal(s.villagers[0].health,92);assert.equal(s.villagers[0].illnessDays,2);
-    s=stepDay(s);assert.equal(s.villagers[0].health,84);assert.equal(s.villagers[0].illnessDays,1);
-    s=stepDay(s);assert.equal(s.villagers[0].health,76);assert.equal(s.villagers[0].illnessDays,0);
+  test('sick hex takes 100 health to 40 over 3 days (20/day), never a fourth; no recovery while ill', () => {
+    let s=healthy(createState());s=cast(s,'sick hex');
+    assert.equal(s.villagers[0].health,80);assert.equal(s.villagers[0].illnessDays,2);
+    s=stepDay(s);assert.equal(s.villagers[0].health,60);assert.equal(s.villagers[0].illnessDays,1);
+    s=stepDay(s);assert.equal(s.villagers[0].health,40);assert.equal(s.villagers[0].illnessDays,0);
     assert.equal(s.villagers[0].safety,40); // ill during this day, even though the timer ends tonight.
-    s=stepDay(s);assert.equal(s.villagers[0].health,80);assert.equal(s.villagers[0].safety,80);
+    s=stepDay(s);assert.equal(s.villagers[0].health,44);assert.equal(s.villagers[0].safety,40); // health below 50
     assert.equal(s.lastDay.damage[0].amount,0);
   });
   test('illness happiness loss is 5; no happy bonus at safety 40', () => {
@@ -283,8 +306,8 @@ describe('Build check 6 · illness and death', () => {
 });
 
 describe('Build check 7 · birth and population cap', () => {
-  test('15 eligible checks create one age-0 child with exact starting needs; first turn tomorrow', () => {
-    let s=days(createState(),14);assert.equal(s.birthCounter,14);assert.equal(s.villagers.length,6);
+  test('5 eligible checks create one age-0 child with exact starting needs; first turn tomorrow', () => {
+    let s=days(createState(),4);assert.equal(s.birthCounter,4);assert.equal(s.villagers.length,6);
     s=stepDay(s);assert.equal(s.birthCounter,0);assert.equal(s.villagers.length,7);
     const v=s.villagers.find(v=>v.id===7);
     assert.deepEqual([v.age,v.health,v.fullness,v.warmth,v.happiness,v.safety],[0,100,80,60,60,80]);
@@ -293,19 +316,19 @@ describe('Build check 7 · birth and population cap', () => {
     assert.equal(s.villagers.find(v=>v.id===7).age,1);
   });
   test('one illness day resets counter, even though it expires that evening', () => {
-    let s=days(createState(),14);s.villagers[0].illnessDays=1;s=stepDay(s);
+    let s=days(createState(),4);s.villagers[0].illnessDays=1;s=stepDay(s);
     assert.equal(s.birthCounter,0);assert.equal(s.villagers.length,6);
     s=stepDay(s);assert.equal(s.birthCounter,1);
   });
   test('children and elders do not count as eligible parents; at least 2 adults needed', () => {
-    let s=healthy(createState());s.birthCounter=14;
+    let s=healthy(createState());s.birthCounter=4;
     for(const v of s.villagers)v.age=240;
     s.villagers[0].age=40;s=stepDay(s);assert.equal(s.birthCounter,0);assert.equal(s.villagers.length,6);
-    s=healthy(createState());s.birthCounter=14;for(const v of s.villagers)v.age=0;
+    s=healthy(createState());s.birthCounter=4;for(const v of s.villagers)v.age=0;
     s=stepDay(s);assert.equal(s.birthCounter,0);
   });
   test('insufficient reserves reset the counter after meals, not before', () => {
-    let s=createState();s.birthCounter=14;s.food=0;
+    let s=createState();s.birthCounter=4;s.food=0;
     s=stepDay(s); // 18 gathered − 6 eaten = 12, below 16 for 6 people.
     assert.equal(s.food,12);assert.equal(s.birthCounter,0);assert.equal(s.villagers.length,6);
   });
@@ -330,10 +353,13 @@ describe('Build check 8 · pause / speed / reset / ending', () => {
     s=advanceTime(s,10_000);assert.equal(s.day,3);
     assert.throws(()=>setSpeed(s,2),RangeError);
   });
-  test('restart exactly clears every value, timer, discovery and pending command', () => {
+  test('restart exactly clears every value, timer, discovery and pending command, with a NEW seed', () => {
     let s=days(createState(),30);s.power=31;s.weather={type:'rain',daysLeft:2};s.villagers[0].illnessDays=2;
-    s.queuedCommand='bless';s.birthCounter=7;s.elapsedMs=1000;s=setSpeed(s,3);
-    assert.deepEqual(restart(s),createState());
+    s.queuedCommand='bless';s.birthCounter=4;s.elapsedMs=1000;s.lastUsed.rain=28;s=setSpeed(s,3);
+    const fresh=restart(s);assert.notEqual(fresh.seed,s.seed);
+    assert.deepEqual(fresh,createState({},fresh.seed));
+    assert.deepEqual(restart(s,42),createState({},42));
+    assert.notEqual(restart(s,s.seed).seed,s.seed);
     const noPlague=createState({enablePlague:false});assert.equal(restart(noPlague).config.enablePlague,false);
   });
   test('last death ends before close-of-day; pauses and rejects all future commands', () => {
@@ -341,7 +367,7 @@ describe('Build check 8 · pause / speed / reset / ending', () => {
     s=cast(s,'rain');assert.equal(s.ended,true);assert.equal(s.speed,0);assert.equal(s.villagers.length,0);
     assert.equal(s.power,40); // no day-end regeneration after zero population.
     assert.equal(s.queuedCommand,null);assert.strictEqual(stepDay(s),s);assert.strictEqual(advanceTime(s,999_999),s);
-    assert.match(queueCommand(s,'rain').message,/Homestead has ended/);
+    assert.match(queueCommand(s,'rain').message,/fallen quiet/);
     assert.equal(s.log.at(-1).text,t('log.ended'));
   });
   test('empty diagnostic state ends cleanly without NaN averages', () => {

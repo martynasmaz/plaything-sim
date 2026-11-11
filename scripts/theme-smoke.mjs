@@ -40,7 +40,7 @@ try{
   page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
   page.on('request',request=>{if(!/^(file:|data:)/.test(request.url()))external.push(request.url());});
   page.setDefaultTimeout(15000);
-  await page.goto(pathToFileURL(result.output).href);
+  await page.goto(pathToFileURL(result.output).href+"?seed=9");
   await page.waitForSelector('#village[data-ready="true"]');
   await page.waitForFunction(()=>document.querySelector('#village').dataset.spritePeople==='6');
   assert.ok((await page.title()).startsWith('Theme swap verified'));
@@ -84,7 +84,7 @@ try{
     const fallbackPage=await fallbackContext.newPage();fallbackPage.setDefaultTimeout(15000);
     fallbackPage.on('pageerror',error=>errors.push(error.message));
     fallbackPage.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
-    await fallbackPage.goto(pathToFileURL(fallback.output).href);
+    await fallbackPage.goto(pathToFileURL(fallback.output).href+"?seed=9");
     await fallbackPage.waitForSelector('#village[data-ready="true"]');
     await fallbackPage.waitForFunction(()=>document.querySelector('#village').dataset.spritePeople==='0');
     assert.deepEqual(JSON.parse(await fallbackPage.getAttribute('#village','data-loaded-sprites')),[]);

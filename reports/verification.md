@@ -1,37 +1,36 @@
-# Verification — v0.1 with Gourdling theme, flavour names and approved art
+# Verification — v0.1 survival rebalance, Gourdling theme and approved art
 
 Date: 2026-11-11. No design numbers were tuned.
 
-## Unit tests: 56 passed, 0 failed (10 suites)
+## Unit tests: 68 passed, 0 failed
 
 `npm test` (Node `node:test`, no dependencies). Full output: `node-tests.txt`.
 
 | Section 7 build check | Result |
 | --- | --- |
-| No-command run (day 30, ≥5 alive, Bonfire known) | PASS — 8 alive, 21 provisions, 6 firewood, 100 Wonder, no deaths; Bonfire discovered end of day 12, first burns day 13; births days 15 and 30 |
-| One normal day | PASS |
-| Three-day weather | PASS |
+| Untouched survival (seeds 0–199) | PASS — 94.5% alive, 5.5% wiped, 81% lose someone, Bonfire 96% (median day 22) |
+| Helped strategy | PASS — 100% alive, 97.5% reach cap 8, 8.5% lose someone |
+| Cruel strategy | PASS — 97% wiped out by day 60 |
+| Seed replay | PASS — identical day-by-day log; restart picks a new seed; 3 rolls/night even under command weather |
+| One fair day | PASS |
+| Three-day weather (cloud wrangle over a forecast cold snap) | PASS |
 | Command validation | PASS |
-| Bonfire in both routes | PASS |
-| Illness and death (24 damage) | PASS |
-| Birth and population cap | PASS |
-| Pause and reset | PASS |
+| Bonfire in both routes (natural day 22 earliest) | PASS |
+| Illness and death (100 → 40; all at 60 die day 3) | PASS |
+| Birth and cap (5 evenings) | PASS |
+| Wipeout and restart | PASS |
+| Pause | PASS |
 
-Extra theme/flavour tests (12): each new name and its old alias produce identical
-canonical states; shared cooldown in both directions (cast day 4 → ready day 9);
-shared restrictions and revalidation; `enablePlague:false` hides/rejects both
-`sick hex` and `plague`; later-version words stay unknown; theme copy/manifest/
-pivot/variant checks; sim numbers unchanged by the theme; build inliner handles
-missing and unsafe asset paths.
-
-Day-by-day no-command data: `no-command.csv`, `no-command.json`, `balance-console.txt`.
+Every JS run equals the Python reference seed by seed (seeds 0–199 in the test
+suite; 500–699 and 1000–1199 also checked by hand). Table: `balance-console.txt`,
+`balance.json`. Layout: `tests/layout.test.js` + `layout-smoke.json`. Docs drift: `tests/docs.test.js` fails if any number quoted in IMPLEMENTATION.md "How a Gourdling decides" differs from `src/config.js`.
 
 ## Browser checks (fresh headless Chromium, temporary profile)
 
 | Run | Result |
 | --- | --- |
 | Local server `http://127.0.0.1:4173/` with art (53 local requests) | PASS, 0 console errors, 0 external requests |
-| `dist/index.html` from `file://`, network offline (1 request, 44 SVGs inlined) | PASS, 0 console errors |
+| `dist/index.html` from `file://`, network offline (1 request, 50 SVGs inlined) | PASS, 0 console errors |
 | Theme swap (title, resource name, Gourdling names, log text changed by one file) | PASS |
 | Missing optional background → shape fallback | PASS |
 | Empty sprite map → plain shapes, fully playable | PASS (`fallback-shapes.png`) |
