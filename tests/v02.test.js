@@ -4,8 +4,8 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createState as seededState, queueCommand, stepDay, validateCommand, matchText,
-  populationCap, fuelTarget } from '../src/sim.js';
+import { createState as seededState, queueCommand, queueText, stepDay, validateCommand, matchText,
+  populationCap, fuelTarget, pickLogLines, creditTrait, mealPlan } from '../src/sim.js';
 import { matchCommand, COMMAND_KEYWORDS, cleanWords } from '../src/commands.js';
 import { CONFIG } from '../src/config.js';
 import { batch, summarise, playRun, digests, V01 } from './strategies.js';
@@ -20,11 +20,11 @@ const setWeather = (s, type) => { s.weather = { type, daysLeft: 9 }; return s; }
 
 describe('Seeded build checks, v0.2 + traits (seeds 0–199, 60 days)', () => {
   const runs = Object.fromEntries(['none', 'helped', 'cruel'].map(m => [m, batch(m)]));
-  test('every run matches the Python reference seed by seed (summary, day log, trait effects, traits)', () => {
+  test('every run matches the Python reference seed by seed (summary, day log, trait effects, kept log lines and their count, traits)', () => {
     for (const mode of ['none', 'helped', 'cruel']) runs[mode].forEach((r, i) => {
       const d = digests(r);
       const js = [r.wipeout_day, r.population30, r.population60, r.deaths30, r.deaths60, r.births60, r.peak_population,
-        r.bonfire_day, r.cap_day, r.farming_day, r.cap12_day, r.shed_built, d.history, d.events, d.traits];
+        r.bonfire_day, r.cap_day, r.farming_day, r.cap12_day, r.shed_built, r.lines.length, d.history, d.events, d.lines, d.traits];
       assert.deepEqual(js, PY.runs[mode][i], `${mode} seed ${i}`);
     });
   });
@@ -125,17 +125,44 @@ describe('Trait effects', () => {
       assert.equal(100 - before(1), hardy); assert.equal(100 - before(2), shivery); assert.equal(100 - before(3), plain);
     }
   });
-  test('Grabby eats first and at 85 or below; Generous skips supper when food is short', () => {
-    let s = withTraits(calm(), [[], [], ['Grabby', 'Hardy'], ['Generous', 'Hardy']]);
+  test('log rule 1: at most 3 lines a day, Generous, Grabby, Smart, Scatterbrained, Brave/Timid, then rest lines', () => {
+    const pr = CONFIG.personality.logPriority, c = (trait, seq) => ({ priority: pr[trait], seq, trait });
+    const pick = list => pickLogLines(list, 3).map(e => e.trait);
+    assert.deepEqual(pick(['Loner', 'Sociable', 'Brave', 'Scatterbrained', 'Smart', 'Grabby', 'Generous'].map(c)), ['Generous', 'Grabby', 'Smart']);
+    assert.deepEqual(pickLogLines([c('Sociable', 0), c('Timid', 1), c('Loner', 2), c('Sociable', 3)], 3).map(e => e.seq), [1, 0, 2]);
+    assert.deepEqual(pick([c('Loner', 0)]), ['Loner']);
+  });
+  test('log rule 2: credit the trait that decided the final job (reference cases)', () => {
+    const s = calm(), v = s.villagers[0];
+    const credit = (traits, warmth, weather, die, action, plain) => { v.traits = traits; v.warmth = warmth; return creditTrait(s, v, weather, die, action, plain); };
+    assert.equal(credit(['Brave', 'Scatterbrained'], 30, 'cold', 5, 'forage', 'warm'), 'Scatterbrained');
+    assert.equal(credit(['Brave', 'Scatterbrained'], 30, 'cold', 50, 'forage', 'warm'), 'Brave');
+    assert.equal(credit(['Brave', 'Smart'], 30, 'cold', 50, 'wood', 'warm'), 'Brave');
+    assert.equal(credit(['Timid', 'Hardy'], 50, 'rain', 50, 'warm', 'forage'), 'Timid');
+    assert.equal(credit(['Timid', 'Smart'], 30, 'rain', 50, 'warm', 'warm'), null);
+    assert.equal(credit(['Brave', 'Smart'], 30, 'normal', 50, 'wood', 'forage'), 'Smart');
+    assert.equal(credit(['Scatterbrained', 'Hardy'], 80, 'normal', 3, 'forage', 'forage'), null);
+  });
+  test('log rule 3: the Grabby line uses a re-run of the meal with every Grabby treated as normal', () => {
+    const none = () => false;
+    assert.deepEqual(mealPlan([1, 2], { 1: 85, 2: 75 }, { 1: 80, 2: 70 }, 1, none).fed, [1]);
+    assert.deepEqual(mealPlan([1, 2], { 1: 75, 2: 75 }, { 1: 80, 2: 70 }, 1, none).fed, [2]); // 2 went without → line
+    assert.deepEqual(mealPlan([1, 2], { 1: 85, 2: 75 }, { 1: 60, 2: 70 }, 1, none).fed, [1]);
+    assert.deepEqual(mealPlan([1, 2], { 1: 75, 2: 75 }, { 1: 60, 2: 70 }, 1, none).fed, [1]); // same → no line
+    // In a full day: a Grabby who takes the last provision names who went without.
+    let s = setWeather(withTraits(calm(), [['Grabby', 'Hardy']]), 'drought');
+    s.villagers.forEach(v => { v.fullness = 85; v.warmth = 100; });
+    s.villagers.slice(1).forEach(v => { v.warmth = 0; }); // only #1 forages: 1 provision at supper
     s.food = 0; s.wood = 50;
-    for (const v of s.villagers) { v.fullness = 60 + 25; v.warmth = 70; } // 60 after the daily −25
-    s.villagers[2].fullness = 80 + 25; // Grabby: 80 before supper (eats; others would not)
-    // Only 3 provisions after work: work adds some, so force stocks after work by a no-forage day.
-    s = stepDay(s);
-    const ev = s.lastDay.traitEvents.map(e => e.trait);
-    assert.ok(s.lastDay.meals.includes(3), 'Grabby ate at 80');
-    assert.ok(ev.includes('Grabby-early'));
-    assert.ok(s.traitLog.some(e => e.trait === 'Grabby-early' && /first at the Pantry/.test(e.text)));
+    // Day 2 rotation starts at #2, so the normal order would feed #2; Grabby #1 eats first instead.
+    s.day = 1; s = stepDay(s);
+    assert.deepEqual(s.lastDay.meals, [1]);
+    const line = s.traitLog.find(e => e.trait === 'Grabby-others-went-without');
+    assert.ok(line && line.id === 1 && /Ada \(Grabby\) was first at the Pantry; Bram went without/.test(line.text), JSON.stringify(s.traitLog.slice(-3)));
+    // Plenty of food: eating early logs nothing.
+    let p = withTraits(calm(), [['Grabby', 'Hardy']]); p.food = 100; p.wood = 50;
+    p.villagers.forEach(v => { v.fullness = 85; v.warmth = 100; }); p = stepDay(p);
+    assert.ok(!p.traitLog.some(e => e.trait.startsWith('Grabby')));
   });
   test('Generous goes without when provisions are fewer than the hungry still waiting (self included)', () => {
     const day = food => {
@@ -252,5 +279,19 @@ describe('Keyword matcher (Minimal UI, section 11)', () => {
     assert.equal(matchText(s, 'please cure them'), 'heal');
     assert.equal(validateCommand(s, matchText(s, 'please cure them')).ok, false, 'nobody ill');
     assert.equal(matchText(calm(V01), 'please cure them'), null, 'v0.1 has no shake off');
+  });
+  test('typed text: refused or unmatched input clears nothing; only a newly accepted command replaces the queue', () => {
+    let s = calm({ version: 'v0.2' });
+    let r = queueText(s, 'Please make it RAIN!'); assert.equal(r.ok, true); s = r.state; assert.equal(s.queuedCommand, 'rain');
+    r = queueText(s, 'make a dragon');           // no keyword
+    assert.equal(r.matched, false); assert.equal(r.message, ''); assert.strictEqual(r.state, s);
+    r = queueText(s, 'please cure them');         // matched, refused: nobody is ill
+    assert.equal(r.matched, true); assert.equal(r.ok, false); assert.match(r.message, /Nobody is ill/);
+    assert.strictEqual(r.state, s); assert.equal(s.queuedCommand, 'rain'); assert.equal(s.power, 50);
+    r = queueText(s, 'throw a party');            // accepted: replaces
+    assert.equal(r.ok, true); assert.equal(r.state.queuedCommand, 'bless');
+    // Exact names and aliases still work, because they are in the synonym table.
+    for (const word of ['cloud wrangle', 'CLOUD   WRANGLE', 'rain', 'teach spark', 'feast drop', 'shake off', 'teach sowing'])
+      assert.equal(queueText(calm({ version: 'v0.2' }), word).matched, true, word);
   });
 });

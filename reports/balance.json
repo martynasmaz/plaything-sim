@@ -120,7 +120,20 @@
         "shed_by60_pct": 17.5,
         "cap12_by60_pct": 0,
         "mean_deaths60": 2.145,
-        "mean_population60_all_runs": 5.925
+        "mean_population60_all_runs": 5.925,
+        "trait_fires": {
+          "Brave": 1107,
+          "Generous": 204,
+          "Grabby-others-went-without": 50,
+          "Loner+": 269,
+          "Loner-": 4004,
+          "Scatterbrained": 1603,
+          "Smart": 952,
+          "Sociable+": 3777,
+          "Sociable-": 238,
+          "Timid": 1182
+        },
+        "log_lines": 12842
       }
     },
     "helped": {
@@ -154,7 +167,18 @@
         "shed_by60_pct": 99.5,
         "cap12_by60_pct": 49.5,
         "mean_deaths60": 0.135,
-        "mean_population60_all_runs": 10.97
+        "mean_population60_all_runs": 10.97,
+        "trait_fires": {
+          "Brave": 889,
+          "Loner+": 114,
+          "Loner-": 11302,
+          "Scatterbrained": 2902,
+          "Smart": 1393,
+          "Sociable+": 11364,
+          "Sociable-": 122,
+          "Timid": 542
+        },
+        "log_lines": 24049
       }
     },
     "cruel": {
@@ -188,7 +212,20 @@
         "shed_by60_pct": 0,
         "cap12_by60_pct": 0,
         "mean_deaths60": 5.995,
-        "mean_population60_all_runs": 0.015
+        "mean_population60_all_runs": 0.015,
+        "trait_fires": {
+          "Brave": 182,
+          "Generous": 12,
+          "Grabby-others-went-without": 2,
+          "Loner+": 174,
+          "Loner-": 818,
+          "Scatterbrained": 701,
+          "Smart": 73,
+          "Sociable+": 779,
+          "Sociable-": 122,
+          "Timid": 208
+        },
+        "log_lines": 3035
       }
     }
   },
@@ -245,16 +282,16 @@
         "median_cap12_day": null,
         "trait_fire_rates": {
           "Brave": {
-            "per_run": 6.154,
-            "per_carrier_per_60_days": 5.844809573558742
+            "per_run": 6.024,
+            "per_carrier_per_60_days": 5.721341058030203
           },
           "Generous": {
             "per_run": 1.21,
             "per_carrier_per_60_days": 1.0171201210457004
           },
           "Grabby-others-went-without": {
-            "per_run": 1.844,
-            "per_carrier_per_60_days": 1.5569940895018295
+            "per_run": 0.47,
+            "per_carrier_per_60_days": 0.39684773430903464
           },
           "Loner+": {
             "per_run": 1.336,
@@ -265,8 +302,8 @@
             "per_carrier_per_60_days": 16.759992956506427
           },
           "Scatterbrained": {
-            "per_run": 7.662,
-            "per_carrier_per_60_days": 6.46855213170114
+            "per_run": 7.792,
+            "per_carrier_per_60_days": 6.578303081468975
           },
           "Smart": {
             "per_run": 5.002,
@@ -339,8 +376,8 @@
         "median_cap12_day": 49,
         "trait_fire_rates": {
           "Brave": {
-            "per_run": 4.256,
-            "per_carrier_per_60_days": 2.5325293557600763
+            "per_run": 4.214,
+            "per_carrier_per_60_days": 2.507537289749286
           },
           "Loner+": {
             "per_run": 0.564,
@@ -351,8 +388,8 @@
             "per_carrier_per_60_days": 33.974208675263775
           },
           "Scatterbrained": {
-            "per_run": 14.564,
-            "per_carrier_per_60_days": 8.77102822499699
+            "per_run": 14.606,
+            "per_carrier_per_60_days": 8.79632231902678
           },
           "Smart": {
             "per_run": 7.19,
@@ -425,16 +462,16 @@
         "median_cap12_day": null,
         "trait_fire_rates": {
           "Brave": {
-            "per_run": 0.944,
-            "per_carrier_per_60_days": 2.2868217054263567
+            "per_run": 0.926,
+            "per_carrier_per_60_days": 2.243217054263566
           },
           "Generous": {
             "per_run": 0.076,
             "per_carrier_per_60_days": 0.16117630425561996
           },
           "Grabby-others-went-without": {
-            "per_run": 0.034,
-            "per_carrier_per_60_days": 0.07285193914720377
+            "per_run": 0.01,
+            "per_carrier_per_60_days": 0.021427040925648167
           },
           "Loner+": {
             "per_run": 0.884,
@@ -445,8 +482,8 @@
             "per_carrier_per_60_days": 8.386642243201353
           },
           "Scatterbrained": {
-            "per_run": 3.454,
-            "per_carrier_per_60_days": 7.460043196544277
+            "per_run": 3.472,
+            "per_carrier_per_60_days": 7.498920086393088
           },
           "Smart": {
             "per_run": 0.424,

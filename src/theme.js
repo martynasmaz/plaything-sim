@@ -929,7 +929,7 @@ export const THEME = {
       pause:'Pause',normal:'1×',fast:'3×',nextDay:'Next day →',restart:'Restart',
       endTitle:'The Homestead Falls Quiet',endBody:'The last Gourdling is gone. The Homestead lasted {days} days.',restartVillage:'Restart',
       commandTitle:'A word from above',oneCommand:'One command per day',commandInput:'God command',prompt:'>',
-      placeholder:'Type a listed command, then press Enter',queue:'Queue',cancel:'Cancel',
+      placeholder:'Type a command, then press Enter',queue:'Queue',cancel:'Cancel',
       feedback:'Queuing is free. Wonder is spent only when the next day starts.',
       lives:'Little lives',journal:'Homestead journal',latest:'Latest {count}',
       goal:'Left alone, the Homestead can survive, but it struggles. Your help can make it flourish.',footer:'A gourd-shaped world, living on its own.'},
@@ -1002,7 +1002,6 @@ export const THEME = {
       Brave:'{name} (Brave) {action} right through the {weather}.',
       Timid:'{name} (Timid) stayed by the {place} instead of {plain} in the {weather}.',
       Generous:'{name} (Generous) went without supper so others could eat.',
-      grabbyEarly:'{name} (Grabby) was first at the Pantry and ate early.',
       grabbyOthers:'{name} (Grabby) was first at the Pantry; {other} went without.',
       sociableTogether:'{name} (Sociable) perked right up resting with {others} others.',
       sociableAlone:'{name} (Sociable) drooped, resting alone.',
@@ -1096,7 +1095,7 @@ THEME.ui = {
     showFooter: true,        // the rest of the footer text
     showEndScreenStats: true,// end screen numbers and seed (title, text and restart stay)
     autoPlaySpeed: null,     // null keeps the sim's start speed; a number sets it on load and restart
-    keywordCommands: false,  // false: exact names/aliases (section 6); true: keyword matcher (section 11)
+    enterRestarts: false,    // Enter in the command box after a wipeout restarts (new seed)
     devOverlay: false,       // developer-only stats + internal log overlay; ?dev=1 also turns it on
   },
   presets: {
@@ -1106,7 +1105,7 @@ THEME.ui = {
       showQueueStatus:false, showFeedback:false, showDetailPanel:false, showJournal:false,
       showGoalText:false, showFooter:false, showEndScreenStats:false,
       autoPlaySpeed: 1,      // no buttons, so days run by themselves
-      keywordCommands: true, // type anything; keywords pick the command; Enter restarts after a wipeout
+      enterRestarts: true,   // no Restart button on screen, so Enter restarts after a wipeout
     },
   },
   devLogLines: 30,           // internal-log lines shown in the developer overlay

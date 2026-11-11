@@ -219,20 +219,35 @@ taken; only Scatterbrained reads it.
 **Commands.** v0.2 adds `shake off` (alias `heal`, 25 Wonder, 6-day cooldown:
 clears everyone's illness, restores no health, refused when nobody is ill) and
 `teach sowing` (alias `teach farming`, 25 Wonder, once per run, refused when
-farming is known). On the current screen commands are exact names or aliases
-(section 6). The minimal preview (`?ui=minimal`) uses the keyword matcher
-(section 11): lowercase the text, turn every character other than a–z and 0–9
+farming is known). Every screen, the full one included, reads typed text with
+the keyword matcher (section 11; Designer decision of 11 Nov 2026). Exact names
+and aliases still work because they are in the synonym table. Lowercase the text, turn every character other than a–z and 0–9
 into a space (apostrophes too, so "don't" is "don t"), and look for whole words or
 two-word phrases anywhere ("brain" is not rain). If several commands match, the
 first of teach spark, teach sowing, shake off, hoedown, feast drop, cloud
 wrangle, dry spell, sick hex wins. Then the normal Wonder, cooldown and rejection
-checks run. No match queues nothing and spends nothing.
+checks run. No match queues nothing, spends nothing and shows no message. A
+refused match shows its reason on the full screen as before (the minimal preview
+hides the feedback line). "Accepted" means the typed text matched and passed the
+cost, cooldown and refusal checks at the moment it was typed; only an accepted
+command replaces the queued one, so refused or unmatched input clears nothing.
+The day start re-checks the queued command as before.
 
 **Internal log.** Every time a trait changes what happens (Smart, Scatterbrained,
-Brave, Timid, Generous, Grabby, Sociable, Loner) the sim counts it; at most 3
-lines a day go into `state.traitLog`, along with each Gourdling's traits at the
-start or at birth. Hardy and Shivery change warmth only and write no line. The
-log is shown only in the developer overlay (`?dev=1`), never to players.
+Brave, Timid, Generous, Grabby, Sociable, Loner) the sim counts it and offers a
+line. The sim keeps at most 3 lines a day in `state.traitLog` (plus each Gourdling's traits
+at the start or at birth), kept in this order: Generous, Grabby, Smart,
+Scatterbrained, Brave/Timid, then the Sociable/Loner rest lines; ties keep the
+order they happened in. A changed job is credited to the trait that decided the
+final job: Brave or Timid when its own warm-up threshold changed whether it
+warmed up (and it did not wander), else Scatterbrained when its roll fired and
+picked a job other than warming up, else Smart. The Grabby line re-runs the meal
+with every Grabby treated as normal (normal order, eats at 75 or below); only if
+someone who ate in that version goes without in the real meal is a line written,
+naming them. Eating early alone is counted but never logged. Hardy and Shivery
+change warmth only and write no line. The log is shown only in the developer
+overlay (`?dev=1`), never to players. The seeded build check also matches the
+kept lines, and their count, seed by seed against the Python reference.
 
 ## Survival rebalance (seeded dice)
 
@@ -272,18 +287,21 @@ log is shown only in the developer overlay (`?dev=1`), never to players.
   commands). It resolves to one command key; `queueCommand` then runs the normal
   checks.
 - The page shows each Gourdling's traits in the current detail panel ("Traits: A
-  and B"). With `THEME.ui.keywordCommands` (on in `?ui=minimal`) the command box
-  uses the keyword matcher, a refusal or no match is silent (nothing queued,
-  nothing spent), and Enter after a wipeout restarts with a new seed. The
+  and B"). The command box always goes through `queueText(state, text)` (keyword
+  matcher, then the normal checks; `{ matched: false }` for no keyword). With
+  `THEME.ui.enterRestarts` (on in `?ui=minimal`) Enter after a wipeout restarts
+  with a new seed. The
   minimal visuals (plank text box, day counter, state cues, end fade) are NOT
   built. `?dev=1` (or `THEME.ui.devOverlay`) adds a developer overlay with stats,
   every Gourdling's traits and needs, and the last 30 internal-log lines; it is
   off by default and not in `index.html`.
-- Harvest and Plant are drawn at the provisions spot for now; the field, the
-  second shed and the copper/tin outcrops and Tinker-shed site have no art yet
-  (the shed and the outcrops appear only as journal lines). The Plank-shed
+- **Temporary placeholder:** Gourdlings who harvest or plant are drawn at the
+  provisions spot. That is NOT the field's location. The field, the second shed,
+  the copper/tin outcrops and the Tinker-shed site (their art and their real
+  places in the clearing) come after the Artist's mockup is approved; until then
+  the shed and the outcrops appear only as journal lines, and the Plank-shed
   label in the clearing still reads 8 places. Local save/load (also in the v0.2
-  draft) is not part of this task.
+  draft) is not started; its spec comes later.
 - Checks: `tests/v02.test.js` compares all 600 runs (seeds 0–199 × untouched,
   helped, cruel; 60 days) with `tests/fixtures/python-v02-traits-seeds-0-199.json`:
   the summary facts plus SHA-256 digests of the day-by-day history, every trait
@@ -324,14 +342,16 @@ preview until its mockup and spec are approved.
   `showQueueStatus`, `showFeedback`, `showDetailPanel`, `showJournal`,
   `showGoalText`, `showFooter`, `showEndScreenStats`. Three more settings:
   `autoPlaySpeed` is `null` by default (keep the sim's paused start),
-  `keywordCommands` is `false` (exact names and aliases) and `devOverlay` is
+  `enterRestarts` is `false` (the full screen restarts with its Restart button)
+  and `devOverlay` is
   `false` (`?dev=1` also turns the developer overlay on).
 - `THEME.ui.targets` maps each flag to the page parts it hides (CSS selectors into
   `index.html`). The world canvas, the command text box and the end screen's
   title, text and Restart button can never be switched off.
 - `THEME.ui.presets.minimal` turns every `show…` flag off, sets
   `autoPlaySpeed: 1`, because with no buttons the days have to run by themselves,
-  and sets `keywordCommands: true` (the section 11 matcher; see the v0.2 section).
+  and sets `enterRestarts: true` (no Restart button, so Enter restarts after a
+  wipeout). The keyword matcher is on in every preset.
   Open the page with `?ui=minimal` (it combines with `?seed=`) to preview it.
   Unknown preset names fall back to the defaults.
 - `src/main.js` resolves the flags once at load (`resolveUi` in `theme.js`), sets
@@ -344,11 +364,11 @@ preview until its mockup and spec are approved.
 - Render code still writes to hidden elements, which is harmless, so turning a
   flag off cannot throw. The sim and rules never read `THEME.ui`; `autoPlaySpeed`
   only calls the existing `setSpeed` at load and on Restart.
-- Commands typed into the box and sent with Enter work in every preset; the
-  minimal preview matches keywords anywhere in the text. A refused command or a
-  sentence with no keyword shows no message and the input text simply stays. The
-  placeholder copy still says "Type a listed command"; the approved spec will
-  settle it.
+- Commands typed into the box and sent with Enter work in every preset, matching
+  keywords anywhere in the text. A sentence with no keyword shows no message; a
+  refused command shows its reason only where the feedback line is shown (not in
+  the minimal preview). Either way the input text stays and the queued command
+  is kept. The placeholder reads "Type a command, then press Enter".
 
 Checks: `tests/ui.test.js` (defaults all on, the minimal preset all off, every flag
 targets real parts of `index.html`, the sim never reads the switches) and

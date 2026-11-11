@@ -123,10 +123,35 @@ const traitNames = v => v.traits.map(tr => t('labels.traits.'+tr)).join(t('label
 function devLog(s, v, trait, text) {
   s.traitLog.push({ day: s.day, id: v.id, trait, text });
 }
+// A trait effect: counted, and offered as a candidate internal-log line.
+// flushTraitLog keeps at most `logPerDay` a day by the design's priority.
 function traitEvent(s, report, v, key, text) {
   s.stats.traitEvents[key] = (s.stats.traitEvents[key] || 0) + 1;
   report.traitEvents.push({ id: v.id, trait: key });
-  if (report.traitLines < s.config.personality.logPerDay) { report.traitLines++; devLog(s, v, key, text); }
+  report.traitCandidates.push({ priority: s.config.personality.logPriority[key.split('-')[0].replace(/[+]$/, '')],
+    seq: report.traitCandidates.length, id: v.id, trait: key, text });
+}
+// Priority: Generous, Grabby, Smart, Scatterbrained, Brave/Timid, then the
+// Sociable/Loner rest lines; ties keep the order they happened in.
+export const pickLogLines = (candidates, perDay) =>
+  [...candidates].sort((a, b) => a.priority - b.priority || a.seq - b.seq).slice(0, perDay);
+function flushTraitLog(s, report) {
+  const kept = pickLogLines(report.traitCandidates, s.config.personality.logPerDay);
+  for (const e of kept) s.traitLog.push({ day: s.day, id: e.id, trait: e.trait, text: e.text });
+  report.traitLines = kept.length;
+}
+// The trait that decided the final job, or null (design: log rules, credit).
+export function creditTrait(s, v, weather, die, action, plain) {
+  if (action === plain) return null;
+  const P = s.config.personality, has = tr => hasTrait(s, v, tr);
+  const wandered = action !== 'warm' && has('Scatterbrained') && die <= P.scatterbrained.chance;
+  if ((weather === 'rain' || weather === 'cold') && (has('Brave') || has('Timid'))) {
+    const below = has('Brave') ? P.braveWarmUpBelow : P.timidWarmUpBelow;
+    // Only when the different threshold itself changed whether it warmed up.
+    if ((v.warmth < below) !== (v.warmth < s.config.needs.warmUpBelow) && !wandered) return has('Brave') ? 'Brave' : 'Timid';
+  }
+  if (wandered) return 'Scatterbrained';
+  return has('Smart') ? 'Smart' : null;
 }
 export const normalizeCommand = normalizeWords;
 export function nextAllowedDay(state, command) {
@@ -169,6 +194,15 @@ export function queueCommand(s, text) {
   const state = structuredClone(s);
   state.queuedCommand = result.command;
   return { ...result, state, message: t('feedback.queued', {command:commandLabel(result.command),day:s.day+1}) };
+}
+// Typed text (design section 11, on every screen): keywords anywhere pick one
+// command, then the normal checks run. No match → { matched: false } and the
+// state is untouched. A refusal or no match never clears the queued command;
+// only a newly accepted command replaces it.
+export function queueText(s, text) {
+  const command = matchText(s, text);
+  if (command === null) return { ok: false, matched: false, command: null, message: '', state: s };
+  return { ...queueCommand(s, command), matched: true };
 }
 export function cancelCommand(s) {
   return { ...s, queuedCommand: null };
@@ -291,10 +325,8 @@ function work(s, order, report) {
     const action = chooseAction(s, v, weather, n, die, true);
     if (c.traits) {
       const plain = chooseAction(s, v, weather, n, die, false);
-      if (action !== plain) {
-        const brave = hasTrait(s, v, 'Brave'), timid = hasTrait(s, v, 'Timid');
-        const trait = (action === 'warm' || plain === 'warm') && (brave || timid) ? (brave ? 'Brave' : 'Timid')
-          : hasTrait(s, v, 'Scatterbrained') && die <= P.scatterbrained.chance ? 'Scatterbrained' : 'Smart';
+      const trait = creditTrait(s, v, weather, die, action, plain);
+      if (trait) {
         traitEvent(s, report, v, trait, t('traitLog.'+trait, {name:v.name,action:actionWord(action),plain:actionWord(plain),
           weather:t('labels.weather.'+weather),place:t(s.fireLit?'labels.resources.fire':'labels.resources.shelter')}));
       }
@@ -319,35 +351,50 @@ function work(s, order, report) {
   }
 }
 
+// One meal, without changing state: `order` serves in that order, `threshold`
+// and `fullness` by id. Returns who ate and who went without as Generous.
+export function mealPlan(order, threshold, fullness, food, generousOk) {
+  const served = new Set(), fed = [], gave = [];
+  for (const id of order) {
+    // "Hungry and waiting": not yet served and at or below their own threshold, self included.
+    const waiting = order.filter(q => !served.has(q) && fullness[q] <= threshold[q]).length;
+    served.add(id);
+    if (fullness[id] > threshold[id]) continue;
+    if (generousOk(id) && food < waiting) { gave.push(id); continue; }
+    if (food >= 1) { food -= 1; fed.push(id); }
+  }
+  return { fed, gave };
+}
 // Meals: Grabby Gourdlings first (in rotation order), then everyone else.
 function meals(s, order, report) {
   const c = s.config, N = c.needs, P = c.personality, grabby = v => hasTrait(s, v, 'Grabby');
-  const mealOrder = [...order.filter(grabby), ...order.filter(v => !grabby(v))];
-  const threshold = v => grabby(v) ? P.grabbyEatAtOrBelow : N.eatAtOrBelow;
-  const served = new Set();
-  let firstGrabby = null;
+  const byId = Object.fromEntries(order.map(v => [v.id, v]));
+  const fullness = Object.fromEntries(order.map(v => [v.id, v.fullness]));
+  const generousOk = id => hasTrait(s, byId[id], 'Generous') && fullness[id] >= P.generousMinFullness;
   for (const v of order) report.beforeMeals.push({ id: v.id, fullness: v.fullness, warmth: v.warmth });
-  for (const v of mealOrder) {
-    // "Hungry and waiting": not yet served and at or below their own threshold, self included.
-    const waiting = mealOrder.filter(q => !served.has(q.id) && q.fullness <= threshold(q)).length;
-    served.add(v.id);
-    if (v.fullness > threshold(v)) continue;
-    if (hasTrait(s, v, 'Generous') && s.food < waiting && v.fullness >= P.generousMinFullness) {
-      traitEvent(s, report, v, 'Generous', t('traitLog.Generous', {name:v.name}));
-      continue;
-    }
-    if (s.food >= N.mealCost) {
-      s.food -= N.mealCost;
-      if (grabby(v)) {
-        firstGrabby ??= v;
-        if (v.fullness > N.eatAtOrBelow) traitEvent(s, report, v, 'Grabby-early', t('traitLog.grabbyEarly', {name:v.name}));
-      }
-      changeNeed(v, 'fullness', N.mealFullness, c);
-      report.meals.push(v.id);
-    } else if (firstGrabby && !grabby(v)) {
-      traitEvent(s, report, v, 'Grabby-others-went-without', t('traitLog.grabbyOthers', {name:firstGrabby.name,other:v.name}));
+  const mealOrder = [...order.filter(grabby), ...order.filter(v => !grabby(v))].map(v => v.id);
+  const threshold = Object.fromEntries(order.map(v => [v.id, grabby(v) ? P.grabbyEatAtOrBelow : N.eatAtOrBelow]));
+  const foodBefore = s.food;
+  const { fed, gave } = mealPlan(mealOrder, threshold, fullness, s.food, generousOk);
+  for (const id of gave) traitEvent(s, report, byId[id], 'Generous', t('traitLog.Generous', {name:byId[id].name}));
+  for (const id of fed) {
+    const v = byId[id];
+    s.food -= N.mealCost; changeNeed(v, 'fullness', N.mealFullness, c); report.meals.push(id);
+    // Eating early is counted, never logged (design: Grabby line rule).
+    if (grabby(v) && fullness[id] > N.eatAtOrBelow) s.stats.traitEvents['Grabby-early'] = (s.stats.traitEvents['Grabby-early'] || 0) + 1;
+  }
+  if (c.traits && order.some(grabby)) {
+    // Re-run the meal with every Grabby treated as normal (rotation order, eats
+    // at 75 or below). Anyone fed there who went without here is named.
+    const normal = Object.fromEntries(order.map(v => [v.id, N.eatAtOrBelow]));
+    const counterfactual = mealPlan(order.map(v => v.id), normal, fullness, foodBefore, generousOk).fed;
+    const grabbyEaters = fed.filter(id => grabby(byId[id]));
+    for (const id of counterfactual) if (!fed.includes(id) && grabbyEaters.length && !grabbyEaters.includes(id)) {
+      const g = byId[grabbyEaters[0]];
+      traitEvent(s, report, g, 'Grabby-others-went-without', t('traitLog.grabbyOthers', {name:g.name,other:byId[id].name}));
     }
   }
+  flushTraitLog(s, report);
 }
 
 function resolveNeeds(s, v, sheltered, report) {
@@ -452,7 +499,7 @@ export function stepDay(previous) {
   s.day += 1;
   const report = { day: s.day, command: null, visitOrder: [], actions: [], beforeMeals: [], meals: [],
     damage: [], deaths: [], birth: null, discoveredFire: false, gatheredFood: 0, gatheredWood: 0,
-    harvests: 0, plantings: 0, traitEvents: [], traitLines: 0, behaviourRolls: [] };
+    harvests: 0, plantings: 0, traitEvents: [], traitCandidates: [], traitLines: 0, behaviourRolls: [] };
   // v0.2: a second shed paid for last night stands from today (cap 12).
   if (s.shed.pending) {
     s.shed.pending = false; s.shed.built = true; s.stats.shedDay = s.day;
