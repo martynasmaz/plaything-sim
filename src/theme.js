@@ -1044,6 +1044,77 @@ export function slotPosition(grid,slot) {
   return {x:x+(slot%S.columns)*S.gapX,y:y+Math.floor(slot/S.columns)*S.gapY};
 }
 
+// UI switches: every HUD and panel element can be turned off from this one
+// block. Defaults show everything (the current screen). A preset only lists
+// the flags it changes; `?ui=<preset>` in the address previews one. The world
+// canvas and the command text box are never switched off. A hidden element
+// gets the `hidden` attribute (display:none), and a wrapper whose children
+// are all hidden is hidden too, so nothing leaves a gap. Rules never read this.
+THEME.ui = {
+  defaults: {
+    showHeader: true,        // eyebrow, title and header note
+    showNotice: true,        // "nothing is saved" notice strip
+    showStats: true,         // day box and the four stat counters
+    showButtons: true,       // pause/1x/3x, next day, restart, queue, cancel
+    showForecast: true,      // today's weather and tomorrow's forecast
+    showWorldTitle: true,    // the "world" heading above the canvas
+    showWorldCaption: true,  // fire line, "next day in" text, progress bar
+    showMilestone: true,     // milestone banner
+    showCommandList: true,   // command heading, command chips and help text
+    showQueueStatus: true,   // "queued: ..." line under the input
+    showFeedback: true,      // feedback line under the input
+    showDetailPanel: true,   // roster and selected Gourdling's needs
+    showJournal: true,       // day-by-day journal
+    showGoalText: true,      // goal sentence in the footer
+    showFooter: true,        // the rest of the footer text
+    showEndScreenStats: true,// end screen numbers and seed (title, text and restart stay)
+    autoPlaySpeed: null,     // null keeps the sim's start speed; a number sets it on load and restart
+  },
+  presets: {
+    minimal: {
+      showHeader:false, showNotice:false, showStats:false, showButtons:false, showForecast:false,
+      showWorldTitle:false, showWorldCaption:false, showMilestone:false, showCommandList:false,
+      showQueueStatus:false, showFeedback:false, showDetailPanel:false, showJournal:false,
+      showGoalText:false, showFooter:false, showEndScreenStats:false,
+      autoPlaySpeed: 1,      // no buttons, so days run by themselves
+    },
+  },
+  // Which page parts each flag hides (CSS selectors into index.html).
+  targets: {
+    showHeader: ['header'],
+    showNotice: ['#no-save'],
+    showStats: ['.day-box', '#stats'],
+    showButtons: ['.playback', '#queue', '#cancel'],
+    showForecast: ['#weather-summary', '#forecast'],
+    showWorldTitle: ['.world-panel > .panel-heading > h2'],
+    showWorldCaption: ['.world-caption', '.progress-track'],
+    showMilestone: ['#milestone'],
+    showCommandList: ['.command-panel > .panel-heading', '#command-list', '#command-help'],
+    showQueueStatus: ['#queued'],
+    showFeedback: ['#feedback'],
+    showDetailPanel: ['.details-panel'],
+    showJournal: ['.log-panel'],
+    showGoalText: ['#goal'],
+    showFooter: ['footer > [data-copy="ui.footer"]'],
+    showEndScreenStats: ['#end-stats', '#end-seed'],
+  },
+  // Wrappers hidden when every child element is hidden; each adds
+  // `ui-empty-<name>` to <html> so CSS can close the space it leaves.
+  containers: {
+    topline: '.topline', worldHeading: '.world-panel > .panel-heading',
+    weatherLine: '.weather-line', queueRow: '.queue-row', aside: 'aside', footer: 'footer',
+  },
+};
+// Resolve the switches: defaults, then a named preset (unknown names are
+// ignored), then any explicit overrides.
+export function resolveUi(preset = null, overrides = {}, ui = THEME.ui) {
+  const flags = { ...ui.defaults, ...(ui.presets[preset] || {}), ...overrides };
+  for (const key of Object.keys(flags)) if (!(key in ui.defaults)) delete flags[key];
+  return flags;
+}
+// Classes for <html>: one `ui-hide-<flag>` per flag that is off.
+export const uiHiddenClasses = flags => Object.keys(THEME.ui.targets).filter(k => flags[k] === false).map(k => 'ui-hide-' + k);
+
 THEME.fallbacks = {
   base(g) { g.fillStyle(themeColor('cream')).fillRect(0,0,THEME.layout.canvas.width,THEME.layout.canvas.height); },
   groundMask(g) { const G=THEME.layout.ground;g.fillStyle(themeColor('ink')).fillRoundedRect(G.x,G.y,G.width,G.height,G.radius); },
@@ -1662,3 +1733,13 @@ THEME.css += `
 .art-drought_cue .forecast-icon[data-weather=drought]{background-image:var(--art-drought_cue)}
 .art-cold_cue .forecast-icon[data-weather=cold]{background-image:var(--art-cold_cue)}`;
 THEME.css += `#command-form.has-art{border:12px solid transparent;border-image:var(--command-panel-art) 20 fill / 12px stretch;background-image:none;min-height:72px}`;
+
+// UI switch layout: [hidden] always wins over a display rule, an empty aside
+// gives the world the full width, and a command panel left with only the text
+// box drops its panel frame (default screen: none of these apply).
+THEME.css += `[hidden]{display:none!important}
+.ui-empty-aside main{grid-template-columns:minmax(0,1fr)}
+.ui-empty-topline main{margin-top:18px}
+.ui-empty-topline.ui-hide-showHeader.ui-hide-showNotice main{margin-top:0}
+.ui-hide-showCommandList.ui-empty-queueRow.ui-hide-showFeedback .command-panel{border:0;background:none;overflow:visible}
+.ui-hide-showCommandList.ui-empty-queueRow.ui-hide-showFeedback #command-form{margin:0}`;

@@ -1,7 +1,7 @@
 import { createState, stepDay, queueCommand, cancelCommand, setSpeed, advanceTime,
   restart, availableCommands, validateCommand, nextAllowedDay, tomorrowWeather } from './sim.js';
 import { makeVillageScene } from './village-view.js';
-import { THEME, t, commandLabel } from './theme.js';
+import { THEME, t, commandLabel, resolveUi, uiHiddenClasses } from './theme.js';
 
 const $=selector=>document.querySelector(selector);
 const escapeHtml=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -22,7 +22,25 @@ document.title=t('ui.title')+t('ui.titleSuffix');
 // replays a run exactly; otherwise the page picks a fresh one.
 const randomSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
 const seedParam=new URLSearchParams(location.search).get('seed');
+// UI switches (THEME.ui): ?ui=minimal previews a preset. Hiding is applied
+// once here; render() keeps writing to hidden elements, which is harmless.
+const ui=resolveUi(new URLSearchParams(location.search).get('ui'));
+function applyUi(){
+  const root=document.documentElement;
+  for(const [flag,selectors] of Object.entries(THEME.ui.targets))if(ui[flag]===false)
+    for(const selector of selectors)for(const node of document.querySelectorAll(selector))node.hidden=true;
+  // Repeat until nothing changes, so nested wrappers close from the inside out.
+  for(let changed=true;changed;){changed=false;
+    for(const [name,selector] of Object.entries(THEME.ui.containers))for(const node of document.querySelectorAll(selector)){
+      if(!node.hidden&&node.children.length&&[...node.children].every(child=>child.hidden)){node.hidden=true;root.classList.add('ui-empty-'+name);changed=true;}
+    }
+  }
+  root.classList.add(...uiHiddenClasses(ui));
+}
+applyUi();
+const withUiSpeed=s=>ui.autoPlaySpeed===null?s:setSpeed(s,ui.autoPlaySpeed);
 let state=createState({},seedParam!==null&&/^\d+$/.test(seedParam)?Number(seedParam)>>>0:randomSeed()),selectedId=1;
+state=withUiSpeed(state);
 function feedback(text,error=false){$('#feedback').textContent=text;$('#feedback').classList.toggle('error',error);}
 function select(id){selectedId=id;render();}
 const Scene=makeVillageScene(()=>state,select);
@@ -39,7 +57,7 @@ function render(){
     .map(([key,value,max])=>`<div class="stat"><small>${htmlText('labels.resources.'+key)}</small><strong>${value}</strong><em>${htmlText('hud.cap',{max})}</em></div>`).join('');
   const weather=state.weather;
   $('#weather-summary').textContent=state.lastDay?t('hud.weather',{today:t('labels.weather.'+state.lastDay.weather),remaining:weather.daysLeft?t('hud.remaining',{days:weather.daysLeft}):''}):'';
-  $('#forecast').hidden=state.ended;
+  $('#forecast').hidden=state.ended||!ui.showForecast;
   // "Tomorrow" is live text BESIDE the tag; the forecast icon sits in the tag's
   // icon slot (theme CSS, only when that art loaded), then the weather word.
   const tomorrow=tomorrowWeather(state);
@@ -77,7 +95,7 @@ function render(){
   $('#cancel').disabled=!state.queuedCommand;$('#command-input').disabled=state.ended;$('#queue').disabled=state.ended;
   $('#latest-label').textContent=t('ui.latest',{count:c.limits.log});
   $('#log').innerHTML=[...state.log].reverse().map(e=>`<li data-type="${e.type}"><small>${htmlText('hud.logDay',{day:e.day})}</small>${escapeHtml(e.text)}</li>`).join('');
-  $('#milestone').hidden=!state.milestoneReached;
+  $('#milestone').hidden=!state.milestoneReached||!ui.showMilestone;
   $('#milestone').textContent=t('hud.milestone',{day:c.milestone.day,population:c.milestone.population,fire:t('labels.resources.fire')});
   $('#goal').textContent=t('ui.goal',{day:c.milestone.day,population:c.milestone.population,fire:t('labels.resources.fire')});
   $('#ended').hidden=!state.ended;
@@ -102,7 +120,7 @@ $('#command-form').addEventListener('submit',e=>{
 $('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.canceled'));render();};
 for(const b of document.querySelectorAll('[data-speed]'))b.onclick=()=>{state=setSpeed(state,Number(b.dataset.speed));render();};
 $('#next-day').onclick=()=>{state=stepDay(state);showCommandResult();render();};
-function reset(){state=restart(state,randomSeed());selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
+function reset(){state=withUiSpeed(restart(state,randomSeed()));selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
 $('#restart').onclick=reset;$('#restart-ended').onclick=reset;
 function showCommandResult(){const r=state.lastDay?.command;if(r)feedback(r.ok?t('feedback.applied',{command:commandLabel(r.command),day:state.day}):r.message,!r.ok);}
 let lastTime=performance.now();
@@ -113,4 +131,4 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 render();requestAnimationFrame(frame);
-window.plaything=Object.freeze({getState:()=>structuredClone(state)});
+window.plaything=Object.freeze({getState:()=>structuredClone(state),getUi:()=>({...ui})});

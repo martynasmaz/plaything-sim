@@ -1113,6 +1113,77 @@ function slotPosition(grid,slot) {
   return {x:x+(slot%S.columns)*S.gapX,y:y+Math.floor(slot/S.columns)*S.gapY};
 }
 
+// UI switches: every HUD and panel element can be turned off from this one
+// block. Defaults show everything (the current screen). A preset only lists
+// the flags it changes; `?ui=<preset>` in the address previews one. The world
+// canvas and the command text box are never switched off. A hidden element
+// gets the `hidden` attribute (display:none), and a wrapper whose children
+// are all hidden is hidden too, so nothing leaves a gap. Rules never read this.
+THEME.ui = {
+  defaults: {
+    showHeader: true,        // eyebrow, title and header note
+    showNotice: true,        // "nothing is saved" notice strip
+    showStats: true,         // day box and the four stat counters
+    showButtons: true,       // pause/1x/3x, next day, restart, queue, cancel
+    showForecast: true,      // today's weather and tomorrow's forecast
+    showWorldTitle: true,    // the "world" heading above the canvas
+    showWorldCaption: true,  // fire line, "next day in" text, progress bar
+    showMilestone: true,     // milestone banner
+    showCommandList: true,   // command heading, command chips and help text
+    showQueueStatus: true,   // "queued: ..." line under the input
+    showFeedback: true,      // feedback line under the input
+    showDetailPanel: true,   // roster and selected Gourdling's needs
+    showJournal: true,       // day-by-day journal
+    showGoalText: true,      // goal sentence in the footer
+    showFooter: true,        // the rest of the footer text
+    showEndScreenStats: true,// end screen numbers and seed (title, text and restart stay)
+    autoPlaySpeed: null,     // null keeps the sim's start speed; a number sets it on load and restart
+  },
+  presets: {
+    minimal: {
+      showHeader:false, showNotice:false, showStats:false, showButtons:false, showForecast:false,
+      showWorldTitle:false, showWorldCaption:false, showMilestone:false, showCommandList:false,
+      showQueueStatus:false, showFeedback:false, showDetailPanel:false, showJournal:false,
+      showGoalText:false, showFooter:false, showEndScreenStats:false,
+      autoPlaySpeed: 1,      // no buttons, so days run by themselves
+    },
+  },
+  // Which page parts each flag hides (CSS selectors into index.html).
+  targets: {
+    showHeader: ['header'],
+    showNotice: ['#no-save'],
+    showStats: ['.day-box', '#stats'],
+    showButtons: ['.playback', '#queue', '#cancel'],
+    showForecast: ['#weather-summary', '#forecast'],
+    showWorldTitle: ['.world-panel > .panel-heading > h2'],
+    showWorldCaption: ['.world-caption', '.progress-track'],
+    showMilestone: ['#milestone'],
+    showCommandList: ['.command-panel > .panel-heading', '#command-list', '#command-help'],
+    showQueueStatus: ['#queued'],
+    showFeedback: ['#feedback'],
+    showDetailPanel: ['.details-panel'],
+    showJournal: ['.log-panel'],
+    showGoalText: ['#goal'],
+    showFooter: ['footer > [data-copy="ui.footer"]'],
+    showEndScreenStats: ['#end-stats', '#end-seed'],
+  },
+  // Wrappers hidden when every child element is hidden; each adds
+  // `ui-empty-<name>` to <html> so CSS can close the space it leaves.
+  containers: {
+    topline: '.topline', worldHeading: '.world-panel > .panel-heading',
+    weatherLine: '.weather-line', queueRow: '.queue-row', aside: 'aside', footer: 'footer',
+  },
+};
+// Resolve the switches: defaults, then a named preset (unknown names are
+// ignored), then any explicit overrides.
+function resolveUi(preset = null, overrides = {}, ui = THEME.ui) {
+  const flags = { ...ui.defaults, ...(ui.presets[preset] || {}), ...overrides };
+  for (const key of Object.keys(flags)) if (!(key in ui.defaults)) delete flags[key];
+  return flags;
+}
+// Classes for <html>: one `ui-hide-<flag>` per flag that is off.
+const uiHiddenClasses = flags => Object.keys(THEME.ui.targets).filter(k => flags[k] === false).map(k => 'ui-hide-' + k);
+
 THEME.fallbacks = {
   base(g) { g.fillStyle(themeColor('cream')).fillRect(0,0,THEME.layout.canvas.width,THEME.layout.canvas.height); },
   groundMask(g) { const G=THEME.layout.ground;g.fillStyle(themeColor('ink')).fillRoundedRect(G.x,G.y,G.width,G.height,G.radius); },
@@ -1731,6 +1802,16 @@ THEME.css += `
 .art-drought_cue .forecast-icon[data-weather=drought]{background-image:var(--art-drought_cue)}
 .art-cold_cue .forecast-icon[data-weather=cold]{background-image:var(--art-cold_cue)}`;
 THEME.css += `#command-form.has-art{border:12px solid transparent;border-image:var(--command-panel-art) 20 fill / 12px stretch;background-image:none;min-height:72px}`;
+
+// UI switch layout: [hidden] always wins over a display rule, an empty aside
+// gives the world the full width, and a command panel left with only the text
+// box drops its panel frame (default screen: none of these apply).
+THEME.css += `[hidden]{display:none!important}
+.ui-empty-aside main{grid-template-columns:minmax(0,1fr)}
+.ui-empty-topline main{margin-top:18px}
+.ui-empty-topline.ui-hide-showHeader.ui-hide-showNotice main{margin-top:0}
+.ui-hide-showCommandList.ui-empty-queueRow.ui-hide-showFeedback .command-panel{border:0;background:none;overflow:visible}
+.ui-hide-showCommandList.ui-empty-queueRow.ui-hide-showFeedback #command-form{margin:0}`;
 
 
 // Build-time optional art: missing paths are deliberately not requested.
@@ -2382,7 +2463,25 @@ document.title=t('ui.title')+t('ui.titleSuffix');
 // replays a run exactly; otherwise the page picks a fresh one.
 const randomSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
 const seedParam=new URLSearchParams(location.search).get('seed');
+// UI switches (THEME.ui): ?ui=minimal previews a preset. Hiding is applied
+// once here; render() keeps writing to hidden elements, which is harmless.
+const ui=resolveUi(new URLSearchParams(location.search).get('ui'));
+function applyUi(){
+  const root=document.documentElement;
+  for(const [flag,selectors] of Object.entries(THEME.ui.targets))if(ui[flag]===false)
+    for(const selector of selectors)for(const node of document.querySelectorAll(selector))node.hidden=true;
+  // Repeat until nothing changes, so nested wrappers close from the inside out.
+  for(let changed=true;changed;){changed=false;
+    for(const [name,selector] of Object.entries(THEME.ui.containers))for(const node of document.querySelectorAll(selector)){
+      if(!node.hidden&&node.children.length&&[...node.children].every(child=>child.hidden)){node.hidden=true;root.classList.add('ui-empty-'+name);changed=true;}
+    }
+  }
+  root.classList.add(...uiHiddenClasses(ui));
+}
+applyUi();
+const withUiSpeed=s=>ui.autoPlaySpeed===null?s:setSpeed(s,ui.autoPlaySpeed);
 let state=createState({},seedParam!==null&&/^\d+$/.test(seedParam)?Number(seedParam)>>>0:randomSeed()),selectedId=1;
+state=withUiSpeed(state);
 function feedback(text,error=false){$('#feedback').textContent=text;$('#feedback').classList.toggle('error',error);}
 function select(id){selectedId=id;render();}
 const Scene=makeVillageScene(()=>state,select);
@@ -2399,7 +2498,7 @@ function render(){
     .map(([key,value,max])=>`<div class="stat"><small>${htmlText('labels.resources.'+key)}</small><strong>${value}</strong><em>${htmlText('hud.cap',{max})}</em></div>`).join('');
   const weather=state.weather;
   $('#weather-summary').textContent=state.lastDay?t('hud.weather',{today:t('labels.weather.'+state.lastDay.weather),remaining:weather.daysLeft?t('hud.remaining',{days:weather.daysLeft}):''}):'';
-  $('#forecast').hidden=state.ended;
+  $('#forecast').hidden=state.ended||!ui.showForecast;
   // "Tomorrow" is live text BESIDE the tag; the forecast icon sits in the tag's
   // icon slot (theme CSS, only when that art loaded), then the weather word.
   const tomorrow=tomorrowWeather(state);
@@ -2437,7 +2536,7 @@ function render(){
   $('#cancel').disabled=!state.queuedCommand;$('#command-input').disabled=state.ended;$('#queue').disabled=state.ended;
   $('#latest-label').textContent=t('ui.latest',{count:c.limits.log});
   $('#log').innerHTML=[...state.log].reverse().map(e=>`<li data-type="${e.type}"><small>${htmlText('hud.logDay',{day:e.day})}</small>${escapeHtml(e.text)}</li>`).join('');
-  $('#milestone').hidden=!state.milestoneReached;
+  $('#milestone').hidden=!state.milestoneReached||!ui.showMilestone;
   $('#milestone').textContent=t('hud.milestone',{day:c.milestone.day,population:c.milestone.population,fire:t('labels.resources.fire')});
   $('#goal').textContent=t('ui.goal',{day:c.milestone.day,population:c.milestone.population,fire:t('labels.resources.fire')});
   $('#ended').hidden=!state.ended;
@@ -2462,7 +2561,7 @@ $('#command-form').addEventListener('submit',e=>{
 $('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.canceled'));render();};
 for(const b of document.querySelectorAll('[data-speed]'))b.onclick=()=>{state=setSpeed(state,Number(b.dataset.speed));render();};
 $('#next-day').onclick=()=>{state=stepDay(state);showCommandResult();render();};
-function reset(){state=restart(state,randomSeed());selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
+function reset(){state=withUiSpeed(restart(state,randomSeed()));selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
 $('#restart').onclick=reset;$('#restart-ended').onclick=reset;
 function showCommandResult(){const r=state.lastDay?.command;if(r)feedback(r.ok?t('feedback.applied',{command:commandLabel(r.command),day:state.day}):r.message,!r.ok);}
 let lastTime=performance.now();
@@ -2473,7 +2572,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 render();requestAnimationFrame(frame);
-window.plaything=Object.freeze({getState:()=>structuredClone(state)});
+window.plaything=Object.freeze({getState:()=>structuredClone(state),getUi:()=>({...ui})});
 
 
 })();

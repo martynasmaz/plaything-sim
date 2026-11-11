@@ -187,3 +187,50 @@ Restart button images. All of this is CSS in `src/theme.js`, switched on per fil
 by `art-<key>` classes after Phaser confirms the file loaded; otherwise the plain
 fallback styling applies. Icon files carry their own ink badge, so the renderer
 draws no backing behind them.
+
+## UI switches (`THEME.ui`) and the minimal preview
+
+Every HUD and panel element outside the world canvas can be switched off from one
+block, `THEME.ui` in `src/theme.js`. This is preparation only: the default screen
+is unchanged, and the radically minimal screen (world plus one text box) is a
+preview until its mockup and spec are approved.
+
+- `THEME.ui.defaults` holds the flags; all `show…` flags are `true` by default:
+  `showHeader`, `showNotice`, `showStats`, `showButtons`, `showForecast`,
+  `showWorldTitle`, `showWorldCaption`, `showMilestone`, `showCommandList`,
+  `showQueueStatus`, `showFeedback`, `showDetailPanel`, `showJournal`,
+  `showGoalText`, `showFooter`, `showEndScreenStats`. One more setting,
+  `autoPlaySpeed`, is `null` by default (keep the sim's paused start).
+- `THEME.ui.targets` maps each flag to the page parts it hides (CSS selectors into
+  `index.html`). The world canvas, the command text box and the end screen's
+  title, text and Restart button can never be switched off.
+- `THEME.ui.presets.minimal` turns every `show…` flag off and sets
+  `autoPlaySpeed: 1`, because with no buttons the days have to run by themselves.
+  Open the page with `?ui=minimal` (it combines with `?seed=`) to preview it.
+  Unknown preset names fall back to the defaults.
+- `src/main.js` resolves the flags once at load (`resolveUi` in `theme.js`), sets
+  `hidden` on each target, then hides any wrapper whose children are all hidden
+  (top bar, world heading, weather line, queue row, side column, footer) and adds
+  `ui-hide-<flag>` / `ui-empty-<wrapper>` classes on `<html>`. CSS in `theme.js`
+  uses those classes to close the space: an empty side column gives the world the
+  full width, and a command panel left with only its text box loses its frame.
+  `[hidden]` always wins over a display rule (`display:none!important`).
+- Render code still writes to hidden elements, which is harmless, so turning a
+  flag off cannot throw. The sim and rules never read `THEME.ui`; `autoPlaySpeed`
+  only calls the existing `setSpeed` at load and on Restart.
+- Commands typed into the box and sent with Enter work exactly as before in every
+  preset. In the minimal preview the feedback line is hidden, so a refused
+  command shows no message; the input text simply stays. The placeholder copy
+  still says "Type a listed command" — both are for the approved spec to settle.
+
+Checks: `tests/ui.test.js` (defaults all on, the minimal preset all off, every flag
+targets real parts of `index.html`, the sim never reads the switches) and
+`scripts/ui-smoke.mjs` (headless browser on `dist/index.html`). The smoke test
+compares the default page at 1440, 900 and 600 px wide with the build from commit
+`87c90b0` (before the switches): the box of every element must match on every
+load, and the screenshot must match pixel for pixel (up to 5 fresh loads per
+width, because Chrome's anti-aliasing of the input placeholder can differ between
+two loads of the same file). For `?ui=minimal` it checks that only the canvas and
+the command box are visible, with no buttons and no gaps, that Enter queues
+`cloud wrangle` and the day then applies it with no button pressed, and it saves
+`reports/ui-minimal-preview.png`.

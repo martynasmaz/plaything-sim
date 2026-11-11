@@ -162,7 +162,13 @@ CHROMIUM_PATH=/path/to/chrome node scripts/smoke.mjs
 # Also checks a changed theme, empty map, missing art and offline SVG embedding:
 PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
 CHROMIUM_PATH=/path/to/chrome node scripts/theme-smoke.mjs
+# UI switches: default screen unchanged vs 87c90b0, ?ui=minimal preview works:
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
+CHROMIUM_PATH=/path/to/chrome node scripts/ui-smoke.mjs
 ```
+
+Preview the future minimal screen (world plus command box only) by opening the
+page with `?ui=minimal`; the switches live in `THEME.ui` in `src/theme.js`.
 
 The optional theme test reads the artist SVG directory by default; override with
 `ART_SVG_DIR=/path/to/svg`. Browser tooling is not needed to play, build or run
