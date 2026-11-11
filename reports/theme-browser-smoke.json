@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "inlinedImages": 44,
+  "missingFallback": {
+    "key": "background",
+    "path": "assets/background.svg",
+    "reason": "missing optional file"
+  },
+  "consoleErrors": [],
+  "externalRequests": [],
+  "checks": [
+    "single theme swap changes title, resource, names and log",
+    "real SVG sprites",
+    "idle/walk patterns",
+    "separate shadows",
+    "ground/weather tiles",
+    "sign panel",
+    "child sprite",
+    "illness icons",
+    "missing optional background fallback",
+    "file:// with network offline",
+    "empty map remains playable",
+    "all configured files missing remain playable"
+  ]
+}

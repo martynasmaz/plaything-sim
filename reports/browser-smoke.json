@@ -6,7 +6,7 @@
     "offline": false,
     "consoleErrors": [],
     "externalRequests": [],
-    "requests": 7,
+    "requests": 53,
     "day30Population": 8,
     "day30Food": 21,
     "checks": [
@@ -19,7 +19,8 @@
       "speed controls",
       "restart",
       "30-day milestone",
-      "mobile layout"
+      "mobile layout",
+      "approved flavour names and fatal-illness help"
     ]
   },
   {
@@ -42,7 +43,8 @@
       "speed controls",
       "restart",
       "30-day milestone",
-      "mobile layout"
+      "mobile layout",
+      "approved flavour names and fatal-illness help"
     ]
   }
 ]

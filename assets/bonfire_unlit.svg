@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" stroke-linecap="round" stroke-linejoin="round">
+  <title>bonfire unlit</title>
+  <g transform="translate(0 -2)"><path d="M9 42 L50 52 Q57 56 53 60 L9 51 Q4 48 9 42 Z" fill="#D2A23A" stroke="#2B211C" stroke-width="3"/><path d="M11 59 L48 39 Q54 39 57 44 L18 63 Q10 64 11 59 Z" fill="#D2A23A" stroke="#2B211C" stroke-width="3"/><path d="M11 45 C5 42 3 48 8 51 Q13 53 14 49 Q14 46 11 45 Z" fill="#EFE3C8" stroke="#2B211C" stroke-width="3"/><path d="M52 52 C46 51 45 58 51 60 Q57 60 57 56 Q56 53 52 52 Z" fill="#EFE3C8" stroke="#2B211C" stroke-width="3"/><path d="M16 56 C9 54 8 61 14 63 Q21 64 21 59 Q21 57 16 56 Z" fill="#EFE3C8" stroke="#2B211C" stroke-width="3"/></g>
+</svg>

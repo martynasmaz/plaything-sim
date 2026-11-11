@@ -1,141 +1,180 @@
-// ALL village art lives here. The artist can replace this file later without
-// touching the simulation, command reader, controls, or needs UI.
-const COLORS = [0xeec98c, 0xa5c9a0, 0xccaacf, 0x95c7c8, 0xe1a58f, 0xc4c784, 0xb7b6e0, 0xe9be9d];
-const SPOTS = { shelter: { x: 185, y: 160 }, fire: { x: 445, y: 255 },
-  food: { x: 725, y: 150 }, wood: { x: 738, y: 320 }, rest: { x: 235, y: 295 } };
-const TEXT = { fontFamily: 'Arial, sans-serif', fontSize: '12px', color: '#c3d3bf' };
+// Renderer only: every palette, primitive, image choice, label and dimension is
+// supplied by theme.js. Rules and command keywords never depend on loaded art.
+import { THEME, t, themeColor, spriteManifest, villagerTextureCandidates } from './theme.js';
+
 export function makeVillageScene(getState, onSelect) {
   return class VillageScene extends Phaser.Scene {
-    constructor() { super('village'); this.people = new Map(); this.lastState = null; }
+    constructor() { super('village'); this.people=new Map(); this.lastState=null; this.optionalImages=new Map(); }
+    preload() {
+      this.manifest=spriteManifest();
+      this.missing=[];
+      // Missing files are optional, not a boot failure. Default map is empty:
+      // today's asset-free build makes NO image/network requests at all.
+      this.load.on('loaderror',file=>this.missing.push(file.key));
+      for(const [key,url] of Object.entries(this.manifest))this.load.image(key,url);
+    }
+    has(key) { return this.textures.exists(key); }
+    image(key,x,y,specKey=key) {
+      const spec=THEME.assetSpecs[specKey];
+      if(!spec||!this.has(key))return null;
+      const image=spec.tile?this.add.tileSprite(x,y,THEME.layout.canvas.width,THEME.layout.canvas.height,key).setOrigin(...spec.origin)
+        :this.add.image(x,y,key).setOrigin(...spec.origin).setDisplaySize(...spec.size);
+      image.setAlpha(spec.alpha??1);
+      if(spec.layer)image.setDepth(THEME.layout.depth[spec.layer]+(spec.layer==='world'?y:0));
+      return image;
+    }
+    text(key,point,values={},size=THEME.layout.text.small,origin=.5) {
+      return this.add.text(...point,t(key,values),{fontFamily:THEME.fonts.canvas,fontSize:`${size}px`,color:THEME.palette[THEME.layout.canvasText.color],backgroundColor:THEME.palette[THEME.layout.canvasText.background],padding:THEME.layout.canvasText.padding}).setOrigin(origin).setDepth(THEME.layout.depth.labels);
+    }
+    shadow(g,x,y,width,height) {
+      const S=THEME.layout.shadow;
+      const image=this.image('shadow',x+S.offsetX,y+S.offsetY);
+      if(image)image.setDisplaySize(width,height);
+      else THEME.fallbacks.shadow(g,x,y,width,height);
+    }
     create() {
-      this.land = this.add.graphics();
-      this.cues = this.add.graphics();
-      this.weatherLabel = this.add.text(450, 24, '', { ...TEXT, fontSize: '11px' }).setOrigin(.5);
-      this.add.text(185, 71, 'SHARED SHELTER', { ...TEXT, fontSize: '10px' }).setOrigin(.5);
-      this.add.text(185, 86, '8 places · always open', { ...TEXT, fontSize: '10px', color: '#8eaa90' }).setOrigin(.5);
-      this.add.text(725, 76, 'WILD FOOD', { ...TEXT, fontSize: '10px' }).setOrigin(.5);
-      this.add.text(745, 448, 'WOODLAND', { ...TEXT, fontSize: '10px' }).setOrigin(.5);
-      this.add.text(235, 432, 'RESTING PLACE', { ...TEXT, fontSize: '10px' }).setOrigin(.5);
-      this.fireLabel = this.add.text(445, 301, '', { ...TEXT, fontSize: '10px' }).setOrigin(.5);
-      this.add.text(22, 451, 'SELECT A LITTLE LIFE TO SEE ITS NEEDS', { ...TEXT, fontSize: '9px', color: '#8da88f' });
-      this.drawLand();
-      // Useful for accessibility/test readiness. No hidden game rules here.
-      document.querySelector('#village').dataset.ready = 'true';
-    }
-    drawLand() {
-      const g = this.land;
-      g.fillStyle(0x263f38).fillRect(0, 0, 900, 480);
-      g.fillStyle(0x304d3b).fillEllipse(444, 252, 770, 385);
-      g.fillStyle(0x38543d).fillEllipse(447, 267, 625, 305);
-      // Fixed positions, not random decoration: every render is repeatable.
-      for (const [x, y, size] of [[58,98,28],[96,38,22],[830,69,29],[855,238,25],[63,367,30],[112,443,19],[800,453,19],[660,38,18]]) {
-        g.fillStyle(0x203a32).fillRoundedRect(x - 4, y, 8, size * 1.6, 3);
-        g.fillStyle(0x456547).fillCircle(x, y, size);
-        g.fillStyle(0x50764e).fillCircle(x - size / 3, y - 8, size * .6);
-      }
-      g.lineStyle(26, 0x60704b, .42);
-      for (const key of ['shelter', 'food', 'wood', 'rest']) {
-        g.beginPath().moveTo(445, 255).lineTo(SPOTS[key].x, SPOTS[key].y).strokePath();
-      }
-      // Shelter: a geometric roof and doorway, deliberately not final artwork.
-      g.fillStyle(0x1d332d).fillEllipse(185, 203, 166, 30);
-      g.fillStyle(0xb6a278).fillRoundedRect(122, 140, 126, 63, 4);
-      g.fillStyle(0xd5bc89).fillTriangle(103, 147, 185, 95, 267, 147);
-      g.lineStyle(3, 0x8c795c).strokeTriangle(103, 147, 185, 95, 267, 147);
-      g.fillStyle(0x314337).fillRoundedRect(165, 159, 40, 45, { tl: 20, tr: 20, bl: 0, br: 0 });
-      // Food store / berries.
-      g.fillStyle(0x21392f).fillEllipse(725, 176, 112, 29);
-      g.fillStyle(0x6f8c50).fillCircle(697, 132, 23).fillCircle(733, 126, 29).fillCircle(758, 142, 21);
-      for (const [x,y] of [[687,130],[705,140],[725,117],[740,137],[750,151]]) g.fillStyle(0xe6b88b).fillCircle(x,y,4);
-      g.fillStyle(0x9c855f).fillRoundedRect(700, 164, 50, 22, 4);
-      g.fillStyle(0xe8c883).fillCircle(711,166,7).fillCircle(728,164,8).fillCircle(740,167,6);
-      // Wood stack.
-      for (let i = 0; i < 3; i++) {
-        g.fillStyle(0x9c805c).fillRoundedRect(703+i*3, 332+i*12, 80-i*8, 12, 6);
-        g.fillStyle(0xc0a376).fillCircle(708+i*3,338+i*12,5);
-      }
-      // A few rocks and tufts; shapes only, no external assets.
-      for (let i = 0; i < 18; i++) {
-        const x = 90 + (i * 137) % 725, y = 50 + (i * 73) % 370;
-        g.lineStyle(2, 0x6a8253, .6).lineBetween(x,y,x-3,y-7).lineBetween(x,y,x+4,y-6);
-      }
-      g.lineStyle(3, 0x87907a).strokeEllipse(445, 267, 84, 47);
-      for (let i=0;i<8;i++) {
-        const a = i * Math.PI / 4;
-        g.fillStyle(0x8d927b).fillEllipse(445+Math.cos(a)*41,267+Math.sin(a)*23,13,9);
-      }
-    }
-    update() {
-      const s = getState();
-      const element = document.querySelector('#village');
-      element.dataset.walking = String(this.tweens.getTweens().length > 0);
-      if (s === this.lastState) return;
-      // Time progress creates lightweight states. Redraw only on meaningful changes.
-      const key = `${s.day}|${s.queuedCommand}|${s.speed}|${s.ended}`;
-      if (key === this.lastKey) { this.lastState = s; return; }
-      this.lastKey = key; this.lastState = s;
-      element.dataset.simDay = String(s.day);
-      this.cues.clear();
-      const g = this.cues;
-      const weather = s.lastDay?.weather || s.weather.type;
-      this.weatherLabel.setText(weather === 'rain' ? 'RAIN · GOOD FOR FOOD, COLD FOR LITTLE LIVES' : weather === 'drought' ? 'DROUGHT · A SMALLER GATHERING' : 'A QUIET DAY IN THE CLEARING');
-      if (weather === 'rain') {
-        g.fillStyle(0x8bb0be,.08).fillRect(0,0,900,480);
-        g.lineStyle(1,0xa5d7e0,.45);
-        for(let i=0;i<60;i++) { const x=(i*139)%900,y=(i*79)%470; g.lineBetween(x,y,x-4,y+13); }
-      } else if (weather === 'drought') {
-        g.fillStyle(0xddb76a,.12).fillEllipse(450,255,780,370);
-        g.fillStyle(0xe7c783,.8).fillCircle(825,40,16);
-        g.lineStyle(1,0xb69c68,.6);
-        for(let i=0;i<12;i++) {const x=70+i*63,y=310+(i%3)*35;g.lineBetween(x,y,x+10,y+7).lineBetween(x+10,y+7,x+15,y-4);}
-      }
-      g.lineStyle(6,0x8b6547).lineBetween(426,272,464,253).lineBetween(428,254,462,272);
-      if(s.fireLit) {
-        g.fillStyle(0xf4b478,.12).fillCircle(445,255,58);
-        g.fillStyle(0xe99b56).fillTriangle(426,266,446,219,464,266);
-        g.fillStyle(0xf5d891).fillTriangle(436,266,446,238,454,266);
-      }
-      this.fireLabel.setText(s.fireKnown ? (s.fireLit ? 'FIRE · BURNING TODAY' : 'FIRE KNOWN · UNLIT TODAY') : 'FIRE · NOT YET KNOWN');
-      const livingIds = new Set(s.villagers.map(v=>v.id));
-      for (const [id,p] of this.people) if(!livingIds.has(id)) { p.container.destroy(); this.people.delete(id); }
-      for (const v of s.villagers) {
-        let p=this.people.get(v.id);
-        if(!p) {
-          const body=this.add.circle(0,0,v.age<s.config.life.adult?10:13,COLORS[(v.id-1)%COLORS.length]).setStrokeStyle(2,0x1e332b);
-          const eyes=this.add.graphics().fillStyle(0x263e34).fillCircle(-4,-1,1.5).fillCircle(4,-1,1.5);
-          const label=this.add.text(0,19,v.name,{...TEXT,fontSize:'10px',color:'#f1eed9'}).setOrigin(.5,0);
-          const status=this.add.text(0,-32,'',{...TEXT,fontSize:'9px',color:'#f4c48f',backgroundColor:'#263e34'}).setOrigin(.5);
-          const container=this.add.container(400+(v.id%3)*42,340+Math.floor((v.id-1)/3)*42,[body,eyes,label,status]);
-          body.setInteractive({useHandCursor:true}).on('pointerdown',()=>onSelect(v.id));
-          p={container,body,status}; this.people.set(v.id,p);
+      const L=THEME.layout,s=getState();
+      this.land=this.add.graphics();
+      THEME.fallbacks.base(this.land);
+      if(!this.image('background',0,0)) {
+        THEME.fallbacks.terrain(this.land);
+        if(this.has('ground_tile')) {
+          const maskShape=this.make.graphics({x:0,y:0,add:false});
+          // A theme-provided terrain mask keeps seamless square tiles in the clearing.
+          THEME.fallbacks.groundMask(maskShape);
+          const mask=maskShape.createGeometryMask(),[w,h]=THEME.assetSpecs.ground_tile.size;
+          for(let x=0;x<L.canvas.width;x+=w)for(let y=0;y<L.canvas.height;y+=h)this.image('ground_tile',x,y).setMask(mask);
+          const paths=this.add.graphics();THEME.fallbacks.paths(paths);
         }
-        p.body.setRadius(v.age<s.config.life.adult?10:13);
-        const labels=[];
-        if(v.illnessDays>0||v.illToday) labels.push('sick');
-        if(v.health<s.config.needs.unwellBelow) labels.push('unwell');
-        if(v.happiness<s.config.needs.unhappyBelow) labels.push('unhappy');
-        if(v.safety===s.config.needs.unsafe) labels.push('uneasy');
-        if(v.reaction) labels.push(v.reaction);
-        p.status.setText(labels.join(' · '));
-        p.body.setStrokeStyle(2,v.illnessDays>0||v.illToday?0xe39488:0x1e332b);
-        if(s.day===0) continue;
-        let spot=SPOTS.rest;
-        if(v.activity==='Forage') spot=SPOTS.food;
-        else if(v.activity==='Gather wood') spot=SPOTS.wood;
-        else if(v.activity==='Warm up') spot=s.fireLit?SPOTS.fire:SPOTS.shelter;
-        else if(v.activity==='Newborn') spot=SPOTS.shelter;
-        // Fixed offset per permanent ID prevents villagers sitting on each other.
-        const offset=(v.id-1)%4;
-        const x=spot.x-61+offset*41,y=spot.y+48+Math.floor((v.id-1)/4)*43;
-        this.tweens.killTweensOf(p.container);
-        if (v.reaction === 'Learned fire') {
-          // Brief shared learning reaction, then the normal activity destination.
-          // This animation never performs work or advances simulation time.
-          this.tweens.chain({ targets:p.container, tweens:[
-            {x:SPOTS.fire.x-61+offset*41,y:SPOTS.fire.y+40+Math.floor((v.id-1)/4)*40,duration:600,ease:'Sine.easeInOut'},
-            {x,y,duration:1000,delay:350,ease:'Sine.easeInOut'}
-          ]});
-        } else this.tweens.add({targets:p.container,x,y,duration:1000,ease:'Sine.easeInOut'});
+      }
+      this.land=this.add.graphics();
+      for(const {key,x,y,angle} of L.fence){const image=this.image(key,x,y);if(image)image.setAngle(angle);else THEME.fallbacks[key](this.land,x,y);}
+      for(const [x,y] of L.corn)if(!this.image('corn',x,y))THEME.fallbacks.corn(this.land,x,y);
+      // Prop shadows are separate from prop SVGs and remain replaceable.
+      for(const key of ['shelter','food_spot','wood_spot','pantry','lantern']) {
+        const [x,y]=L.props[key],spec=THEME.assetSpecs[key];
+        this.shadow(this.land,x,y,spec.size[0]*L.propShadow.width,spec.size[0]*L.propShadow.height);
+        if(!this.image(key,x,y))THEME.fallbacks[key](this.land);
+      }
+      this.cues=this.add.graphics();
+      for(const key of ['rain','drought']) {
+        const image=this.image(key,0,0);if(image)this.optionalImages.set(key,image.setVisible(false));
+      }
+      for(const key of ['campfire_lit','campfire_out']) {
+        const image=this.image(key,...L.props[key]);if(image)this.optionalImages.set(key,image.setVisible(false));
+      }
+      for(const key of ['rain_cue','drought_cue']) {
+        const image=this.image(key,L.weatherCue.x,L.weatherCue.y);if(image)this.optionalImages.set(key,image.setVisible(false));
+      }
+      this.weatherLabel=this.text('scene.normal',L.labels.weather,{},L.text.weather);
+      for(const key of ['shelter','food','wood','rest','pantry'])this.text(`scene.${key}`,L.labels[key]);
+      this.text('scene.shelterPlaces',L.labels.shelterPlaces,{places:s.config.limits.shelter});
+      this.fireLabel=this.text('scene.fireUnknown',L.labels.fire);
+      this.text('scene.hint',L.labels.hint,{},L.text.hint,0);
+      const element=document.querySelector('#village');
+      element.dataset.ready='true';
+      element.dataset.loadedSprites=JSON.stringify(Object.keys(this.manifest).filter(key=>this.has(key)));
+      element.dataset.missingSprites=JSON.stringify(this.missing);
+      if(this.has('command_panel')){document.documentElement.style.setProperty('--command-panel-art',`url("${this.manifest.command_panel}")`);document.querySelector('#command-form').classList.add('has-art');}
+    }
+    makePerson(v,child) {
+      const L=THEME.layout,P=L.initial;
+      const shadow=this.add.graphics();
+      const foot=child?L.people.childFootOffset:L.people.footOffset;
+      const shadowSize=child?THEME.assetSpecs.shadow.childSize:THEME.assetSpecs.shadow.size;
+      const shadowImage=this.image('shadow',L.shadow.offsetX,foot+L.shadow.offsetY);
+      if(shadowImage)shadowImage.setDisplaySize(...shadowSize);
+      else THEME.fallbacks.shadow(shadow,0,foot,...shadowSize);
+      const {body,eyes}=THEME.fallbacks.villager(this,child);
+      const label=this.text('labels.nameFallback',[0,L.text.labelY],{id:v.id},L.text.small).setText(v.name).setOrigin(.5,0);
+      const status=this.text('labels.nameFallback',[0,L.text.statusY],{id:v.id},L.text.status).setText('').setOrigin(.5,1);
+      const icons=this.add.container(0,0);
+      const container=this.add.container(P.x+(v.id%P.columns)*P.gapX,P.y+Math.floor((v.id-1)/P.columns)*P.gapY,
+        [shadow,...(shadowImage?[shadowImage]:[]),body,eyes,label,status,icons]);
+      // Both an image and a shape share this same generous clickable area.
+      const [w,h]=THEME.assetSpecs.villager.size;
+      container.setInteractive(new Phaser.Geom.Rectangle(-w/2,L.fallback.adultRadius-h,w,h),Phaser.Geom.Rectangle.Contains);
+      container.input.cursor='pointer';container.on('pointerdown',()=>onSelect(v.id));
+      return {container,body,eyes,label,status,icons,shadow,shadowImage,sprite:null,child};
+    }
+    refreshPersonImage(p,v,time) {
+      const foot=p.child?THEME.layout.people.childFootOffset:THEME.layout.people.footOffset;
+      if(p.shadowImage)p.shadowImage.setPosition(THEME.layout.shadow.offsetX,foot+THEME.layout.shadow.offsetY).setDisplaySize(...(p.child?THEME.assetSpecs.shadow.childSize:THEME.assetSpecs.shadow.size));
+      const walking=Math.hypot(p.container.x-(p.lastX??p.container.x),p.container.y-(p.lastY??p.container.y))>THEME.layout.animation.motionThreshold;
+      p.lastX=p.container.x;p.lastY=p.container.y;
+      const key=villagerTextureCandidates(v,p.child,walking,time).find(key=>this.has(key));
+      if(!key){p.sprite?.setVisible(false);p.body.setVisible(true);p.eyes.setVisible(true);return;}
+      const spec=THEME.assetSpecs[p.child?'villager_child':'villager'];
+      if(!p.sprite) {
+        p.sprite=this.add.image(0,0,key);p.container.addAt(p.sprite,2);
+      }
+      p.sprite.setTexture(key).setOrigin(...spec.origin).setDisplaySize(...spec.size)
+        .setPosition(0,p.child?THEME.layout.people.childFootOffset:THEME.layout.people.footOffset).setVisible(true);
+      p.body.setVisible(false);p.eyes.setVisible(false);
+    }
+    update(time) {
+      const s=getState(),L=THEME.layout,element=document.querySelector('#village');
+      element.dataset.walking=String(this.tweens.getTweens().length>0);
+      for(const v of s.villagers){const p=this.people.get(v.id);if(p){p.container.setDepth(L.depth.world+p.container.y+(p.child?L.people.childFootOffset:L.people.footOffset));this.refreshPersonImage(p,v,time);}}
+      element.dataset.spritePeople=String([...this.people.values()].filter(p=>p.sprite?.visible).length);
+      if(s===this.lastState)return;
+      const key=`${s.day}|${s.ended}`;
+      if(key===this.lastKey){this.lastState=s;return;}
+      this.lastKey=key;this.lastState=s;element.dataset.simDay=String(s.day);
+      this.cues.clear();for(const image of this.optionalImages.values())image.setVisible(false);
+      const weather=s.lastDay?.weather||s.weather.type;
+      this.weatherLabel.setText(t(`scene.${weather}`));
+      if(weather!=='normal') {
+        const image=this.optionalImages.get(weather);
+        if(image)image.setVisible(true);else THEME.fallbacks[weather](this.cues);
+        const cue=this.optionalImages.get(weather+'_cue');
+        if(cue)cue.setVisible(true);else THEME.fallbacks[weather+'_cue'](this.cues,L.weatherCue.x,L.weatherCue.y);
+      }
+      const fire=s.fireLit?'campfire_lit':'campfire_out';
+      const fireImage=this.optionalImages.get(fire);
+      if(fireImage)fireImage.setVisible(true);else THEME.fallbacks[fire](this.cues);
+      this.fireLabel.setText(t(s.fireKnown?(s.fireLit?'scene.fireLit':'scene.fireOut'):'scene.fireUnknown'));
+      const livingIds=new Set(s.villagers.map(v=>v.id));
+      for(const [id,p] of this.people)if(!livingIds.has(id)){this.tweens.killTweensOf(p.container);p.container.destroy();this.people.delete(id);}
+      for(const v of s.villagers) {
+        let p=this.people.get(v.id),child=v.age<s.config.life.adult;
+        if(!p){p=this.makePerson(v,child);this.people.set(v.id,p);}
+        p.child=child;p.body.setRadius(child?L.fallback.childRadius:L.fallback.adultRadius);
+        const conditions=[];
+        if(v.illnessDays>0||v.illToday)conditions.push('sick');
+        if(v.health<s.config.needs.unwellBelow)conditions.push('unwell');
+        if(v.happiness<s.config.needs.unhappyBelow)conditions.push('unhappy');
+        if(v.safety===s.config.needs.unsafe)conditions.push('uneasy');
+        const labels=conditions.map(condition=>t('labels.conditions.'+condition));
+        if(v.reaction&&!(v.reaction==='Sick'&&conditions.includes('sick')))labels.push(t('labels.reactions.'+v.reaction));
+        p.status.setText(labels.join(L.text.statusSeparator));
+        p.body.setStrokeStyle(L.fallback.outline,themeColor(conditions.includes('sick')?'red':'ink'));
+        p.icons.removeAll(true);
+        const icons=[...new Set(conditions.map(c=>(c==='unwell'?'sick':c)+'_icon'))];
+        if(v.reaction==='Grateful')icons.push('hoedown_icon');
+        if(v.activity==='Warm up')icons.push('warming_icon');
+        icons.forEach((icon,index)=>{
+          const x=L.icons.x+index*L.icons.gap,y=L.icons.y;
+          const image=this.image(icon,x,y);
+          if(image)p.icons.add(image);
+          else {const g=this.add.graphics().setPosition(x,y);THEME.fallbacks.statusIcon(g,0);p.icons.add(g);}
+        });
+        if(s.day!==0) {
+          let spot=L.spots.rest;
+          if(v.activity==='Forage')spot=L.spots.food;
+          else if(v.activity==='Gather wood')spot=L.spots.wood;
+          else if(v.activity==='Warm up')spot=s.fireLit?L.spots.fire:L.spots.shelter;
+          else if(v.activity==='Newborn')spot=L.spots.shelter;
+          const offset=(v.id-1)%L.people.columns;
+          const x=spot.x+L.people.offsetX+offset*L.people.gapX,y=spot.y+L.people.offsetY+Math.floor((v.id-1)/L.people.columns)*L.people.gapY;
+          this.tweens.killTweensOf(p.container);
+          const A=L.animation;
+          if(v.reaction==='Learned fire')this.tweens.chain({targets:p.container,tweens:[
+            {x:L.spots.fire.x+L.people.offsetX+offset*L.people.gapX,y:L.spots.fire.y+L.people.offsetY+Math.floor((v.id-1)/L.people.columns)*L.people.gapY,duration:A.learnMs,ease:A.ease},
+            {x,y,duration:A.walkMs,delay:A.learnWaitMs,ease:A.ease}]});
+          else if(Math.hypot(p.container.x-x,p.container.y-y)>A.minTravel)this.tweens.add({targets:p.container,x,y,duration:A.walkMs,ease:A.ease});
+        }
+        this.refreshPersonImage(p,v,time);
       }
     }
   };
