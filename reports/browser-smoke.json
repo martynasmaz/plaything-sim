@@ -1,0 +1,48 @@
+[
+  {
+    "name": "local-server",
+    "passed": true,
+    "url": "http://127.0.0.1:4173/",
+    "offline": false,
+    "consoleErrors": [],
+    "externalRequests": [],
+    "requests": 7,
+    "day30Population": 8,
+    "day30Food": 21,
+    "checks": [
+      "load/render",
+      "unknown phrase",
+      "queue/replace/cancel",
+      "teach fire",
+      "rain and days",
+      "villager details and clickable circles",
+      "speed controls",
+      "restart",
+      "30-day milestone",
+      "mobile layout"
+    ]
+  },
+  {
+    "name": "double-click-offline",
+    "passed": true,
+    "url": "file:///workspace/plaything-sim/dist/index.html",
+    "offline": true,
+    "consoleErrors": [],
+    "externalRequests": [],
+    "requests": 1,
+    "day30Population": 8,
+    "day30Food": 21,
+    "checks": [
+      "load/render",
+      "unknown phrase",
+      "queue/replace/cancel",
+      "teach fire",
+      "rain and days",
+      "villager details and clickable circles",
+      "speed controls",
+      "restart",
+      "30-day milestone",
+      "mobile layout"
+    ]
+  }
+]

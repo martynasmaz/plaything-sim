@@ -1,0 +1,72 @@
+
+> plaything-sim@0.1.0 test
+> node --test tests/*.test.js
+
+▶ Build check 1 · no-command run
+  ✔ exact starting state and independent state/config objects (1.372961ms)
+  ✔ day 30 has ≥5 alive and natural fire; original balance unchanged (4.229902ms)
+  ✔ same inputs produce identical outputs without mutating any input (7.390203ms)
+  ✔ milestone does not end play and the log keeps the latest 10 entries (1.919291ms)
+✔ Build check 1 · no-command run (15.895548ms)
+▶ Build check 2 · one normal day / priorities / rotation
+  ✔ 75 → 50 → 80; exactly one food per meal AFTER all work (0.285287ms)
+  ✔ full villagers above 75 do not eat; fullness clamps at 100 (0.179815ms)
+  ✔ emergency forage beats warming; rechecking stock lets the next cold person warm up (0.350554ms)
+  ✔ food reserve before wood; wood reserve before resting (0.24894ms)
+  ✔ visit order rotates by permanent number and meals use the same order (0.350372ms)
+  ✔ children gather less; drought child forage can yield honestly zero (0.286719ms)
+  ✔ health damage is combined; safety AFTER health; recovery is conditional (0.440133ms)
+  ✔ power bonus uses living average happiness and caps at 100 (0.287258ms)
+✔ Build check 2 · one normal day / priorities / rotation (2.787671ms)
+▶ Build check 3 · three-day weather
+  ✔ rain cast day 2 affects yields/cold on 2, 3, 4 only; day 5 is normal (0.731669ms)
+  ✔ opposite weather replaces immediately with a fresh timer; same weather fails (0.33417ms)
+  ✔ same-weather rejection independent of cooldown (0.152877ms)
+✔ Build check 3 · three-day weather (1.334875ms)
+▶ Build check 4 · command validation and effects
+  ✔ normalization accepts only exact fixed phrases (0.671295ms)
+  ✔ queue is free; only one slot; replace and cancel (0.269015ms)
+  ✔ successful command pays once, has one effect, and clears queue (0.524561ms)
+  ✔ unaffordable is no mutation/cost/cooldown; conditions checked again on application (0.359265ms)
+  ✔ cooldown of 5 cast on day 4 rejects day 8 but allows day 9 (0.66301ms)
+  ✔ all cooldowns use casting day + specified wait (0.229773ms)
+  ✔ plague, full food, known fire, insufficient wood, full bless are rejected (0.202917ms)
+  ✔ bless clamps, reports actual gains, and does not cure illness (0.218401ms)
+  ✔ harvest clamps at capacity and uses actual stock gain in log (0.151054ms)
+  ✔ plague disabled means unknown/unavailable AND absent from visible vocabulary (0.102314ms)
+✔ Build check 4 · command validation and effects (3.622716ms)
+▶ Build check 5 · fire in both routes
+  ✔ teach with 3 wood spends 2 to learn, 1 to burn today (0.186561ms)
+  ✔ natural discovery uses consecutive days 10–12, costs 2, first burns on 13 (0.766341ms)
+  ✔ a failed discovery check resets the counter (0.817473ms)
+  ✔ no wood preserves knowledge; warm-up uses shelter +20, not fire +40 (0.169628ms)
+  ✔ lit fire warms +5 before work and boosts warm-up to +40 (0.128766ms)
+✔ Build check 5 · fire in both routes (2.189841ms)
+▶ Build check 6 · illness and death
+  ✔ plague deals exactly 24 over 3 days, never a fourth; no recovery while ill (0.381498ms)
+  ✔ illness happiness loss is 5; no happy bonus at safety 40 (0.16157ms)
+  ✔ health 0 removes once; multiple causes include reaching age 300 (0.602519ms)
+  ✔ elder works the same as adult, but dies reaching 300 (0.177702ms)
+✔ Build check 6 · illness and death (1.437053ms)
+▶ Build check 7 · birth and population cap
+  ✔ 15 eligible checks create one age-0 child with exact starting needs; first turn tomorrow (1.237746ms)
+  ✔ one illness day resets counter, even though it expires that evening (0.893354ms)
+  ✔ children and elders do not count as eligible parents; at least 2 adults needed (0.225154ms)
+  ✔ insufficient reserves reset the counter after meals, not before (0.106388ms)
+  ✔ cap 8 holds in a long no-command run; identities are never reused (27.993906ms)
+✔ Build check 7 · birth and population cap (30.61008ms)
+▶ Build check 8 · pause / speed / reset / ending
+  ✔ initial pause freezes time, effects, cooldowns and queued command (0.529587ms)
+  ✔ normal is 30 seconds/day; 3× is 10; partial day survives pause (0.504973ms)
+  ✔ restart exactly clears every value, timer, discovery and pending command (1.929343ms)
+  ✔ last death ends before close-of-day; pauses and rejects all future commands (0.261897ms)
+  ✔ empty diagnostic state ends cleanly without NaN averages (0.14959ms)
+✔ Build check 8 · pause / speed / reset / ending (3.570059ms)
+ℹ tests 44
+ℹ suites 8
+ℹ pass 44
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 122.150032
