@@ -15,6 +15,7 @@ export const THEME = {
   // Static villager / villager_child entries and expanded gourdling_* keys work too.
   sprites: {
   "shelter": "assets/shed.svg",
+  "painted_barn": "assets/painted_barn.svg",
   "campfire_lit": "assets/bonfire_lit.svg",
   "campfire_out": "assets/bonfire_unlit.svg",
   "lantern": "assets/lantern.svg",
@@ -931,22 +932,22 @@ export const THEME = {
       villageAria:'A little Homestead. Select a creature or its name below to inspect it.',
       pause:'Pause',normal:'1×',fast:'3×',nextDay:'Next day →',restart:'Restart',
       endTitle:'The Homestead Falls Quiet',endBody:'The last Gourdling is gone. The Homestead lasted {days} days.',restartVillage:'Restart',
-      commandTitle:'A word from above',oneCommand:'One command per day',commandInput:'God command',prompt:'>',
-      placeholder:'Type a command, then press Enter',queue:'Queue',cancel:'Cancel',
-      feedback:'Queuing is free. Wonder is spent only when the next day starts.',
+      commandTitle:'A word from above',oneCommand:'Press Enter to cast',commandInput:'God command',prompt:'>',
+      placeholder:'Type a command, then press Enter',queue:'Cast',cancel:'Cancel',
+      feedback:'Powers take effect immediately.',
       lives:'Little lives',journal:'Homestead journal',latest:'Latest {count}',
       goal:'Left alone, the Homestead can survive, but it struggles. Your help can make it flourish.',footer:'A gourd-shaped world, living on its own.'},
     labels:{ages:{Stone:'First Age'},resources:{population:'Gourdlings',food:'Provisions',wood:'Firewood',power:'Wonder',shelter:'Plank shed',fire:'Bonfire'},
       needs:{fullness:'Fullness',warmth:'Warmth',health:'Health',safety:'Safety',happiness:'Happiness'},
       units:{food:'provisions',wood:'firewood',warmth:'warmth',happiness:'happiness'},
       life:{child:'Child',adult:'Adult',elder:'Elder'},weather:{normal:'fair',rain:'rain',drought:'dry spell',cold:'cold snap'},
-      activities:{Waiting:'Waiting',Forage:'Forage','Gather wood':'Gather firewood','Warm up':'Warm up',Rest:'Rest',Newborn:'Newborn',Harvest:'Harvest a ripe plot',Plant:'Plant a plot'},
+      activities:{'Craft hammer stone':'Select a hammer stone','Craft stone blades':'Shape stone blades','Craft digging stick':'Shape a digging stick','Craft hand axe':'Shape a hand axe','Craft mallet & chisel':'Make a mallet and chisel','Gather clay':'Dig river clay','Shape jar':'Shape a clay jar','Fire jar':'Fire storage jars','Build kiln':'Build a clay kiln',Fish:'Fish with a reed trap','Gather reeds':'Gather river reeds','Weave trap':'Weave a fish trap','Build hut':'Build a sleeping hut',Hunt:'Hunt wild game','Build shelter':'Build the communal shelter','Build bridge':'Build the footbridge',Waiting:'Waiting',Forage:'Forage','Gather wood':'Gather firewood','Warm up':'Warm up',Rest:'Rest',Newborn:'Newborn',Harvest:'Harvest a ripe plot',Plant:'Plant a plot'},
       traits:{Smart:'Smart',Scatterbrained:'Scatterbrained',Brave:'Brave',Timid:'Timid',Generous:'Generous',Grabby:'Grabby',Sociable:'Sociable',Loner:'Loner',Hardy:'Hardy',Shivery:'Shivery'},
       reactions:{Sick:'Sick',Grateful:'Grateful','Learned fire':'Learned Bonfire',Cured:'Shook it off'},
       conditions:{sick:'sick',unwell:'unwell',unhappy:'unhappy',uneasy:'uneasy'},
       // One-character marks drawn on the fallback status discs (no icon art).
       statusGlyphs:{sick_icon:'+',unhappy_icon:'~',uneasy_icon:'!',hoedown_icon:'*',warming_icon:'^'},
-      commandNames:{rain:'cloud wrangle',drought:'dry spell',bless:'hoedown',plague:'sick hex','teach fire':'teach spark',harvest:'feast drop',heal:'shake off','teach farming':'teach sowing'},
+      commandNames:{'spawn people':'call settlers',meteor:'falling star',volcano:'mountain fire','earth crack':'split ground',godzilla:'summon kaiju',flood:'river surge',earthquake:'ground tremor',rain:'cloud wrangle',drought:'dry spell',bless:'hoedown',plague:'sick hex','teach fire':'teach spark',harvest:'feast drop',heal:'shake off','teach farming':'teach sowing'},
       causes:{hunger:'hunger',cold:'cold',illness:'illness','poor health':'poor health','old age':'old age'},
       separators:{list:', ',detail:'; ',cause:' and ',status:' · ',traits:' and '},powerGlyph:'⚡',
       nameFallback:'Gourdling {id}',newbornName:'Neri {id}'},
@@ -968,6 +969,8 @@ export const THEME = {
     help:{rain:'Call {duration} days of rain: more gathered provisions, a little extra cold. Replaces a dry spell or cold snap.',
       drought:'Call {duration} days of drought: far fewer gathered provisions. Replaces rain or a cold snap.',
       bless:'Give everyone +{health} health and +{happiness} happiness. Does not cure illness.',
+      'spawn people':'Call {settlers} adult settlers, even when every shelter is full.', meteor:'Call a meteor that burns up to {woodLoss} wood.', volcano:'Bury planted crops and spoil up to {foodLoss} provisions.', 'earth crack':'Split the ford, damaging up to {bridgeLoss} bridge sections and losing up to {woodLoss} wood.', godzilla:'Summon Godzilla to scatter hares and trample up to {foodLoss} provisions.',
+      flood:'Overflow the river for one day and wash away up to {foodLoss} provisions.', earthquake:'Shake the ground, scatter up to {woodLoss} wood, and lower happiness by {moodLoss}.',
       plague:'Make everyone ill for {duration} days: −{damage} health and −{mood} happiness each day. This can kill Gourdlings, and deaths are permanent.',
       'teach fire':'Teach permanent Bonfire knowledge; firewood is still required to learn and burn.',
       harvest:'Add {food} provisions, up to capacity. Gourdlings still eat at the normal meal step.',
@@ -983,14 +986,15 @@ export const THEME = {
       fireWood:'teach spark needs at least {min} firewood ({learn} to learn, {burn} to burn).',blessFull:'Everyone already has full health and happiness.',nobodyIll:'Nobody is ill, so there is nothing to shake off.',farmingKnown:'Farming is already known; teach sowing is once per run.',
       speed:'Speed must be 0 (pause), 1 or 3.',time:'Time must be a finite nonnegative number.'},
     feedback:{canApply:'{command} can apply on day {day}.',queued:'Queued {command} for day {day}. No wonder spent yet.',
-      canceled:'Command canceled. No wonder spent.',reset:'A fresh Homestead. Paused at day 0.',beginAnew:'say it again to let this world go',applied:'{command} applied on day {day}. See the journal for its effect.'},
-    log:{start:'Six Gourdlings begin a First Age Homestead (seed {seed}). Paused.',naturalIllness:'{name} fell ill for {days} days.',rejected:'Command rejected: {reason}',
+      canceled:'Command canceled.',reset:'A fresh Homestead. Paused at day 0.',beginAnew:'say it again to let this world go',applied:'{command} applied on day {day}. See the journal for its effect.'},
+    log:{flood:'The river flooded its banks and swept away {lost} provisions.',earthquake:'The ground shook. The village lost {lost} wood and each Gourdling lost up to {mood} happiness.',start:'Six Gourdlings begin a First Age Homestead (seed {seed}). Paused.',naturalIllness:'{name} fell ill for {days} days.',rejected:'Command rejected: {reason}',
       weather:'{command} for {duration} days including today; replaces previous weather. {effect}',rain:'More provisions, extra cold.',drought:'Lower foraging yields.',
       plague:'Everyone is ill for {duration} days including today.',blessPerson:'{name} +{health} health/+{happiness} happiness',blessEnd:'. Illness is not cured.',
       harvest:'Gift: +{food} provisions (meals still happen after work).',teach:'Bonfire knowledge learned; {wood} firewood spent. Today\'s fuel check is next.',
       command:'{command} (−{cost} wonder). {details}',death:'{name} (#{id}) died: {causes}.',ended:'The last Gourdling is gone. The Homestead falls quiet.',
       birth:'{name} was born. First work and meal tomorrow.',discovery:'The Homestead discovered the Bonfire! Spent {wood} firewood; first Bonfire fuel check is tomorrow.',
       fireLit:'Bonfire burned {wood} firewood.',fireOut:'Bonfire known, but unlit today.',fireUnknown:'Bonfire unknown.',
+      homesteadDay:'Work: +{food} provisions, +{wood} firewood. {meals} meals. {fire}',
       day:'Work: +{food} provisions, +{wood} firewood. {meals} meals. {fire} Wonder +{power} (cap {cap}).',
       milestone:'Milestone: {population} Gourdlings alive through day {day}, and Bonfire is known. Keep watching!',
       heal:'Everyone\'s illness is shaken off. No health is restored.',sow:'Farming knowledge taught: a field of {plots} plots appears.',
@@ -1010,8 +1014,8 @@ export const THEME = {
       sociableAlone:'{name} (Sociable) drooped, resting alone.',
       lonerAlone:'{name} (Loner) slipped off for a quiet rest and came back smiling.',
       lonerTogether:'{name} (Loner) fidgeted in the crowded resting circle.',
-      actions:{forage:'foraged',warm:'warmed up',wood:'gathered firewood',harvest:'harvested',plant:'planted',rest:'rested'}},
-    dev:{title:'Developer overlay (?dev=1)',stats:'Day {day} · seed {seed} · {population}/{cap} Gourdlings · provisions {food} · firewood {wood} · wonder {power}',
+      actions:{hut:'built a sleeping hut',shelter:'built shelter',bridge:'built the footbridge',hunt:'hunted',forage:'foraged',warm:'warmed up',wood:'gathered firewood',harvest:'harvested',plant:'planted',rest:'rested'}},
+    dev:{title:'Developer overlay (?dev=1)',stats:'Day {day} · seed {seed} · {population}/{cap} Gourdlings · provisions {food} · firewood {wood}',
       more:'Weather {weather} ({days} left) · tomorrow {tomorrow} · Bonfire {fire} · farming {farming} · plots {plots} · shed {shed}',
       end:'Peak {peak} · births {births} · deaths {deaths} · Bonfire day {fireDay} · farming day {farmDay}',
       person:'#{id} {name}: {traits} · {activity} · full {fullness} · warm {warmth} · health {health} · happy {happiness}{ill}',ill:' · ill {days}',
@@ -1794,3 +1798,25 @@ THEME.css += `[hidden]{display:none!important}
 THEME.css += `.dev-overlay{position:fixed;right:8px;bottom:8px;z-index:50;max-width:520px;max-height:60vh;overflow:auto;padding:8px 10px;background:rgba(36,30,24,.92);color:#f3e6c4;font:11px/1.45 ui-monospace,monospace;border-radius:6px;white-space:pre-wrap}
 .dev-overlay .dev-title{font-weight:bold;margin-bottom:4px}
 .person-traits{font-size:11px;color:var(--green);margin:-2px 0 4px}`;
+
+THEME.css += `
+html.clearing, .clearing body {background:#efe4cc}
+.clearing .app {width:100%;max-width:none;margin:0;padding:0}
+.clearing main,.clearing .world-column {display:block;margin:0;padding:0}
+.clearing .world-panel,.clearing .world-stage {border:0;box-shadow:none;border-radius:0;background:transparent}
+.clearing #village {aspect-ratio:auto;height:100vh;height:100dvh;background:#40583c}
+.clearing #village canvas {width:100%;height:100%}
+.clearing #village {position:relative}
+.villager-card {position:absolute;top:12px;right:12px;width:min(250px,46%);box-sizing:border-box;padding:9px 12px;background:#302b21f2;color:#f4e6c7;border:1px solid #917c57;pointer-events:none;text-align:left;font:14px/1.35 Georgia,serif;overflow-wrap:anywhere}
+.villager-card small {color:#dfd0b0}
+.clearing .world-column {position:relative}
+.clearing .command-panel {position:absolute;bottom:max(14px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(86%,360px);z-index:3}
+.clearing #command-form {display:flex;align-items:center;padding:3px 12px;min-height:36px;border:3px double #352a21;border-radius:1px;outline:1px solid #aa8856;background:#40593c;box-shadow:2px 2px #392b23}
+.clearing #command-input {width:100%;padding:3px;background:transparent;text-align:center;font:italic 16px Georgia,serif;color:#fff4da}
+.clearing .prompt {display:none}
+#open-guide{flex:none;border:1px solid #b3a27c;border-radius:50%;background:transparent;color:#f9eed4;width:25px;height:25px;padding:0;font:bold 16px Georgia,serif;cursor:pointer}
+#god-guide{box-sizing:border-box;width:min(460px,94vw);max-height:80dvh;overflow:auto;background:#f2e7ce;color:#332c22;border:2px solid #65533e;padding:18px;font:15px/1.4 Georgia,serif}
+#god-guide::backdrop{background:#211f1899}#god-guide>button{float:right}#god-guide h2{margin:0}#god-guide input{width:100%;padding:8px}#god-guide h3{border-bottom:1px solid #baa98b;color:#435439;margin:14px 0 4px}
+#god-guide [data-results] button{display:block;width:100%;text-align:left;padding:6px;background:transparent;border:0;border-bottom:1px solid #d4c7ac;color:inherit;cursor:pointer}#god-guide [data-results] button:is(:hover,:focus-visible){background:#e3d5b5}#god-guide [data-results] span{display:block;font:14px/1.4 Georgia,serif}
+.clearing #feedback {position:absolute;bottom:calc(100% + 6px);left:0;width:100%;padding:6px 10px;margin:0;background:#f4e8d1;color:#352a21;text-align:center;font:15px/1.35 Georgia,serif;pointer-events:none;border:1px solid #594934;border-radius:2px}
+`;

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { CONFIG as c } from '../src/config.js';
 
-const doc = readFileSync(new URL('../docs/IMPLEMENTATION.md', import.meta.url), 'utf8');
+const doc = readFileSync(new URL('../docs/IMPLEMENTATION.md', import.meta.url), 'utf8').replace(/\r\n/g,'\n');
 const section = doc.split('## How a Gourdling decides')[1]?.split('\n## ')[0] ?? '';
 const n = c.needs, w = c.work, ch = c.weather.chances, P = c.personality, F = c.farming, S = c.shed, K = c.commands;
 const CHECKS = [

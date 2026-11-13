@@ -1,8 +1,9 @@
+import {initSettlement} from './practices.js';
 // Save and load (design section 10, "Save and load (v0.2)"): one slot in the
 // browser's local storage, written at every day end and whenever the queued
 // command changes, and the "begin anew" fresh start. No rules live here: a
 // loaded run continues exactly as it would have without the reload.
-import { createState } from './sim.js';
+import { createState, assignIdentity, findHomesteadHealer } from './sim.js';
 import { cleanWords } from './commands.js';
 
 // Not saved: the config (rebuilt from src/config.js), the previous day's report,
@@ -18,6 +19,7 @@ const isCount = n => Number.isInteger(n) && n >= 0;
 export function serialize(s) {
   const run = {};
   for (const [key, value] of Object.entries(s)) if (!NOT_SAVED.has(key)) run[key] = value;
+  if(s.meteors?.length)run.elapsedMs=s.elapsedMs;
   return JSON.stringify({ version: s.config.save.version, run });
 }
 
@@ -30,6 +32,8 @@ export function deserialize(text, overrides = {}) {
   const run = data?.run;
   if (!run || typeof run !== 'object' || !isCount(run.seed)) return null;
   const fresh = createState(overrides, run.seed);
+  if(!('local' in run))delete fresh.local;
+  if(!('furWraps' in run))delete fresh.furWraps; // Keep the clothing in older worlds.
   if (data.version !== fresh.config.save.version) return null;
   // Every field a run has must be present, with the same kind of value.
   for (const [key, value] of Object.entries(fresh)) {
@@ -42,6 +46,21 @@ export function deserialize(text, overrides = {}) {
   const need = ['id', 'age', 'fullness', 'warmth', 'health', 'happiness', 'safety'];
   if (!run.villagers.every(v => v && need.every(k => Number.isFinite(v[k])))) return null;
   const s = { ...fresh, ...structuredClone(run), config: fresh.config, lastDay: null, elapsedMs: 0 };
+  if(s.meteors?.length&&Number.isFinite(run.elapsedMs)&&run.elapsedMs>=0&&run.elapsedMs<s.config.dayMs)s.elapsedMs=run.elapsedMs;
+  if (!fresh.config.power) delete s.power; // Migrate saves from before free casting.
+  for(const person of s.villagers){
+    assignIdentity(s,person);
+    if(person.fishingNet)person.fishTrap=true;
+    delete person.fishingNet;
+    if(person.activity==='Weave net')person.activity='Weave trap';
+  }
+  if(s.local&&s.local.seasonOffset===undefined){
+    // Older saves had ten-day seasons. Preserve their year, season and phase.
+    const elapsed=Math.max(0,s.day-1);
+    s.local.seasonOffset=Math.floor(elapsed*s.config.learning.seasonLength/10)-elapsed;
+  }
+  initSettlement(s);
+  findHomesteadHealer(s);
   s.speed = 0;
   return s;
 }

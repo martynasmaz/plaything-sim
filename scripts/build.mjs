@@ -16,7 +16,8 @@ export async function inlineAssets(manifest,root=projectRoot){
       const requested=path.resolve(root,url);
       if(!requested.startsWith(assetsRoot+path.sep))throw new Error('Asset must be under assets/');
       const actual=await realpath(requested);
-      if(!actual.startsWith(assetsRoot+path.sep))throw new Error('Asset symlink leaves assets/');
+      const relative=path.relative(await realpath(assetsRoot),actual);
+      if(relative.startsWith('..'+path.sep)||relative==='..'||path.isAbsolute(relative))throw new Error('Asset symlink leaves assets/');
       const data=await readFile(actual),extension=path.extname(actual).toLowerCase();
       const mime={'.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif'}[extension];
       if(!mime)throw new Error('Unsupported image format');
@@ -35,10 +36,10 @@ export async function build({root=projectRoot,output=path.join(root,'dist/index.
   const read=name=>readFile(path.join(root,name),'utf8');
   const {THEME,spriteManifest}=await import(pathToFileURL(path.join(root,'src/theme.js')).href+`?build=${Date.now()}`);
   const art=await inlineAssets(spriteManifest(THEME),root);
-  const files=['src/commands.js','src/theme.js','src/config.js','src/sim.js','src/save.js','src/village-view.js','src/main.js'];
+  const files=['src/commands.js','src/theme.js','src/config.js','src/practices.js','src/sim.js','src/save.js','src/village-view.js','src/clearing.js','src/notebook.js','src/main.js'];
   let code='';
   for(const file of files){
-    const source=(await read(file)).replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');
+    const source=(await read(file)).replace(/^import[\s\S]*?;\r?\n/gm,'').replace(/^export /gm,'');
     code+=`\n// ---- ${file} ----\n${source}\n`;
     if(file==='src/theme.js')code+=`\n// Build-time optional art: missing paths are deliberately not requested.\nTHEME.sprites=${JSON.stringify(art.sprites)};\n`;
   }

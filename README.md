@@ -2,14 +2,31 @@
 
 A tiny **First Age Homestead** that lives on its own. Six alien Gourdlings gather
 provisions, keep warm, rest, grow old and raise children. Vintage folk-Americana
-art, simple rules. **No AI, accounts, internet, farming or music simulation.**
+art, simple rules, and an offline browser build.
 
 ## Play — no installation
 
 1. Open the **dist** folder.
 2. Double-click **index.html**. It opens in your browser.
-3. The Homestead starts **paused**.
-4. Click **1×** to watch, **3×** to speed up, or **Next day →** to step one day.
+3. The Homestead starts moving immediately. A full day and night take two minutes. Adults hunt hares for food and gather berries when game is scarce. At dusk the tribes walk home to sleep.
+4. Type **let it rain**, **give them food**, or **teach fire** and press Enter.
+   Type **speed up** for 3× speed or **normal speed** to return to 1×.
+   Type **spawn people** to call two adults even when every bed is taken. Crowded villages can raise extra huts, each with three sleeping places.
+   Type **disasters** for powers including **meteor**, **volcano**, **earth crack**, and **Godzilla**. A **flood** swells the river
+   for a day and washes away up to eight provisions. An **earthquake** scatters
+   up to eight wood and costs each Gourdling up to ten happiness.
+   Watch the sky for a response. An accepted command takes effect at the start
+   of the next day. Add `?ui=full` to the address for the original dashboard,
+   individual needs, journal, and playback controls.
+
+New camps form around compatible personalities. Hover or tap a villager to see
+their camp and traits. After the first successful divine intervention, some
+begin to wonder about the sign. When two believers in a camp share the custom,
+they build a stone cairn and visit it at dusk. Other villagers can remain skeptical.
+
+In this playtest, a birth takes three qualifying days. Two healthy adults,
+enough provisions, and a free place are required. Illness in another villager
+allows the household to keep its progress. Nightly illness chance is 9%.
 
 **The game saves itself** in this browser at the end of every day and whenever
 you queue a command; opening the page again picks up where you left off. To let
@@ -36,7 +53,7 @@ Open with → your web browser.
 - Click a Gourdling, or its name in **Little lives**, for its age, activity and
   five needs. Higher numbers are better. The name buttons also work on a phone.
 - Read the **Homestead journal** for important changes; it keeps the latest 10.
-- **1×:** one day every 30 seconds. **3×:** one day every 10 seconds.
+- **Dashboard speeds:** one day every two minutes at 1× or every 40 seconds at 3×.
 - **Pause** freezes simulation time. **Next day →** deliberately resolves one
   complete day even while paused; it helps you learn the rules.
 - **Restart** immediately returns to a new Homestead at day 0, paused, with a

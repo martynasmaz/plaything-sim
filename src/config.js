@@ -58,6 +58,13 @@ export const CONFIG = {
     drought: { cost: 10, cooldown: 4, duration: 3 },
     bless: { cost: 20, cooldown: 5, health: 25, happiness: 15 },
     plague: { cost: 30, cooldown: 8, duration: 3 },
+    flood: { cost: 20, cooldown: 5, foodLoss: 8 },
+    earthquake: { cost: 25, cooldown: 7, woodLoss: 8, moodLoss: 10 },
+    meteor: { cost: 24, cooldown: 5, woodLoss: 10 },
+    volcano: { cost: 32, cooldown: 8, foodLoss: 10 },
+    'earth crack': { cost: 22, cooldown: 6, bridgeLoss: 5, woodLoss: 3 },
+    godzilla: { cost: 40, cooldown: 10, foodLoss: 12 },
+    'spawn people': { cost: 15, cooldown: 2, settlers: 2 },
     'teach fire': { cost: 25, cooldown: null },
     harvest: { cost: 20, cooldown: 5, food: 12 },
     // v0.2 only (hidden and refused under version 'v0.1').
@@ -83,6 +90,20 @@ export const CONFIG = {
     // Internal-log priority when more than 3 lines compete (lower is kept first).
     logPriority: { Generous: 0, Grabby: 1, Smart: 2, Scatterbrained: 3, Brave: 4, Timid: 4, Sociable: 5, Loner: 5 }
   }
+};
+
+// Live homestead tuning. The original v0.1/v0.2 rules above remain available
+// for replaying the reference simulations.
+export const HOMESTEAD_RULES = {
+  start:{food:38,wood:22},
+  learning:{abundance:1,seasonLength:20,spoilage:.035,workCost:8,restGain:24,experimentChance:48,progress:1,lessonDays:2},
+  power: null, // The playable homestead has unrestricted divine powers.
+  settlement: { bedsPerHut: 3, shelterWork: 5, bridgeWork: 10, fuelReserve: 3, shelterBonus: 4 },
+  birth: { consecutiveDays: 3, healthyParentsOnly: true },
+  illness: { chance: 9 },
+  hunting: { herdSize: 3, provisions: 5, returnEvery: 3 },
+  tribeThresholds: [8,12],
+  dayMs: 120000
 };
 
 // Allow small nested overrides in tests without accidentally losing other rules.
