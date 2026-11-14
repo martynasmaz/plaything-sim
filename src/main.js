@@ -6,7 +6,7 @@ import { createState, stepDay, cancelCommand, setSpeed, advanceTime,
 import { makeVillageScene } from './village-view.js';
 import { createClearing } from './clearing.js';
 import { THEME, t, commandLabel, resolveUi, uiHiddenClasses } from './theme.js';
-import {createPhoneControls,phoneLayoutEnabled} from './phone-ui.js';
+import {createPhoneControls,phoneLayoutEnabled,phoneTimeCheck} from './phone-ui.js';
 
 const $=selector=>document.querySelector(selector);
 let phoneControls=null;
@@ -390,8 +390,18 @@ $('#command-form').addEventListener('submit',e=>{
   render();
 });
 phoneControls=createPhoneControls({enabled:immersive,storage,readState:()=>state,
-  runCommand:words=>{input.value=words;$('#command-form').requestSubmit();return input.value==='';},
+  runCommand:words=>{
+    if(skipping)return false;
+    if(/^(skip|back) \d+$/.test(words)){
+      const day=state.day;
+      return (words.startsWith('back ')?backDays(words):skipDays(words)).then(()=>state.day!==day);
+    }
+    input.value=words;$('#command-form').requestSubmit();return input.value==='';
+  },
   checkCommand:words=>{
+    const timeCheck=phoneTimeCheck(state,words,{busy:skipping,hasUndo:words==='undo skip'&&!!skipCheckpoint()});
+    if(timeCheck)return timeCheck;
+    if(skipping)return {ok:false,message:'Finishing the current time change.'};
     if(state.ended||!state.villagers.length)return {ok:false,message:'Rewind to a living village first.'};
     if(words==='recall settlers')return {ok:!!state.local?.daughter?.members.length,message:'All settlers are already home.'};
     return validateCommand(state,words==='spawn people 5'?'spawn people':words,state.day,true);

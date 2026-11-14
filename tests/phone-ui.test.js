@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createPhoneControls,phonePowers,phoneLayoutEnabled,createPhoneGesture} from '../src/phone-ui.js';
+import {createPhoneControls,phonePowers,phoneLayoutEnabled,createPhoneGesture,phoneTimeCheck} from '../src/phone-ui.js';
 import {phoneDom} from './fixtures/phone-dom.js';
-import {createState,castText,validateCommand,setSpeed,advanceTime} from '../src/sim.js';
+import {createState,castText,validateCommand,setSpeed,advanceTime,stepDay} from '../src/sim.js';
 import {HOMESTEAD_RULES} from '../src/config.js';
 import {serialize} from '../src/save.js';
 
@@ -10,10 +10,10 @@ function fixture(width=390,height=844,coarse=true,options={}){
   const dom=phoneDom(width,height,coarse),calls=[],settings=new Map();let state=setSpeed(createState(HOMESTEAD_RULES,4),3),notebook=false,centered=0;
   const phone=createPhoneControls({...dom,readState:()=>state,
     runCommand:words=>{calls.push(words);const result=castText(state,words);if(result.ok)state=result.state;return result.ok;},
-    checkCommand:words=>validateCommand(state,words==='spawn people 5'?'spawn people':words,state.day,true),changeSpeed:speed=>{state=setSpeed(state,speed);},
+    checkCommand:words=>phoneTimeCheck(state,words)||validateCommand(state,words==='spawn people 5'?'spawn people':words,state.day,true),changeSpeed:speed=>{state=setSpeed(state,speed);},
     openNotebook:()=>{notebook=true;},closeNotebook:()=>{notebook=false;},notebookOpen:()=>notebook,recenter:()=>{centered++;},
     storage:{getItem:k=>settings.get(k)??null,setItem:(k,v)=>settings.set(k,v)},...options});
-  return {...dom,phone,calls,settings,get state(){return state;},get centered(){return centered;},get notebook(){return notebook;}};
+  return {...dom,phone,calls,settings,advanceDay(){state=stepDay(state);},get state(){return state;},get centered(){return centered;},get notebook(){return notebook;}};
 }
 test('phone controls activate for small touch screens in both orientations; narrow desktop windows keep desktop controls',()=>{
   for(const [w,h,touch,expected] of [[390,844,true,true],[932,430,true,true],[1440,900,true,false],[390,844,false,false],[1440,900,false,false]]){
@@ -57,7 +57,7 @@ test('reading pauses playback without changing world state or the chosen speed; 
 test('phone pause resumes the last speed, the camera button recenters, and time actions use the shared command route',()=>{
   const f=fixture();f.findButton('Pause').click();assert.equal(f.state.speed,0);f.findButton('Play').click();assert.equal(f.state.speed,3);
   f.doc.body.querySelector('.phone-home').click();assert.equal(f.centered,1);
-  f.phone.open('time');f.findButton('Back one day').click();assert.deepEqual(f.calls,['back 1']);assert.equal(f.phone.holdClock(),false);
+  f.advanceDay();f.phone.open('time');f.findButton('Back one day').click();assert.deepEqual(f.calls,['back 1']);assert.equal(f.phone.holdClock(),false);
 });
 test('orientation and keyboard viewport changes keep the phone interface usable; leaving phone mode closes its menus',()=>{
   const f=fixture();f.phone.open('speak');f.browser.visualViewport.height=360;f.browser.visualViewport.offsetTop=12;f.browser.visualViewport.resize();
@@ -123,4 +123,34 @@ test('Speak and time controls do not turn the manual magic unlock into a repeata
   f.doc.body.querySelector('form').onsubmit({preventDefault(){}});
   assert.equal(f.state.local.magic.enabled,true);assert.equal(repeat.hidden,true);
   f.phone.open('time');f.findButton('Back one day').click();assert.equal(repeat.hidden,true);
+});
+
+test('phone time actions repeat after async completion, serialize rapid taps, and stop rewinding at day zero',async()=>{
+  let world=setSpeed(createState(HOMESTEAD_RULES,4),3);
+  const history=new Map(),pending=[],calls=[];
+  const f=fixture(390,844,true,{
+    readState:()=>world,checkCommand:words=>phoneTimeCheck(world,words,{busy:pending.length>0}),
+    runCommand:words=>{calls.push(words);return new Promise(resolve=>pending.push({words,resolve}));}
+  });
+  const complete=async()=>{
+    const {words,resolve}=pending.shift(),[kind,countText]=words.split(' '),count=Number(countText);
+    if(kind==='skip')for(let i=0;i<count;i++){history.set(world.day,structuredClone(world));world=stepDay(world);}
+    else world=history.get(world.day-count);
+    resolve(true);await Promise.resolve();
+  };
+  f.phone.open('time');f.findButton('Back one day').click();assert.deepEqual(calls,[]);
+  assert.match(f.doc.body.querySelector('.phone-reason').textContent,/Day 0/);
+  f.findButton('Skip 5 days').click();await complete();
+  const repeat=f.doc.body.querySelector('.phone-repeat');
+  assert.equal(world.day,5);assert.equal(repeat.textContent,'↻ Skip 5 days');assert.equal(repeat.hidden,false);
+  repeat.click();assert.equal(repeat.disabled,true);repeat.click();assert.equal(pending.length,1);
+  await complete();assert.equal(world.day,10);assert.equal(repeat.disabled,false);
+  f.phone.open('time');f.findButton('Back 5 days').click();await complete();assert.equal(world.day,5);
+  assert.equal(repeat.textContent,'↻ Back 5 days');repeat.click();await complete();
+  assert.equal(world.day,0);assert.equal(repeat.disabled,true);repeat.click();
+  assert.deepEqual(calls,['skip 5','skip 5','back 5','back 5']);
+  assert.equal(f.phone.holdClock(),false);assert.equal(f.doc.focusedInputs,0);
+  world.ended=true;world.day=5;
+  assert.equal(phoneTimeCheck(world,'back 5').ok,true,'rewind can restore an extinct village');
+  assert.equal(phoneTimeCheck(world,'skip 5').ok,false);assert.equal(phoneTimeCheck(world,'undo skip').ok,false);
 });

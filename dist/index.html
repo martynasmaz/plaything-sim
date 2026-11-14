@@ -6065,6 +6065,16 @@ function drawEmojiSpeech(g,x,y,emoji){
 // Presentation only. Both interfaces submit to the same command handler.
 const phoneLayoutQuery='(pointer: coarse) and (max-width: 900px), (pointer: coarse) and (max-width: 1100px) and (max-height: 550px)';
 function phoneLayoutEnabled(browser=globalThis.window){return !!browser?.matchMedia?.(phoneLayoutQuery).matches;}
+function phoneTimeCheck(s,words,{busy=false,hasUndo=false}={}){
+  const match=/^(skip|back) (\d+)$/.exec(words);
+  if(!match&&words!=='undo skip')return null;
+  if(busy)return {ok:false,message:'Finishing the current time change.'};
+  if(words==='undo skip')return {ok:hasUndo,message:'There is no earlier skip to undo.'};
+  const count=Number(match[2]);
+  if(!Number.isSafeInteger(count)||count<1)return {ok:false,message:'Choose a positive number of days.'};
+  if(match[1]==='back')return {ok:s.day>=count,message:'Day 0 is the beginning of this world.'};
+  return {ok:!s.ended&&Number.isSafeInteger(s.day+count),message:'Rewind to a living village first.'};
+}
 const phonePowers=[
   {group:'Care',name:'Food',command:'harvest',description:'Give the camp a gift of provisions.'},
   {group:'Care',name:'Heal',command:'heal',description:'Cure everyone currently sick.'},
@@ -6115,7 +6125,7 @@ function createPhoneControls({readState,runCommand,checkCommand,changeSpeed,open
   for(const b of [powers,observe,time,speak])b.setAttribute('aria-haspopup','dialog');
   toolbar.append(powers,observe,time,speak);
   const repeat=button('',()=>{
-    if(!active||!lastPower||view||notebookOpen()||otherMenuOpen())return;
+    if(!active||casting||!lastPower||view||notebookOpen()||otherMenuOpen())return;
     castPower(lastPower);
   });repeat.className='phone-repeat';repeat.hidden=true;
   const home=button('⌂',()=>{recenter();});home.className='phone-home';home.setAttribute('aria-label','Return to village');home.hidden=true;
@@ -6131,15 +6141,21 @@ function createPhoneControls({readState,runCommand,checkCommand,changeSpeed,open
   const body=make('div',null,'phone-tray-body'),reading=make('p',null,'phone-reading');tray.append(header,body,reading);
   doc.body.append(toolbar,repeat,home,pause,toast,tray);
   let active=false,view=null,chosen=null,confirming=false,castButton=null,reason=null,draft='',resumeSpeed=readState().speed||1,noticeTimer;
-  let lastPower=null;
+  let lastPower=null,casting=false;
   let pauseMenus=true;
   try{pauseMenus=storage?.getItem('plaything.phone.pauseMenus')!=='false';}catch{}
   const persistPause=()=>{try{storage?.setItem('plaything.phone.pauseMenus',String(pauseMenus));}catch{}};
   function castPower(power){
-    if(!checkCommand(power.command).ok){refresh();return;}
+    if(casting)return;
+    const check=checkCommand(power.command);
+    if(!check.ok){if(reason)reason.textContent=check.message;refresh();return;}
     close();
-    if(runCommand(power.command))lastPower=power;
-    refresh();
+    casting=true;refresh();
+    const finish=ok=>{if(ok)lastPower=power;casting=false;refresh();};
+    let result;
+    try{result=runCommand(power.command);}catch(error){finish(false);throw error;}
+    if(result&&typeof result.then==='function')result.then(finish,()=>finish(false));
+    else finish(result);
   }
   function close(){if(tray.open)tray.close();view=null;chosen=null;castButton=reason=null;refresh();}
   tray.addEventListener('close',()=>{if(tray.open)return;view=null;chosen=null;castButton=reason=null;refresh();});
@@ -6184,8 +6200,9 @@ function createPhoneControls({readState,runCommand,checkCommand,changeSpeed,open
       }
       const steps=make('div',null,'phone-power-grid');
       for(const [label,command] of [['Next day','skip 1'],['Skip 5 days','skip 5'],['Back one day','back 1'],['Back 5 days','back 5'],['Undo last skip','undo skip']])
-        steps.append(button(label,()=>{close();runCommand(command);}));
-      body.append(rates,make('h3','Move through time'),steps,button('Return to village',()=>{recenter();close();}));
+        steps.append(button(label,()=>castPower({name:label,command,time:true})));
+      reason=make('p',null,'phone-reason');reason.setAttribute('role','status');
+      body.append(rates,make('h3','Move through time'),steps,reason,button('Return to village',()=>{recenter();close();}));
       const setting=make('label',null,'phone-pause-setting'),checkbox=make('input');checkbox.type='checkbox';checkbox.checked=pauseMenus;
       checkbox.onchange=()=>{pauseMenus=checkbox.checked;persistPause();refresh();};setting.append(checkbox,make('span','Pause while menus are open'));body.append(setting);
     }else if(view==='speak'){
@@ -6207,7 +6224,8 @@ function createPhoneControls({readState,runCommand,checkCommand,changeSpeed,open
     root.style.setProperty('--phone-repeat-space',repeat.hidden?'0px':'56px');
     if(lastPower){
       const check=checkCommand(lastPower.command);
-      repeat.textContent='↻ Cast '+lastPower.name;repeat.disabled=!check.ok;
+      repeat.textContent=(lastPower.time?'↻ ':'↻ Cast ')+lastPower.name;repeat.disabled=casting||!check.ok;
+      repeat.setAttribute('aria-busy',String(casting));
       repeat.title=check.ok?'Repeat '+lastPower.name:check.message;
       repeat.setAttribute('aria-label','Repeat '+lastPower.name+(check.ok?'':': '+check.message));
     }
@@ -6655,14 +6673,20 @@ function boulder(g,x,y,size){
   g.fillStyle='#888a76';g.fill();g.strokeStyle='#393e35';g.lineWidth=1.8;g.stroke();
   line(g,-10,-11,-1,-15,'#c3bea1',2);line(g,1,-14,6,-8,'#646956',1.5);g.restore();
 }
-function skyClock(g,day,hour,speed,darkness,twilight){
-  const radius=32,orbit=22;
+function skyClock(g,day,hour,speed,darkness,twilight,phone=false,width=390){
+  const radius=phone?25:32,orbit=phone?17:22;
   // Dawn is the left horizon, noon the top, dusk the right, and midnight the bottom.
   const angle=(hour-12)*Math.PI/12-Math.PI/2;
   const sunX=orbit*Math.cos(angle),sunY=orbit*Math.sin(angle);
   const phase=hour>=5&&hour<7?'Dawn':hour>=17&&hour<19?'Dusk':hour>=7&&hour<17?'Daylight':'Night';
   g.save();
-  g.translate(49,49);
+  const panelWidth=Math.min(220,width-144);
+  if(phone){
+    g.save();g.shadowColor='#0c170c99';g.shadowBlur=7;g.shadowOffsetY=2;
+    g.fillStyle='#253222f5';g.strokeStyle='#cdb789';g.lineWidth=1.5;
+    g.beginPath();g.roundRect(8,8,panelWidth,64,8);g.fill();g.stroke();g.restore();
+  }
+  g.translate(phone?36:49,phone?39:49);
   ellipse(g,0,1,radius+3,radius+3,'#382f27');
   ellipse(g,0,0,radius,radius,'#d8bc86');
   g.save();
@@ -6688,9 +6712,14 @@ function skyClock(g,day,hour,speed,darkness,twilight){
   g.quadraticCurveTo(-3,0,6*Math.cos(Math.PI*.4),6*Math.sin(Math.PI*.4));
   g.closePath();g.fillStyle='#fff1cd';g.fill();g.strokeStyle='#625b51';g.lineWidth=1;g.stroke();
   g.restore();
-  g.textAlign='left';g.fillStyle='#f4e6c7';g.font='15px Georgia';
-  g.fillText('Day '+day,43,-3);
-  g.font='12px Georgia';g.fillText(speed>1?phase+' · '+speed+'×':phase,43,13);
+  g.textAlign='left';g.fillStyle=phone?'#fff3d6':'#f4e6c7';g.font=phone?'bold 18px Georgia':'15px Georgia';
+  const labelX=phone?37:43,textWidth=phone?panelWidth-78:undefined;
+  if(phone){g.strokeStyle='#13200f';g.lineWidth=2.5;g.strokeText('Day '+day,labelX,-4,textWidth);}
+  if(phone)g.fillText('Day '+day,labelX,-4,textWidth);else g.fillText('Day '+day,labelX,-3);
+  g.font=phone?'bold 14px Georgia':'12px Georgia';
+  const status=speed===0&&phone?'Paused':speed>1?phase+' · '+speed+'×':phase;
+  if(phone)g.strokeText(status,labelX,17,textWidth);
+  if(phone)g.fillText(status,labelX,17,textWidth);else g.fillText(status,labelX,13);
   g.restore();
 }
 function riverBands(width,height,baseWidth,flood,kaunas){
@@ -7725,8 +7754,9 @@ function createClearing(host,getState){
       sky.addColorStop(0,refused?'#5c554f':'#dc914a');sky.addColorStop(1,'transparent');
       ctx.globalAlpha=.48*Math.sin(Math.PI*signalLeft);ctx.fillStyle=sky;ctx.fillRect(-fieldWidth,-fieldHeight,worldWidth,3*fieldHeight);ctx.globalAlpha=1;
     }
-    ctx.save();ctx.setTransform(3*w/fieldWidth,0,0,3*h/fieldHeight,0,0);
-    skyClock(ctx,s.day,hour,s.speed,darkness,twilight);
+    const phoneClock=phoneLayoutEnabled();
+    ctx.save();ctx.setTransform(phoneClock?ratio:3*w/fieldWidth,0,0,phoneClock?ratio:3*h/fieldHeight,0,0);
+    skyClock(ctx,s.day,hour,s.speed,darkness,twilight,phoneClock,rect.width);
     ctx.restore();
     const picked=people.get(selected);
     const emptyHome=selected==='healer-home'?healerHome:null;
@@ -8336,8 +8366,18 @@ $('#command-form').addEventListener('submit',e=>{
   render();
 });
 phoneControls=createPhoneControls({enabled:immersive,storage,readState:()=>state,
-  runCommand:words=>{input.value=words;$('#command-form').requestSubmit();return input.value==='';},
+  runCommand:words=>{
+    if(skipping)return false;
+    if(/^(skip|back) \d+$/.test(words)){
+      const day=state.day;
+      return (words.startsWith('back ')?backDays(words):skipDays(words)).then(()=>state.day!==day);
+    }
+    input.value=words;$('#command-form').requestSubmit();return input.value==='';
+  },
   checkCommand:words=>{
+    const timeCheck=phoneTimeCheck(state,words,{busy:skipping,hasUndo:words==='undo skip'&&!!skipCheckpoint()});
+    if(timeCheck)return timeCheck;
+    if(skipping)return {ok:false,message:'Finishing the current time change.'};
     if(state.ended||!state.villagers.length)return {ok:false,message:'Rewind to a living village first.'};
     if(words==='recall settlers')return {ok:!!state.local?.daughter?.members.length,message:'All settlers are already home.'};
     return validateCommand(state,words==='spawn people 5'?'spawn people':words,state.day,true);

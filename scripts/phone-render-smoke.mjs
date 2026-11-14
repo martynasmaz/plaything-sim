@@ -8,8 +8,8 @@ import {HOMESTEAD_RULES} from '../src/config.js';
 import {createClearing} from '../src/clearing.js';
 const require=createRequire(import.meta.url),{createCanvas,Path2D}=require(process.argv[2]||'@napi-rs/canvas');
 globalThis.Path2D=Path2D;globalThis.devicePixelRatio=1;globalThis.Image=class {set src(value){}};
-for(const phone of [false,true]){
-  const width=phone?390:1200,height=phone?844:768,canvases=[],events=new Map();
+for(const [phone,width,height] of [[false,1200,768],[true,390,844],[true,320,568],[true,932,430]]){
+  const canvases=[],events=new Map();
   const element=()=>({style:{},dataset:{},children:[],setAttribute(){},append(...nodes){this.children.push(...nodes);},
     addEventListener(name,fn){events.set(name,fn);},getBoundingClientRect(){return {left:0,top:0,width,height};}});
   globalThis.window={matchMedia:()=>({matches:phone})};
@@ -17,6 +17,7 @@ for(const phone of [false,true]){
     const c=createCanvas(width,height);Object.assign(c,element(),{clientWidth:width,clientHeight:height,setPointerCapture(){}});canvases.push(c);return c;
   }};
   const s=createState(HOMESTEAD_RULES,4);s.villagers=[];s.food=35;s.bankFood=5;s.huts=[0];s.hutDetails=[{shape:'round hut',wall:'woven wall'}];s.settlementWork=5;
+  if(width===320){s.day=12345;s.speed=3;}
   const before=JSON.stringify(s),host=element(),scene=createClearing(host,()=>s),card=host.children[1];
   const labels=[],context=canvases[0].getContext('2d'),fillText=context.fillText.bind(context);
   context.fillText=(text,...args)=>{labels.push(String(text));return fillText(text,...args);};
@@ -41,7 +42,8 @@ for(const phone of [false,true]){
   }
   assert.equal(labels.some(text=>/Uphill cache/.test(text)),false,'cache text belongs to the DOM card, never the zoomed canvas');
   assert.equal(JSON.stringify(s),before,'phone and desktop drawing cannot mutate the simulation');
-  writeFileSync(new URL('../reports/'+(phone?'phone-map-preview.png':'cache-map-preview.png'),import.meta.url),canvases[0].toBuffer('image/png'));
+  const output=phone?(width===390?'phone-map-preview.png':'phone-map-'+width+'x'+height+'.png'):'cache-map-preview.png';
+  writeFileSync(new URL('../reports/'+output,import.meta.url),canvases[0].toBuffer('image/png'));
 }
 delete globalThis.window;
 console.log('Verified phone taps, drag cancellation, house cards and recentering; cache uses a corner card at multiple desktop zoom levels.');

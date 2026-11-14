@@ -348,14 +348,20 @@ function boulder(g,x,y,size){
   g.fillStyle='#888a76';g.fill();g.strokeStyle='#393e35';g.lineWidth=1.8;g.stroke();
   line(g,-10,-11,-1,-15,'#c3bea1',2);line(g,1,-14,6,-8,'#646956',1.5);g.restore();
 }
-function skyClock(g,day,hour,speed,darkness,twilight){
-  const radius=32,orbit=22;
+function skyClock(g,day,hour,speed,darkness,twilight,phone=false,width=390){
+  const radius=phone?25:32,orbit=phone?17:22;
   // Dawn is the left horizon, noon the top, dusk the right, and midnight the bottom.
   const angle=(hour-12)*Math.PI/12-Math.PI/2;
   const sunX=orbit*Math.cos(angle),sunY=orbit*Math.sin(angle);
   const phase=hour>=5&&hour<7?'Dawn':hour>=17&&hour<19?'Dusk':hour>=7&&hour<17?'Daylight':'Night';
   g.save();
-  g.translate(49,49);
+  const panelWidth=Math.min(220,width-144);
+  if(phone){
+    g.save();g.shadowColor='#0c170c99';g.shadowBlur=7;g.shadowOffsetY=2;
+    g.fillStyle='#253222f5';g.strokeStyle='#cdb789';g.lineWidth=1.5;
+    g.beginPath();g.roundRect(8,8,panelWidth,64,8);g.fill();g.stroke();g.restore();
+  }
+  g.translate(phone?36:49,phone?39:49);
   ellipse(g,0,1,radius+3,radius+3,'#382f27');
   ellipse(g,0,0,radius,radius,'#d8bc86');
   g.save();
@@ -381,9 +387,14 @@ function skyClock(g,day,hour,speed,darkness,twilight){
   g.quadraticCurveTo(-3,0,6*Math.cos(Math.PI*.4),6*Math.sin(Math.PI*.4));
   g.closePath();g.fillStyle='#fff1cd';g.fill();g.strokeStyle='#625b51';g.lineWidth=1;g.stroke();
   g.restore();
-  g.textAlign='left';g.fillStyle='#f4e6c7';g.font='15px Georgia';
-  g.fillText('Day '+day,43,-3);
-  g.font='12px Georgia';g.fillText(speed>1?phase+' · '+speed+'×':phase,43,13);
+  g.textAlign='left';g.fillStyle=phone?'#fff3d6':'#f4e6c7';g.font=phone?'bold 18px Georgia':'15px Georgia';
+  const labelX=phone?37:43,textWidth=phone?panelWidth-78:undefined;
+  if(phone){g.strokeStyle='#13200f';g.lineWidth=2.5;g.strokeText('Day '+day,labelX,-4,textWidth);}
+  if(phone)g.fillText('Day '+day,labelX,-4,textWidth);else g.fillText('Day '+day,labelX,-3);
+  g.font=phone?'bold 14px Georgia':'12px Georgia';
+  const status=speed===0&&phone?'Paused':speed>1?phase+' · '+speed+'×':phase;
+  if(phone)g.strokeText(status,labelX,17,textWidth);
+  if(phone)g.fillText(status,labelX,17,textWidth);else g.fillText(status,labelX,13);
   g.restore();
 }
 function riverBands(width,height,baseWidth,flood,kaunas){
@@ -1418,8 +1429,9 @@ export function createClearing(host,getState){
       sky.addColorStop(0,refused?'#5c554f':'#dc914a');sky.addColorStop(1,'transparent');
       ctx.globalAlpha=.48*Math.sin(Math.PI*signalLeft);ctx.fillStyle=sky;ctx.fillRect(-fieldWidth,-fieldHeight,worldWidth,3*fieldHeight);ctx.globalAlpha=1;
     }
-    ctx.save();ctx.setTransform(3*w/fieldWidth,0,0,3*h/fieldHeight,0,0);
-    skyClock(ctx,s.day,hour,s.speed,darkness,twilight);
+    const phoneClock=phoneLayoutEnabled();
+    ctx.save();ctx.setTransform(phoneClock?ratio:3*w/fieldWidth,0,0,phoneClock?ratio:3*h/fieldHeight,0,0);
+    skyClock(ctx,s.day,hour,s.speed,darkness,twilight,phoneClock,rect.width);
     ctx.restore();
     const picked=people.get(selected);
     const emptyHome=selected==='healer-home'?healerHome:null;

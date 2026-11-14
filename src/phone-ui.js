@@ -1,6 +1,16 @@
 // Presentation only. Both interfaces submit to the same command handler.
 export const phoneLayoutQuery='(pointer: coarse) and (max-width: 900px), (pointer: coarse) and (max-width: 1100px) and (max-height: 550px)';
 export function phoneLayoutEnabled(browser=globalThis.window){return !!browser?.matchMedia?.(phoneLayoutQuery).matches;}
+export function phoneTimeCheck(s,words,{busy=false,hasUndo=false}={}){
+  const match=/^(skip|back) (\d+)$/.exec(words);
+  if(!match&&words!=='undo skip')return null;
+  if(busy)return {ok:false,message:'Finishing the current time change.'};
+  if(words==='undo skip')return {ok:hasUndo,message:'There is no earlier skip to undo.'};
+  const count=Number(match[2]);
+  if(!Number.isSafeInteger(count)||count<1)return {ok:false,message:'Choose a positive number of days.'};
+  if(match[1]==='back')return {ok:s.day>=count,message:'Day 0 is the beginning of this world.'};
+  return {ok:!s.ended&&Number.isSafeInteger(s.day+count),message:'Rewind to a living village first.'};
+}
 export const phonePowers=[
   {group:'Care',name:'Food',command:'harvest',description:'Give the camp a gift of provisions.'},
   {group:'Care',name:'Heal',command:'heal',description:'Cure everyone currently sick.'},
@@ -51,7 +61,7 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
   for(const b of [powers,observe,time,speak])b.setAttribute('aria-haspopup','dialog');
   toolbar.append(powers,observe,time,speak);
   const repeat=button('',()=>{
-    if(!active||!lastPower||view||notebookOpen()||otherMenuOpen())return;
+    if(!active||casting||!lastPower||view||notebookOpen()||otherMenuOpen())return;
     castPower(lastPower);
   });repeat.className='phone-repeat';repeat.hidden=true;
   const home=button('⌂',()=>{recenter();});home.className='phone-home';home.setAttribute('aria-label','Return to village');home.hidden=true;
@@ -67,15 +77,21 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
   const body=make('div',null,'phone-tray-body'),reading=make('p',null,'phone-reading');tray.append(header,body,reading);
   doc.body.append(toolbar,repeat,home,pause,toast,tray);
   let active=false,view=null,chosen=null,confirming=false,castButton=null,reason=null,draft='',resumeSpeed=readState().speed||1,noticeTimer;
-  let lastPower=null;
+  let lastPower=null,casting=false;
   let pauseMenus=true;
   try{pauseMenus=storage?.getItem('plaything.phone.pauseMenus')!=='false';}catch{}
   const persistPause=()=>{try{storage?.setItem('plaything.phone.pauseMenus',String(pauseMenus));}catch{}};
   function castPower(power){
-    if(!checkCommand(power.command).ok){refresh();return;}
+    if(casting)return;
+    const check=checkCommand(power.command);
+    if(!check.ok){if(reason)reason.textContent=check.message;refresh();return;}
     close();
-    if(runCommand(power.command))lastPower=power;
-    refresh();
+    casting=true;refresh();
+    const finish=ok=>{if(ok)lastPower=power;casting=false;refresh();};
+    let result;
+    try{result=runCommand(power.command);}catch(error){finish(false);throw error;}
+    if(result&&typeof result.then==='function')result.then(finish,()=>finish(false));
+    else finish(result);
   }
   function close(){if(tray.open)tray.close();view=null;chosen=null;castButton=reason=null;refresh();}
   tray.addEventListener('close',()=>{if(tray.open)return;view=null;chosen=null;castButton=reason=null;refresh();});
@@ -120,8 +136,9 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
       }
       const steps=make('div',null,'phone-power-grid');
       for(const [label,command] of [['Next day','skip 1'],['Skip 5 days','skip 5'],['Back one day','back 1'],['Back 5 days','back 5'],['Undo last skip','undo skip']])
-        steps.append(button(label,()=>{close();runCommand(command);}));
-      body.append(rates,make('h3','Move through time'),steps,button('Return to village',()=>{recenter();close();}));
+        steps.append(button(label,()=>castPower({name:label,command,time:true})));
+      reason=make('p',null,'phone-reason');reason.setAttribute('role','status');
+      body.append(rates,make('h3','Move through time'),steps,reason,button('Return to village',()=>{recenter();close();}));
       const setting=make('label',null,'phone-pause-setting'),checkbox=make('input');checkbox.type='checkbox';checkbox.checked=pauseMenus;
       checkbox.onchange=()=>{pauseMenus=checkbox.checked;persistPause();refresh();};setting.append(checkbox,make('span','Pause while menus are open'));body.append(setting);
     }else if(view==='speak'){
@@ -143,7 +160,8 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
     root.style.setProperty('--phone-repeat-space',repeat.hidden?'0px':'56px');
     if(lastPower){
       const check=checkCommand(lastPower.command);
-      repeat.textContent='↻ Cast '+lastPower.name;repeat.disabled=!check.ok;
+      repeat.textContent=(lastPower.time?'↻ ':'↻ Cast ')+lastPower.name;repeat.disabled=casting||!check.ok;
+      repeat.setAttribute('aria-busy',String(casting));
       repeat.title=check.ok?'Repeat '+lastPower.name:check.message;
       repeat.setAttribute('aria-label','Repeat '+lastPower.name+(check.ok?'':': '+check.message));
     }

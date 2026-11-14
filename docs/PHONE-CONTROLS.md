@@ -21,9 +21,17 @@ handler, without reopening a menu or the keyboard. A destructive power keeps
 its initial confirmation; subsequent deliberate taps repeat the chosen effect.
 The button updates when another power succeeds and disables whenever that
 power is unavailable. It is hidden during menus, on desktop and until a power
-has been used. Selection lasts for the current page session. Speak, time
-controls and the manually typed magic unlock do not become repeat buttons.
+has been used. Selection lasts for the current page session. Next day, day
+skips, rewinds and undo skip can also become the repeat action. Repeated time
+changes wait for the current operation to complete; rewinds stop at day zero
+and still require recorded history. Failed operations keep the previous action.
+Speak and the manually typed magic unlock do not become repeat buttons.
 Inspection cards move above the button so that neither covers the other.
+
+The phone day/phase display uses a dark bordered backing, bright outlined type,
+and larger text sized in screen pixels so portrait displays do not shrink it
+with the world map. Paused time is stated explicitly. The clock fits beside the
+phone's pause and home buttons.
 
 Observe opens the same notebook in a phone-sized modal sheet. Time provides
 pause, 1× and 3× speed, day stepping, rewind, undo skip and camera recentering.
