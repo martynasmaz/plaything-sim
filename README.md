@@ -8,7 +8,7 @@ art, simple rules, and an offline browser build.
 
 1. Open the **dist** folder.
 2. Double-click **index.html**. It opens in your browser.
-3. The Homestead starts moving immediately. A full day and night take two minutes. Adults hunt hares for food and gather berries when game is scarce. At dusk the tribes walk home to sleep.
+3. The Homestead starts moving immediately. A full day and night take four minutes. Adults hunt hares for food and gather berries when game is scarce. At dusk the tribes walk home to sleep.
 4. Type **let it rain**, **give them food**, or **teach fire** and press Enter.
    Type **speed up** for 3× speed or **normal speed** to return to 1×.
    Type **spawn people** to call two adults even when every bed is taken. Crowded villages can raise extra huts, each with three sleeping places.
@@ -27,6 +27,76 @@ they build a stone cairn and visit it at dusk. Other villagers can remain skepti
 In this playtest, a birth takes three qualifying days. Two healthy adults,
 enough provisions, and a free place are required. Illness in another villager
 allows the household to keep its progress. Nightly illness chance is 9%.
+
+Villagers now follow a flexible needs hierarchy alongside their personalities:
+food, warmth and recovery; secure provisions, fuel and shelter; belonging;
+competence through useful practice; then curiosity, teaching and experimentation.
+Their current priority appears when you select them and in the notebook.
+Local preserved food counts toward security. Sociable villagers seek company
+more often, while Loners are comfortable with longer gaps. Urgent needs take
+precedence over optional crafts and expeditions.
+
+River fishing has separate spear, wicker-trap, bone-hook/handline, fixed-line
+pole, and plant-fibre net techniques. Villagers must learn the skills and obtain
+the materials before making new equipment. Nets use floats and stone sinkers
+and do not require a loom. Watch fishers work at the bank, lift or haul their
+gear, and carry the catch home. Existing saved equipment remains usable.
+
+Villagers can learn plant remedies through foraging and experience caring for
+the sick. A healer starts in their existing household. Someone who wants a quiet
+workspace may learn construction, choose a woodland site, and build an herb hut
+with materials and workdays. Drying racks, a leaf sign and herb thatch are later
+NPC projects. Sites leave a gap beyond neighboring huts while staying within a
+short walk of camp. Hover over or tap a shelter to identify its owner, see progress
+and learn why work is paused; the map has no permanent healer label. Qualified
+neighbors can help with construction, and gathered building supplies stay with
+the project. Structures and unfinished work remain after the builder dies.
+One practising healer can train one younger apprentice through actual plant
+gathering, remedy preparation and patient care. A qualified adult apprentice
+has priority to succeed the healer after their death and can teach a later
+generation. Hunger and illness pause training; progress survives save/load.
+Shelter drawings have appropriate headroom, and villagers use compact standing
+places outside work sites and their own huts instead of stacking in one spot.
+
+Established farmers replant with enough food left for supper and seed, and
+harvest ripe crops when hungry. Adults without an unrelated partner in their
+camp can move to another camp, and births are spread among eligible families.
+Existing saves retain their discoveries and acquire the new motives as play
+continues. The original v0.1/v0.2 reference simulations retain their rules.
+
+Wheat is a later crop alongside the original gardens. Experienced villagers
+with saved seed, observed growing seasons and a digging stick can begin trying
+it after day 360. They harvest grain, make physical saddle querns, mill
+wholemeal flour and learn to bake flatbread on a lit hearth. Milling protects
+seed for replanting; baking spends flour, fuel and a separate workday. Stored
+grain provides another winter resource, but needs skilled people to process it.
+Knowledge can pass through actual paired lessons. This aims for a useful food
+chain around day 500 without guaranteeing discovery or survival. See
+[Wheat and bread](docs/WHEAT-AND-BREAD.md) for prerequisites and measurements.
+
+Type exactly `magic` to awaken optional pagan-inspired folk magic in the current
+world. It stays dormant otherwise. Villagers can learn marked casting bones,
+foretelling, hearth charms, mending rites and store wards through real work and
+teaching. Omens concern the next dawn and can be changed by later god commands;
+rites spend materials, energy and a workday. Inspect the notebook for readings.
+
+Bone fertilizer is a separate practical discovery and works without magic.
+Experienced farmers with a hammer stone can learn to grind four bones into two
+units of meal, then spend workdays applying it to individual plots. It matures
+over a season and improves a limited number of harvests. There is no instant
+crop growth or unlimited stacking. Nearby villagers also share brief emoji
+speech bubbles instead of floating craft labels; precise details stay on hover.
+
+Observe now keeps dated birth records with parents alongside the death history;
+choose Births only, Deaths only, or Births and deaths in Village events. Available
+birth entries in older saves are preserved, and arrivals remain distinct from
+births. The Kaunas-inspired landscape also has denser mixed woodland, wet bank
+vegetation, evergreen pines and birches, with clearings around homes and fields.
+Builders prepare small house sites by cutting obstructing trees one per
+workday with a usable axe, bringing the wood back to camp. Surrounding trees
+remain; unfinished clearings persist, and dismantled sites can regrow.
+Its marked fords remain gameplay approximations rather than reconstructed
+prehistoric river surveys; waders move slowly and stand partly in the water.
 
 **The game saves itself** in this browser at the end of every day and whenever
 you queue a command; opening the page again picks up where you left off. To let
@@ -53,7 +123,7 @@ Open with → your web browser.
 - Click a Gourdling, or its name in **Little lives**, for its age, activity and
   five needs. Higher numbers are better. The name buttons also work on a phone.
 - Read the **Homestead journal** for important changes; it keeps the latest 10.
-- **Dashboard speeds:** one day every two minutes at 1× or every 40 seconds at 3×.
+- **Dashboard speeds:** one day every four minutes at 1× or every 80 seconds at 3×. Main work finishes before optional afternoon chores; survival priorities can still interrupt.
 - **Pause** freezes simulation time. **Next day →** deliberately resolves one
   complete day even while paused; it helps you learn the rules.
 - **Restart** immediately returns to a new Homestead at day 0, paused, with a
@@ -214,6 +284,21 @@ browser or a signed-in account.
 `npm test` also checks the docs: every number quoted in
 `docs/IMPLEMENTATION.md` → "How a Gourdling decides" must match `src/config.js`.
 Change a number in config, update that section in the same commit.
+
+## Phone controls
+
+Family readiness now counts accessible preserved food, and villagers plan
+paid huts before all sleeping places are occupied. Neighboring communities can
+exchange visits, techniques and family connections through real workdays and
+packed provisions. Food preservation can improve after surviving a winter;
+village survival remains uncertain. See [family growth](docs/FAMILY-GROWTH.md).
+
+The default clearing automatically uses a touch toolbar on small touchscreens:
+Powers, Observe, Time and Speak. Routine powers and time controls work without
+typing; `magic` still requires typing it in Speak. Menus can pause playback,
+and tapped villagers, huts and caches show a dismissible information card.
+Desktop retains its command box and hover controls. See
+[phone controls](docs/PHONE-CONTROLS.md) for behavior and validation details.
 
 ## Verified result
 

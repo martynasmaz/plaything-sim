@@ -6,8 +6,10 @@ import { createState, stepDay, cancelCommand, setSpeed, advanceTime,
 import { makeVillageScene } from './village-view.js';
 import { createClearing } from './clearing.js';
 import { THEME, t, commandLabel, resolveUi, uiHiddenClasses } from './theme.js';
+import {createPhoneControls,phoneLayoutEnabled} from './phone-ui.js';
 
 const $=selector=>document.querySelector(selector);
+let phoneControls=null;
 const escapeHtml=text=>String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const htmlText=(key,values)=>escapeHtml(t(key,values));
 // All CSS, system fonts, colors, static labels, ARIA and placeholder copy come
@@ -93,6 +95,7 @@ function feedback(text,error=false){
   clearFaint();
   const line=$('#feedback');
   line.textContent=text;line.classList.toggle('error',error);
+  phoneControls?.notify(text,error);
   if(immersive){
     line.hidden=false;
     clearTimeout(feedbackTimeout);
@@ -106,6 +109,7 @@ const input=$('#command-input'),placeholder=immersive?'Speak to the homestead…
 let faintTimer=null,fadeTimer=null;
 function showFaint(text){
   clearFaint();
+  phoneControls?.notify(text);
   if(ui.showFeedback){const f=$('#feedback');f.textContent=text;f.classList.remove('error','fading');f.classList.add('faint');}
   else{input.setAttribute('placeholder',text);input.classList.add('faint-placeholder');}
   faintTimer=setTimeout(fadeFaint,CONFIG.freshStart.confirmSeconds*1000);
@@ -128,9 +132,10 @@ const game=immersive?null:new Phaser.Game({type:Phaser.CANVAS,...THEME.layout.ca
   scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:makeVillageScene(()=>state,select)});
 if(immersive)input.placeholder='Speak to the homestead…';
 
-const notebook=createNotebook(()=>state,speed=>{state=setSpeed(state,speed);render();});
+const notebook=createNotebook(()=>state,speed=>{state=setSpeed(state,speed);render();},{isPhone:()=>immersive&&phoneLayoutEnabled()});
 function render(){
   notebook.draw();
+  phoneControls?.refresh();
   const c=state.config;
   $('#age-label').textContent=t('labels.ages.'+state.age);
   $('#day').textContent=t('hud.day',{day:state.day});
@@ -279,6 +284,8 @@ const guideGroups={
     ['meteor','Strike the valley; nearby shelters can catch fire.'],['volcano','Bury planted plots and spoil stored food.'],
     ['earth crack','Split the ground at the ford, damaging bridge work and losing wood.'],
     ['godzilla','Summon a monster. Armed, brave villagers can try to defend the camp.']],
+  'Optional folk magic':[
+    ['magic','Awaken magic in this world. Villagers must then learn and practise omens, charms, healing rites and wards.']],
   'Time and worlds':[
     ['pause','Stop the clock.'],['resume','Continue at normal speed.'],['speed up','Run time three times faster.'],
     ['normal speed','Return to normal speed.'],['skip 5','Simulate 5 days, stopping early if the village dies out.'],
@@ -309,7 +316,7 @@ function drawGuide(){
   }
   if(!guideResults.childElementCount)guideResults.textContent='No matching commands.';
 }
-function openGuide(){searchGuide.value='';drawGuide();if(!guide.open)guide.showModal();searchGuide.focus();}
+function openGuide(){if(phoneControls?.active){phoneControls.open('powers');return;}searchGuide.value='';drawGuide();if(!guide.open)guide.showModal();searchGuide.focus();}
 $('#open-guide').onclick=openGuide;searchGuide.oninput=drawGuide;guide.querySelector('button').onclick=()=>guide.close();
 $('#command-form').addEventListener('submit',e=>{
   e.preventDefault();
@@ -382,6 +389,17 @@ $('#command-form').addEventListener('submit',e=>{
   if(result.ok){input.value='';slot.save(state);}
   render();
 });
+phoneControls=createPhoneControls({enabled:immersive,storage,readState:()=>state,
+  runCommand:words=>{input.value=words;$('#command-form').requestSubmit();return input.value==='';},
+  checkCommand:words=>{
+    if(state.ended||!state.villagers.length)return {ok:false,message:'Rewind to a living village first.'};
+    if(words==='recall settlers')return {ok:!!state.local?.daughter?.members.length,message:'All settlers are already home.'};
+    return validateCommand(state,words==='spawn people 5'?'spawn people':words,state.day,true);
+  },
+  changeSpeed:speed=>{state=setSpeed(state,speed);render();},
+  openNotebook:()=>notebook.open(),closeNotebook:()=>notebook.close(),notebookOpen:()=>notebook.isOpen(),
+  otherMenuOpen:()=>guide.open,recenter:()=>clearing?.recenter()
+});
 // Unmatched input (no keyword): a 'plaything:unmatched' event always, and with
 // THEME.ui.unmatchedFeedback 'gust' (minimal preset) the placeholder gust.
 function onUnmatched(text){
@@ -406,6 +424,7 @@ $('#restart').onclick=reset;$('#restart-ended').onclick=reset;
 function showCommandResult(result=state.lastDay?.command){
   if(!result){if(state.lastDay?.discovery)feedback(state.lastDay.discovery);return;}
   if(!result.ok){feedback(result.message,true);return;}
+  if(result.command==='magic'){feedback(result.effect||result.message);return;}
   const effects={
     rain:'Rain is falling.',drought:'A dry spell has begun.',bless:'The village received your blessing.',
     plague:'Sickness has spread through the village.',harvest:'Your gift of provisions reached the pantry.',
@@ -417,7 +436,7 @@ function showCommandResult(result=state.lastDay?.command){
 let lastTime=null;
 function frame(now){
   if(skipping){requestAnimationFrame(frame);return;}
-  const dt=document.hidden||lastTime===null?0:Math.min(1000,Math.max(0,now-lastTime));
+  const dt=document.hidden||lastTime===null||phoneControls?.holdClock()?0:Math.min(1000,Math.max(0,now-lastTime));
   lastTime=now;
   const fireRevision=state.fireRevision;
   const oldDay=state.day,prevEnded=state.ended;state=advanceTime(state,dt);

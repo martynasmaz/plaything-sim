@@ -36,7 +36,7 @@ export async function build({root=projectRoot,output=path.join(root,'dist/index.
   const read=name=>readFile(path.join(root,name),'utf8');
   const {THEME,spriteManifest}=await import(pathToFileURL(path.join(root,'src/theme.js')).href+`?build=${Date.now()}`);
   const art=await inlineAssets(spriteManifest(THEME),root);
-  const files=['src/commands.js','src/theme.js','src/config.js','src/practices.js','src/sim.js','src/save.js','src/village-view.js','src/clearing.js','src/notebook.js','src/main.js'];
+  const files=['src/commands.js','src/theme.js','src/config.js','src/provisions.js','src/needs.js','src/fishing.js','src/healer-home.js','src/magic.js','src/farming.js','src/village-events.js','src/ecology.js','src/practices.js','src/neighbors.js','src/sim.js','src/save.js','src/village-view.js','src/fishing-view.js','src/farming-view.js','src/magic-view.js','src/village-speech.js','src/phone-ui.js','src/settlement-layout.js','src/settlement-view.js','src/clearing.js','src/notebook.js','src/main.js'];
   let code='';
   for(const file of files){
     const source=(await read(file)).replace(/^import[\s\S]*?;\r?\n/gm,'').replace(/^export /gm,'');

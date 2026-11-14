@@ -103,7 +103,7 @@ export const HOMESTEAD_RULES = {
   illness: { chance: 9 },
   hunting: { herdSize: 3, provisions: 5, returnEvery: 3 },
   tribeThresholds: [8,12],
-  dayMs: 120000
+  dayMs: 240000
 };
 
 // Allow small nested overrides in tests without accidentally losing other rules.

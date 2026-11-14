@@ -1820,3 +1820,45 @@ html.clearing, .clearing body {background:#efe4cc}
 #god-guide [data-results] button{display:block;width:100%;text-align:left;padding:6px;background:transparent;border:0;border-bottom:1px solid #d4c7ac;color:inherit;cursor:pointer}#god-guide [data-results] button:is(:hover,:focus-visible){background:#e3d5b5}#god-guide [data-results] span{display:block;font:14px/1.4 Georgia,serif}
 .clearing #feedback {position:absolute;bottom:calc(100% + 6px);left:0;width:100%;padding:6px 10px;margin:0;background:#f4e8d1;color:#352a21;text-align:center;font:15px/1.35 Georgia,serif;pointer-events:none;border:1px solid #594934;border-radius:2px}
 `;
+
+// Enabled by the small-primary-touchscreen query in phone-ui.js. Desktop
+// selectors, text entry, hover cards and the simulation remain unchanged.
+THEME.css += `
+.phone-ui body{overflow:hidden;overscroll-behavior:none}
+.phone-ui .command-panel{display:none}
+.phone-ui .phone-toolbar{position:fixed;z-index:20;left:8px;right:8px;top:calc(var(--phone-top,0px) + var(--phone-height,100dvh) - 72px - env(safe-area-inset-bottom,0px));height:64px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:5px;box-sizing:border-box;background:#354b32f5;border:2px solid #baaa80;border-radius:9px;box-shadow:0 2px 8px #242b2590}
+.phone-ui .phone-toolbar button{min-width:0;min-height:48px;padding:6px 2px;border:1px solid #ab9b75;border-radius:5px;background:#40593c;color:#fff1d5;font:16px Georgia,serif;touch-action:manipulation}
+.phone-ui .phone-home,.phone-ui .phone-pause{position:fixed;z-index:15;top:calc(var(--phone-top,0px) + max(10px,env(safe-area-inset-top,0px)));min-height:48px;border:1px solid #bba77b;border-radius:7px;background:#354b32ed;color:#fff1d5;touch-action:manipulation}
+.phone-ui .phone-home{right:10px;width:48px;font-size:28px;padding:0}
+.phone-ui .phone-pause{right:66px;min-width:64px;font:16px Georgia,serif;padding:6px 10px}
+.phone-ui .phone-feedback{position:fixed;z-index:40;left:12px;right:12px;top:calc(var(--phone-top,0px) + max(70px,env(safe-area-inset-top,0px) + 60px));max-height:30dvh;overflow:auto;margin:0;padding:10px 12px;border:1px solid #65533e;border-radius:5px;background:#f4e8d1f5;color:#352a21;font:16px/1.4 Georgia,serif;box-shadow:0 2px 7px #25291e60;pointer-events:none}
+.phone-ui .phone-feedback.error{border-color:#8d4230;color:#743321}
+.phone-ui .phone-tray{position:fixed;inset:auto 8px auto;top:calc(var(--phone-top,0px) + var(--phone-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));transform:translateY(-100%);box-sizing:border-box;width:calc(100% - 16px);max-width:560px;max-height:calc(var(--phone-height,100dvh) - max(24px,env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px)));margin:0 auto;padding:0;background:#efe3c6;color:#332e24;border:2px solid #65533e;border-radius:13px 13px 5px 5px;font:16px/1.4 Georgia,serif;overflow:hidden}
+.phone-ui .phone-tray[open]{display:flex;flex-direction:column}
+.phone-ui .phone-tray::backdrop,.phone-ui .settlement-notebook::backdrop{background:#242c2566}
+.phone-ui .phone-tray header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;padding:10px 12px;border:0;border-bottom:1px solid #b6a580;flex-shrink:0}
+.phone-ui .phone-tray h2{font:bold 21px Georgia,serif;margin:0;color:#3c4931}
+.phone-ui .phone-tray h3{font:bold 18px Georgia,serif;margin:16px 0 8px;color:#435439}
+.phone-ui .phone-tray-body{overflow:auto;overscroll-behavior:contain;padding:0 12px 12px;min-height:0}
+.phone-ui .phone-tray button,.phone-ui .settlement-notebook button,.phone-ui .settlement-notebook select,.phone-ui .end-panel button{min-height:48px;font:16px Georgia,serif;touch-action:manipulation}
+.phone-ui .phone-tray button{padding:10px 12px;border:1px solid #9b8967;border-radius:5px;background:#f8efd9;color:#35472f}
+.phone-ui .phone-power-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.phone-ui .phone-power-grid button{text-align:left;overflow-wrap:anywhere}
+.phone-ui .phone-rates{display:flex;gap:8px;margin-top:14px}.phone-ui .phone-rates button{flex:1}
+.phone-ui .phone-tray button[aria-pressed=true]{background:#40593c;color:#fff1d5}
+.phone-ui .phone-tray .phone-cast{width:100%;background:#40593c;color:#fff1d5;font-weight:bold}
+.phone-ui .phone-tray .phone-warning{color:#793d2b}.phone-ui .phone-tray button.phone-warning{background:#793d2b;color:#fff1d5}
+.phone-ui .phone-tray .phone-reason{color:#793d2b}.phone-ui .phone-tray button:disabled{opacity:.5}
+.phone-ui .phone-reading{flex-shrink:0;font-size:14px;margin:0;padding:10px 12px;border-top:1px solid #b6a580}
+.phone-ui .phone-pause-setting{display:flex;align-items:center;gap:10px;margin-top:16px;min-height:48px}
+.phone-ui .phone-pause-setting input{width:24px;height:24px;flex-shrink:0;accent-color:#40593c}
+.phone-ui .phone-tray form{display:grid;gap:10px}.phone-ui .phone-tray input[type=text]{box-sizing:border-box;min-height:48px;width:100%;font:18px Georgia,serif;background:#fff7e5;color:#332e24;border:1px solid #9b8967;border-radius:4px;padding:10px}
+.phone-ui .villager-card{position:fixed;z-index:16;top:auto;bottom:calc(82px + env(safe-area-inset-bottom,0px));left:8px;right:8px;width:auto;max-height:36dvh;overflow:auto;padding:12px;pointer-events:auto;font-size:16px;border-radius:6px}
+.phone-ui .villager-card>strong{display:block;padding-right:64px}.phone-ui .phone-card-close{position:absolute;right:6px;top:6px;min-width:48px;min-height:48px;padding:6px;font:15px Georgia,serif}
+.phone-ui .settlement-notebook{inset:auto 8px auto!important;top:calc(var(--phone-top,0px) + var(--phone-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)))!important;transform:translateY(-100%);width:calc(100% - 16px)!important;max-width:560px;max-height:calc(var(--phone-height,100dvh) - max(24px,env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px)))!important;margin:0 auto!important;box-sizing:border-box;border-radius:12px 12px 5px 5px;padding:12px!important;font-size:16px!important;overscroll-behavior:contain}
+.phone-ui .settlement-notebook summary{min-height:48px;padding-top:10px;box-sizing:border-box}.phone-ui .settlement-notebook select{max-width:100%;font-size:16px}
+.phone-ui .end-panel{max-height:calc(var(--phone-height,100dvh) - 120px);overflow:auto}
+.phone-ui .phone-toolbar,.phone-ui .phone-feedback,.phone-ui .villager-card{left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px))}
+.phone-ui .phone-home{right:max(10px,env(safe-area-inset-right,0px))}.phone-ui .phone-pause{right:calc(66px + env(safe-area-inset-right,0px))}
+.phone-ui .phone-tray,.phone-ui .settlement-notebook{left:max(8px,env(safe-area-inset-left,0px))!important;right:max(8px,env(safe-area-inset-right,0px))!important;width:calc(100% - max(8px,env(safe-area-inset-left,0px)) - max(8px,env(safe-area-inset-right,0px)))!important}
+`;

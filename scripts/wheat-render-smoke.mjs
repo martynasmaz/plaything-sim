@@ -1,0 +1,28 @@
+import {createRequire} from 'node:module';
+import {writeFileSync,readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {createState} from '../src/sim.js';
+import {HOMESTEAD_RULES} from '../src/config.js';
+import {createClearing} from '../src/clearing.js';
+import {drawWheat,drawSaddleQuern} from '../src/farming-view.js';
+const require=createRequire(import.meta.url),{createCanvas,Path2D}=require(process.argv[2]||'@napi-rs/canvas');
+globalThis.Path2D=Path2D;globalThis.devicePixelRatio=1;globalThis.Image=class {set src(value){}};
+const canvases=[],element=()=>({style:{},dataset:{},children:[],setAttribute(){},append(...nodes){this.children.push(...nodes);},
+  addEventListener(){},getBoundingClientRect(){return {left:0,top:0,width:1200,height:768};}});
+globalThis.document={createElement(tag){if(tag!=='canvas')return element();const c=createCanvas(1200,768);
+  Object.assign(c,element(),{clientWidth:1200,clientHeight:768,setPointerCapture(){}});canvases.push(c);return c;}};
+const s=createState(HOMESTEAD_RULES,0);s.day=500;s.elapsedMs=s.config.dayMs*.55;s.fireKnown=s.fireLit=true;
+s.farming.known=true;s.farming.plots=[4,12,20,24];s.farming.crops={0:'wheat',1:'wheat',2:'wheat',3:'wheat'};
+s.farming.querns=[{camp:0,builder:s.villagers[0].id,day:460}];s.villagers[0].activity='Grind wheat into flour';
+s.lastDay={actions:[{id:s.villagers[0].id,action:'Grind wheat into flour',site:[202,247],gained:0}]};
+const before=JSON.stringify(s),view=createClearing(element(),()=>s);view.draw(0);
+assert.equal(JSON.stringify(s),before,'drawing must not create crops or equipment');
+writeFileSync(new URL('../reports/wheat-map-preview.png',import.meta.url),canvases[0].toBuffer('image/png'));
+const detail=createCanvas(900,300),g=detail.getContext('2d');g.fillStyle='#7c8252';g.fillRect(0,0,900,300);
+g.save();g.translate(50,60);g.scale(3,3);for(let i=0;i<4;i++)drawWheat(g,22+i*47,44,[4,12,20,24][i],24,0);
+drawSaddleQuern(g,230,44,true,0);g.restore();
+writeFileSync(new URL('../reports/wheat-detail-preview.png',import.meta.url),detail.toBuffer('image/png'));
+const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
+for(const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new vm.Script(match[1]);
+console.log('Rendered real wheat stages, persistent quern and map without simulation mutation; parsed offline build.');

@@ -1,16 +1,26 @@
-import {practices,campSites,explorationSites,worldTrees,valleySeason,fellTree,wearCampPaths,maintainHouseholds,initPractice,initSettlement,beginSettlementDay,planLessons,practiceWork,finishOrdinaryWork,takeDeposit,settlementEvent} from './practices.js';
+import {practices,availablePractices,materialSites,campSites,explorationSites,worldTrees,valleySeason,fellTree,wearCampPaths,maintainHouseholds,initPractice,initSettlement,beginSettlementDay,planLessons,practiceWork,completeMagicLessons,completeCerealLessons,finishOrdinaryWork,takeDeposit,settlementEvent,makePracticeProduct} from './practices.js';
+import {hutBuildingSite,buildingSiteTree,canFellBuildingTree,clearBuildingTree} from './practices.js';
+import {communityOf,familyFoodReady,mainFoodRequired,foodLedger,recordFoodBalance,familyFoodStable,winterStorageTarget} from './provisions.js';
+import {neighborWork,crossVillageParents,recentVillagePartner,rememberFamilyVisit} from './neighbors.js';
 // Pure, deterministic simulation. No Phaser, DOM, clock or I/O. The only
 // "randomness" is a seeded dice generator stored IN the state, so the same
 // seed + the same commands on the same days always replays the same run.
 // Every transition returns a new state; failed command checks return the old one.
 import { makeConfig } from './config.js';
+import {assessNeeds} from './needs.js';
+import {fishingCrafts,fishingDependencies,fishingMethod,hasFishingGear} from './fishing.js';
+import {rememberHealerHome,healerBuildingRules,healerMedicineStore,healerTrainingRules,healerTrainingComplete,healerNeighbors,chooseQuietHealerSite,crowdedHealerSite} from './healer-home.js';
 import { THEME, t, commandLabel } from './theme.js';
+import {magicEnabled,awakenMagic,magicRecipes,magicDependencies,finishDivinations,coldOmen} from './magic.js';
+import {boneHarvestBonus,wheatRules,cerealRecipes,cerealDependencies,cerealFoodWork,cerealStudyReady,gatherWildWheat,grainCapacity,cropRipeAt,ripePlot} from './farming.js';
 import { normalizeWords, resolveCommand, matchCommand } from './commands.js';
 
 const clamp = (n, max) => Math.max(0, Math.min(max, n));
 const averageHappiness = s => s.villagers.length
   ? s.villagers.reduce((sum, v) => sum + v.happiness, 0) / s.villagers.length : 0;
 const adult = (v, c) => v.age >= c.life.adult && v.age < c.life.elder;
+export const unrelated = (a,b) => !a.parents?.includes(b.id) && !b.parents?.includes(a.id) &&
+  !a.parents?.some(id=>b.parents?.includes(id));
 const changeNeed = (v, key, amount, c) => { v[key] = clamp(v[key] + amount, c.limits.need); };
 export function foodCapacity(s){
   const baskets=(s.textiles||[]).filter(name=>name.endsWith('basket')).length;
@@ -154,9 +164,13 @@ function crowdedCamp(s,camp){
   const huts=(s.huts||[]).filter(home=>home===camp).length;
   return people-huts*s.config.settlement.bedsPerHut>=(s.shelterIdeas?.length?5:8);
 }
+export function shouldPlanHut(s){
+  return !!s.config.learning&&s.settlementWork>=s.config.settlement.shelterWork&&
+    populationCap(s)-s.villagers.length<=2;
+}
 export function sleepingHut(s,v){
   const camp=v.tribe||0;
-  const residents=s.villagers.filter(person=>!person.herbalist&&(person.tribe||0)===camp&&!person.outdoors);
+  const residents=s.villagers.filter(person=>!person.herbalist?.home&&(person.tribe||0)===camp&&!person.outdoors);
   residents.sort((a,b)=>(a.household??a.id)-(b.household??b.id)||a.id-b.id);
   const place=residents.findIndex(person=>person.id===v.id);
   if(place<0||!s.huts?.length)return -1;
@@ -350,6 +364,17 @@ export function currentWeather(s) {
   return s.liveWeather?.day === s.day ? s.liveWeather.type : (s.lastDay?.weather ?? s.weather.type);
 }
 export function castText(s, text, hooks = {}) {
+  if(normalizeWords(text)==='magic'){
+    const refuse=message=>({ok:false,matched:true,command:'magic',state:s,message});
+    if(!s.config.learning||!s.local)return refuse('Folk magic belongs to the live homestead.');
+    if(s.ended||!s.villagers.length)return refuse('Rewind to a living village first.');
+    if(magicEnabled(s))return {ok:true,matched:true,command:'magic',state:s,effect:'Magic is already awake in this world.'};
+    const state=structuredClone(s);awakenMagic(state);state.castCount=(state.castCount||0)+1;
+    state.castAt??={};state.castAt.magic=state.day*state.config.dayMs+state.elapsedMs;state.lastUsed.magic=state.day;
+    const effect='Magic has awakened. Villagers may learn casting bones, foretelling, hearth charms, mending rites and store wards.';
+    log(state,effect,'command');
+    return {ok:true,matched:true,command:'magic',state,effect,message:effect};
+  }
   if(s.config.settlement&&/^(?:spawn\s+)?food(?:\s|$)/i.test(text.trim())){
     const match=/^(?:spawn\s+)?food(?:\s+(\d+))?$/i.exec(text.trim());
     const n=match?Number(match[1]??10):0;
@@ -362,12 +387,14 @@ export function castText(s, text, hooks = {}) {
   if (command === null) { hooks.onUnmatched?.(text); return { ok:false, matched:false, state:s }; }
   let settlers;
   if(command==='spawn people'){
-    const argument=/^spawn\s+people\s+(.+)$/i.exec(text.trim())?.[1];
-    if(argument!==undefined){
-      settlers=Number(argument);
-      if(!/^\d+$/.test(argument)||!Number.isSafeInteger(settlers)||settlers<1||settlers>1000)
-        return {ok:false,matched:true,command,state:s,message:'Use “spawn people 5” with a whole number from 1 to 1000 per command.'};
+    const phrase=text.trim().toLowerCase().replace(/[.!?]+$/, '').replace(/\s+/g,' ').trim();
+    const count=phrase.match(/\b\d+\b/g);
+    const defaultRequest=/^(?:please )?(?:spawn(?: people)?|call settlers|summon people|more people|new settlers|populate)(?: please)?$/.test(phrase);
+    if(count?.length===1 && !/[+\-.,]\s*\d|\d\s*[.,]\s*\d/.test(phrase)){
+      settlers=Number(count[0]);
     }
+    if(settlers===undefined?!defaultRequest:settlers<1||settlers>1000)
+      return {ok:false,matched:true,command,state:s,message:'Use “spawn people 100” with one whole number from 1 to 1000.'};
   }
   const check = validateCommand(s, command, s.day, true);
   if (!check.ok) return { ...check, matched:true, state:s };
@@ -411,12 +438,15 @@ function applyPower(s, report, command, instant = false, scene, settlers) {
     for(let i=0;i<number;i++){
       const id=s.nextId++,person=villager(id,t('labels.nameFallback',{id}),c.life.adult,c.newborn,c);
       assignIdentity(s,person);
+      if(c.learning)person.travelMeals=3;
       if(s.config.learning)initPractice(s,person);
       if(c.traits)assignTraits(s,person);
       person.tribe=bestHome(s,person);s.villagers.push(person);
     }
     s.stats.peak=Math.max(s.stats.peak,s.villagers.length);
     details=number===1?'One adult settler joined the village.':number+' adult settlers joined the village.';
+    details+=' Population: '+s.villagers.length+'.';
+    if(c.learning)details+=' Each brought three travel meals.';
     const shortfall=s.villagers.length-shelterPlaces(s);
     if(shortfall>0)details+=` The village is short ${shortfall} sleeping ${shortfall===1?'place':'places'}.`;
   }else if(command==='flood'){
@@ -455,6 +485,7 @@ function applyPower(s, report, command, instant = false, scene, settlers) {
   }else if(command==='volcano'){
     const lost=Math.min(s.food,rule.foodLoss);changeStock(s,'food',-lost);
     const plots=s.farming.plots.filter(p=>p!==null).length;s.farming.plots.fill(null);
+    if(s.farming.wheatRemaining)s.farming.wheatRemaining={};
     details=`The volcano erupted. Ash spoiled ${lost} provisions${plots?' and buried '+plots+' planted plots':''}.`;
   }else if(command==='earth crack'){
     const bridgeWork=Math.max(0,(s.settlementWork||0)-(c.settlement?.shelterWork||0));
@@ -530,6 +561,18 @@ function applyPower(s, report, command, instant = false, scene, settlers) {
 // useTraits=false gives the plain v0.1/v0.2 choice, used to log trait effects.
 function chooseAction(s, v, weather, n, die, useTraits) {
   const c = s.config, N = c.needs, P = c.personality, has = tr => useTraits && hasTrait(s, v, tr);
+  if(c.learning){
+    const motive=assessNeeds(s,v);
+    if(motive.need==='warmth')return 'warm';
+    if(motive.need==='recovery'||motive.need==='energy')return 'rest';
+    if(motive.need==='food')return s.farming.known&&ripePlot(s)>=0?'harvest':'forage';
+    if(motive.need==='fuel')return 'wood';
+    if(motive.need==='belonging')return 'rest';
+    if(motive.level>=2&&coldOmen(s,v)&&s.wood<fuelTarget(s)+2)return 'wood';
+    if(motive.need==='provisions'&&(!s.farming.known||ripePlot(s)<0))return 'forage';
+  }
+  if(c.learning && s.farming.known && ripePlot(s)>=0 &&
+    v.fullness<N.emergencyFullness && s.food<N.mealCost)return 'harvest';
   if (v.fullness < N.emergencyFullness && s.food < N.mealCost) return 'forage';
   let warmBelow = N.warmUpBelow;
   if (weather === 'rain' || weather === 'cold') {
@@ -537,13 +580,22 @@ function chooseAction(s, v, weather, n, die, useTraits) {
     else if (has('Timid')) warmBelow = P.timidWarmUpBelow;
   }
   if (v.warmth < warmBelow) return 'warm';
-  if(c.settlement&&(s.hutProject||s.hutDetails?.some(h=>h?.ruined)||n>shelterPlaces(s)||crowdedCamp(s,v.tribe||0))&&v.age>=c.life.adult&&!v.illnessDays&&s.food>=n*c.needs.mealCost){
-    return s.wood>c.settlement.fuelReserve?'hut':'wood';
+  if(c.settlement&&(!c.learning||s.settlementWork>=c.settlement.shelterWork||s.hutProject||s.huts?.length)&&
+    (s.hutProject||s.hutDetails?.some(h=>h?.ruined)||n>shelterPlaces(s)||crowdedCamp(s,v.tribe||0)||shouldPlanHut(s))&&v.age>=c.life.adult&&!v.illnessDays&&
+    (c.learning?s.food>=mainFoodRequired(s,v.tribe||0,2,0):s.food>=n*c.needs.mealCost)){
+    const site=hutBuildingSite(s,v).site;
+    if(!c.learning||buildingSiteTree(s,site)===null||canFellBuildingTree(s,v))
+      return s.wood>c.settlement.fuelReserve?'hut':'wood';
   }
   if (has('Scatterbrained') && die <= P.scatterbrained.chance)
     return die <= P.scatterbrained.forageUpTo ? 'forage' : die <= P.scatterbrained.woodUpTo ? 'wood' : 'rest';
   const v02 = isV02(s), F = c.farming;
-  if (v02 && s.farming.plots.some(x => x !== null && x >= F.ripeAt)) return 'harvest';
+  if (v02 && ripePlot(s)>=0) return 'harvest';
+  // Established growers keep fields in use while there is food for supper and
+  // seed. Waiting for the full foraging target can leave every plot empty.
+  if (v02 && c.learning && s.local.season!=='Winter' && s.farming.known &&
+    v.age>=c.life.adult && !v.illnessDays && s.farming.plots.includes(null) &&
+    s.food>=F.plantCost&&s.food-F.plantCost>=mainFoodRequired(s,v.tribe||0,1,0)) return 'plant';
   const foodTarget = c.work.foodTargetPerPerson * n, woodTarget = fuelTarget(s, n), smart = has('Smart');
   if (smart) {
     // Compare each stock's gap as a share of its target; provisions win a tie.
@@ -552,7 +604,7 @@ function chooseAction(s, v, weather, n, die, useTraits) {
     if (foodGap > 0 || woodGap > 0) return foodGap >= woodGap ? 'forage' : 'wood';
   } else if (s.food < foodTarget) return 'forage';
   if (v02 && s.local?.season!=='Winter' && s.farming.known && v.age >= c.life.adult && s.farming.plots.includes(null)
-    && s.food >= F.plantFoodPerPerson * n + F.plantExtraFood) return 'plant';
+    && (c.learning?s.food>=F.plantCost&&s.food-F.plantCost>=mainFoodRequired(s,v.tribe||0,1,0):s.food >= F.plantFoodPerPerson * n + F.plantExtraFood)) return 'plant';
   if (!smart && s.wood < woodTarget) return 'wood';
   const project=c.settlement;
   if(project&&v.age>=c.life.adult&&!v.illnessDays){
@@ -589,6 +641,14 @@ const textileCrafts=[
 // Cross-craft prerequisites supplement the individual learning rules in practices.js.
 // These express material dependencies in this village, not universal historical dates.
 function readyToInvent(s,name){
+  if(cerealRecipes.some(r=>r[7]===name))return cerealDependencies(s,name);
+  if(name==='bone meal')return s.farming.known&&s.toolkit?.includes('hammer stone');
+  if(magicRecipes.some(r=>r[7]===name))return magicDependencies(s,name);
+  if(name==='healer hut')return s.settlementWork>=s.config.settlement.shelterWork&&
+    s.villagers.some(v=>v.practice?.known.housing&&v.practice.known.cordage);
+  if(name==='herb drying rack')return s.local.healerHome?.work>=healerBuildingRules.hutWork;
+  if(name==='healer marker')return s.local.healerHome?.rackWork>=healerBuildingRules.rackWork;
+  if(fishingCrafts.includes(name))return fishingDependencies(s,name);
   switch(name){
     case 'drop spindle':return s.textiles?.includes('cordage');
     case 'loom':return s.textiles?.includes('drop spindle')&&s.toolkit?.includes('mallet & chisel');
@@ -632,6 +692,7 @@ function passingWildlife(s){
 function planWildlifeHunts(s,herd,adults,report,busy){
   if(!herd)return;
   for(const v of adults){
+    if(s.config.learning){const motive=assessNeeds(s,v);if(motive.level===0&&motive.need!=='food')continue;}
     if(busy.has(v.id)||(v.huntWear||0)>=6||!huntingWeapons.includes(v.gear)||v.warmth<35||v.practice.energy<30||s.food>=foodCapacity(s))continue;
     const [cx,cy]=report.fieldCamp?.members.includes(v.id)?report.fieldCamp.site:campSites[v.tribe||0];
     const distance=Math.abs(cy-herd.y);
@@ -655,7 +716,10 @@ function planWildlifeHunts(s,herd,adults,report,busy){
     v.huntWear=(v.huntWear||0)+1;
     v.activity='Track '+herd.species;
     const before=s.food;
-    if(success)changeStock(s,'food',(herd.species==='deer'?8:3)+Number(!!s.toolkit?.includes('stone blades')));
+    if(success){
+      changeStock(s,'food',(herd.species==='deer'?8:3)+Number(!!s.toolkit?.includes('stone blades')));
+      if(s.local)s.local.stock.bone=(s.local.stock.bone||0)+1;
+    }
     v.gained=s.food-before;report.gatheredFood+=v.gained;
     finishOrdinaryWork(s,v,'hunt');
     report.actions.push({id:v.id,action:v.activity,gained:v.gained});
@@ -669,9 +733,9 @@ export function inventionProgress(s){
     ...heatTools.map(t=>[t.name,s.fireTools?.includes(t.name)]),
     ...textileCrafts.map(t=>[t,s.textiles?.includes(t)]),
     ...[...wallTypes,...hutTypes,'chimney','ondol'].map(t=>[t,s.shelterIdeas?.includes(t)]),
-    ...Object.keys(practices).map(id=>[practices[id].name,s.local.first[id]!==undefined||s.villagers.some(v=>v.practice?.known[id])]),
+    ...availablePractices(s).map(r=>[r.name,s.local.first[r.id]!==undefined||s.villagers.some(v=>v.practice?.known[r.id])]),
     ...huntingWeapons.map(t=>[t,s.villagers.some(v=>v.gear===t)]),
-    ['fish trap',s.villagers.some(v=>v.fishTrap)],['controlled fire',s.fireKnown],
+    ...fishingCrafts.map(item=>[item,s.villagers.some(v=>item==='fish trap'?v.fishTrap||v.practice?.gear[item]:v.practice?.gear[item])]),['controlled fire',s.fireKnown],
     ['farming',s.farming.known],['communal shelter',s.settlementWork>=rules.shelterWork],
     ['footbridge',s.settlementWork>=rules.shelterWork+rules.bridgeWork],['plank shed',s.shed.built],
     ['camp kiln',s.pottery?.kiln]
@@ -695,11 +759,17 @@ const weeklyChores={
   sandals:['Walk the gathering trail','berries'], sling:['Practice sling aim','stone'],
   bow:['Practice bow aim','hide'], 'spear thrower':['Practice a throw','hide'],
   'fish trap':['Check the fish trap','fish'], 'controlled fire':['Tend the hearth','wood'],
+  'fishing spear':['Practice spearing fish','fish'],'hook and line':['Check the handline','fish'],
+  'fishing pole':['Fish with a wooden pole','fish'],'fishing net':['Check the fishing net','fish'],
   farming:['Tend the field','berries'], 'footbridge':['Carry supplies across the ford','wood'],
   'plank shed':['Stack supplies under cover','wood'], 'communal shelter':['Prepare sleeping places','hide'],
   'camp kiln':['Tend the pottery kiln','clay'], chimney:['Clear the chimney','wood'],ondol:['Tend the heated floor','wood']
 };
 const techniqueChores={
+  bonemeal:'Inspect treated soil',
+  herbalism:'Practice preparing plant remedies',
+  fishtraps:'Practice weaving a funnel trap',fishspears:'Sharpen a wooden fishing spear',
+  angling:'Carve a bone hook',fishingpoles:'Fit a fixed fishing line',fishnets:'Mend a fibre fishing net',
   knapping:'Retouch a cutting edge',cordage:'Twist a length of cord',hafting:'Refit a tool handle',
   baskets:'Weave a basket rim',housing:'Line a sleeping place',drying:'Lay food out to dry',
   shaping:'Shape a clay cup',pottery:'Practice forming a storage jar',charcoal:'Bank wood for charcoal',
@@ -708,7 +778,7 @@ const techniqueChores={
 function weeklyWork(s,report){
   const history=s.local.weeklyUses??={};
   const known=inventionProgress(s).known;
-  const people=s.villagers.filter(v=>v.age>=s.config.life.adult&&!v.illnessDays&&!report.daughter?.members.includes(v.id)&&!report.fieldCamp?.members.includes(v.id)&&!report.outing?.members.includes(v.id)&&!v.herbalist&&!v.activity.startsWith('Care for '));
+  const people=s.villagers.filter(v=>assessNeeds(s,v).level>0&&v.age>=s.config.life.adult&&!v.illnessDays&&!v.campJourney&&!report.daughter?.members.includes(v.id)&&!report.fieldCamp?.members.includes(v.id)&&!report.outing?.members.includes(v.id)&&!v.herbalist?.home&&!v.activity.startsWith('Care for '));
   if(!people.length)return;
   const sessions=report.weeklyWork=[];
   const recipes=Object.values(practices);
@@ -718,18 +788,20 @@ function weeklyWork(s,report){
     due[item]??=s.day+i%7;
     if(previous?s.day-previous.day<7:s.day<due[item])continue;
     const recipe=recipes.find(r=>r.name===item);
+    if(recipe?.magic)continue; // Rites have real costs; no free weekly casts or proficiency.
     const eligible=people.filter(v=>recipe?v.practice.known[recipe.id]:
-      huntingWeapons.includes(item)?v.gear===item&&(v.huntWear||0)<6:item==='fish trap'?v.fishTrap:item==='hand axe'?(v.axeWear||0)<4:true);
+      huntingWeapons.includes(item)?v.gear===item&&(v.huntWear||0)<6:fishingCrafts.includes(item)?
+        item==='fish trap'?v.fishTrap||v.practice.gear[item]:v.practice.gear[item]:item==='hand axe'?(v.axeWear||0)<4:true);
     if(!eligible.length)continue;
     const activeCount=v=>sessions.filter(task=>task.id===v.id).length;
     eligible.sort((a,b)=>activeCount(a)-activeCount(b));
     const worker=eligible[0];
     let [action,skill]=recipe?[techniqueChores[recipe.id],recipe.skill]:
       weeklyChores[item]||[wallTypes.includes(item)?'Repair a wall section':'Fit shelter poles',wallTypes.includes(item)?'stone':'wood'];
-    if(item==='fish trap'&&(valleySeason(s).frozen||s.lastUsed.flood>=s.day-1))action='Mend the fish trap';
+    if(fishingCrafts.includes(item)&&(valleySeason(s).frozen||s.lastUsed.flood>=s.day-1))action='Maintain '+item;
     let result='practiced '+skill+' work';
-    if(['Crack nuts','Cut roots for supper','Dig edible roots','Carry berries','Check the fish trap'].includes(action)){
-      const source=item==='fish trap'?'fish':'berries';
+    if(['Crack nuts','Cut roots for supper','Dig edible roots','Carry berries','Check the fish trap','Practice spearing fish','Check the handline','Fish with a wooden pole','Check the fishing net'].includes(action)){
+      const source=fishingCrafts.includes(item)?'fish':'berries';
       const qty=Math.min(1,Math.max(0,foodCapacity(s)-s.food),Math.floor(s.local.deposits[source]));
       if(qty){s.food+=takeDeposit(s,source,qty);report.gatheredFood+=qty;result='stored one provision';}
       else if(source==='fish')result='checked the trap';
@@ -745,7 +817,7 @@ function weeklyWork(s,report){
   }
 }
 
-function doWork(s, v, action, report) {
+function doWork(s, v, action, report, fishingMethodOverride) {
   const c = s.config, n = c.needs;
   v.activity = ACTIVITY[action]; v.gained = 0;
   if(action==='seed trial'){
@@ -754,7 +826,8 @@ function doWork(s, v, action, report) {
     settlementEvent(s,v.name+' buried saved seeds in a small patch of bare ground.');
   }else if(action==='explore'){
     v.activity='Scout upriver';
-    s.food-=2;
+    if(report.outing.packedMeals)v.travelMeals-=2;
+    else s.food-=2;
     s.local.scouting=(s.local.scouting||0)+1;
     settlementEvent(s,v.name+' set out. '+report.outing.reason);
     if(s.local.scouting>=3){
@@ -793,7 +866,7 @@ function doWork(s, v, action, report) {
     }
     if(report.discovery&&(action==='Fire jar'||action==='Build kiln'))log(s,report.discovery,'discovery');
   }else if(action==='reeds'){
-    if(c.learning)takeDeposit(s,'fibre',1);
+    if(c.learning)s.local.stock.fibre+=takeDeposit(s,'fibre',1);
     v.reedBundle=true;
     v.activity='Gather reeds';
     if(!s.pottery){
@@ -802,16 +875,19 @@ function doWork(s, v, action, report) {
       log(s,report.discovery,'discovery');
     }
   }else if(action==='trap'){
-    delete v.reedBundle;
-    v.fishTrap=true;
-    v.activity='Weave trap';
-    log(s,`${v.name} wove the gathered river reeds into a fish trap.`,'discovery');
+    if(!c.learning||readyToInvent(s,'fish trap')&&makePracticeProduct(s,v,'fishtraps')){
+      delete v.reedBundle;v.fishTrap=true;v.activity='Weave trap';
+      log(s,`${v.name} wove flexible shoots and bark ties into a funnel fish trap.`,'discovery');
+    }else v.activity='Prepare trap materials';
   }else if(action==='fish'){
     v.activity='Fish';
     const before=s.food;
-    const catchSize=(report.weather==='drought'?2:4)+Number((v.practice?.skills.fish||0)>=3);
+    const method=fishingMethodOverride||fishingMethod(v,s.day)||'trap';
+    const base={spear:2,line:2,pole:3,trap:4,net:5}[method];
+    const catchSize=Math.max(1,base-(report.weather==='drought'?2:0))+Number((v.practice?.skills.fish||0)>=3);
     changeStock(s,'food',c.learning?takeDeposit(s,'fish',catchSize):catchSize);
     v.gained=s.food-before;report.gatheredFood+=v.gained;
+    (report.fishing??={})[v.id]={method,caught:v.gained};
     if(!s.storesUphill)s.bankFood=Math.min(8,(s.bankFood||0)+v.gained);
   }else if(action==='invent'||action==='invent heat tool'){
     const heat=action==='invent heat tool';
@@ -837,6 +913,7 @@ function doWork(s, v, action, report) {
     const prepared=!!(v.practice?.gear['cutting tool']||s.toolkit?.includes('stone blades'));
     const before=s.food;changeStock(s,'food',c.hunting.provisions+Number(huntingWeapons.includes(v.gear))+Number(prepared));
     v.gained=s.food-before;report.gatheredFood+=v.gained;
+    if(s.local)s.local.stock.bone=(s.local.stock.bone||0)+1;
   }else if (action === 'forage') {
     const yields = v.age < c.life.adult ? c.work.childFood : c.work.adultFood;
     let yieldAmount=yields[report.weather]+Number(v.gear==='digging stick'||!!s.toolkit?.includes('digging stick'));
@@ -853,7 +930,7 @@ function doWork(s, v, action, report) {
     }
     const before=s.food;changeStock(s,'food',yieldAmount);
     v.gained = s.food - before; report.gatheredFood += v.gained;
-    if(s.local&&v.gained>0)s.local.seedFinds=(s.local.seedFinds||0)+1;
+    if(s.local&&v.gained>0){s.local.seedFinds=(s.local.seedFinds||0)+1;gatherWildWheat(s,v,report);}
   } else if (action === 'warm') {
     const before = v.warmth;
     const stoked=s.fireTools?.includes('blowpipe')?4:0;
@@ -874,8 +951,22 @@ function doWork(s, v, action, report) {
     changeStock(s,'wood',woodYield);
     v.gained = s.wood - before; report.gatheredWood += v.gained;
   } else if (action === 'harvest') {
-    s.farming.plots[s.farming.plots.findIndex(x => x !== null && x >= c.farming.ripeAt)] = null;
-    const before = s.food; changeStock(s, 'food', c.farming.harvestFood);
+    const plot=ripePlot(s);
+    const wheat=s.farming.crops?.[plot]==='wheat';
+    const remaining=s.farming.wheatRemaining?.[plot];
+    const bonus=wheat&&remaining!==undefined?0:boneHarvestBonus(s,plot);s.farming.plots[plot]=null;
+    const before = s.food;
+    if(wheat){
+      const total=remaining??wheatRules.harvest+bonus;
+      const amount=Math.max(0,Math.min(total,grainCapacity(s)-s.local.stock.wheat));
+      s.farming.wheatRemaining??={};
+      if(amount<total){s.farming.wheatRemaining[plot]=total-amount;s.farming.plots[plot]=wheatRules.ripeAt;}
+      else delete s.farming.wheatRemaining[plot];
+      s.local.stock.wheat+=amount;s.farming.wheatHarvests=(s.farming.wheatHarvests||0)+1;
+      (report.wheatHarvests??=[]).push({id:v.id,plot,grain:amount});
+      v.activity='Harvest wheat';
+    }else changeStock(s, 'food', c.farming.harvestFood+bonus);
+    if(bonus)(report.boneFertilizerHarvests??=[]).push({id:v.id,plot,bonus});
     if(s.local)s.local.harvests=(s.local.harvests||0)+1;
     v.gained = s.food - before; report.gatheredFood += v.gained; report.harvests += 1;
   } else if(action==='improve hut'){
@@ -893,19 +984,31 @@ function doWork(s, v, action, report) {
     report.hutSites[v.id]={camp:s.huts[i],index:s.huts.slice(0,i).filter(camp=>camp===s.huts[i]).length};
     learnShelter(s,v,idea,report);
   } else if(action==='hut'){
-    s.hutProject??={camp:v.tribe||0,work:0};
+    const {camp,index,repairSlot,site}=hutBuildingSite(s,v);
+    s.hutProject??={camp,index,work:0};
+    s.hutProject.camp=camp;
+    if(repairSlot>=0)s.hutProject.repairSlot=repairSlot;
+    s.hutProject.index??=index;
+    if(c.learning&&buildingSiteTree(s,site)!==null){
+      if(clearBuildingTree(s,v,s.hutProject,site,report)){
+        v.activity='Clear hut site';
+        report.actions.push({id:v.id,action:v.activity,site,gained:v.gained});
+      }
+      return;
+    }
     s.wood--;s.hutProject.work+=(s.toolkit?.includes('mallet & chisel')?2:1)+Number(!!v.practice?.gear['lined bed']);
     report.hutSites??={};
-    report.hutSites[v.id]={camp:s.hutProject.camp,index:(s.huts||[]).filter(camp=>camp===s.hutProject.camp).length};
+    report.hutSites[v.id]={camp,index};
     if(s.hutProject.work>=c.settlement.shelterWork){
-      const ruin=s.hutDetails?.findIndex(h=>h?.ruined)??-1;
+      const ruin=s.hutProject.repairSlot??-1;
       if(ruin>=0){s.hutDetails[ruin].ruined=false;s.hutDetails[ruin].scorched=false;s.hutProject=null;log(s,'A burned hut has been rebuilt.','discovery');}
       else{
+      const clearedTrees=s.hutProject.clearedTrees||[];
       s.huts??=[];s.huts.push(s.hutProject.camp);s.hutProject=null;
       const camp=s.huts.at(-1);
       const wall=favoredCraft(s,wallTypes,camp);
       const shape=favoredCraft(s,hutTypes,camp);
-      (s.hutDetails??=[])[s.huts.length-1]={wall,shape};
+      (s.hutDetails??=[])[s.huts.length-1]={wall,shape,clearedTrees};
       learnShelter(s,v,wall,report);
       learnShelter(s,v,shape,report);
       log(s,`The villagers finished a hut with ${c.settlement.bedsPerHut} sleeping places.`,'discovery');
@@ -919,8 +1022,13 @@ function doWork(s, v, action, report) {
     if(s.settlementWork===shelterWork)log(s,'The village finished a communal lean-to. It keeps the camp warmer.','discovery');
     if(s.settlementWork===shelterWork+bridgeWork)log(s,'The village finished a footbridge across the ford.','discovery');
   } else if (action === 'plant') {
-    s.farming.plots[s.farming.plots.indexOf(null)] = 0;
-    s.food -= c.farming.plantCost; report.plantings += 1;
+    const plot=s.farming.plots.indexOf(null);s.farming.plots[plot]=0;
+    if(c.learning&&v.practice.known.wheatgrowing&&s.local.stock.wheat>=1){
+      s.local.stock.wheat--;s.farming.crops[plot]='wheat';v.activity='Sow wheat';
+      v.practice.used.wheatgrowing=(v.practice.used.wheatgrowing||0)+1;
+      s.local.first.wheatSown??=s.day;
+    }else{if(s.farming.crops)delete s.farming.crops[plot];s.food-=c.farming.plantCost;}
+    report.plantings += 1;
   }
   report.actions.push({ id: v.id, action: v.activity, gained: v.gained });
 }
@@ -987,7 +1095,7 @@ function trustedPartner(person,options){
 }
 function campVisits(s,adults,busy,report){
   if(!s.local)return;
-  const available=()=>adults.filter(v=>!busy.has(v.id)&&v.fullness>=35&&v.warmth>=30);
+  const available=()=>adults.filter(v=>!busy.has(v.id)&&assessNeeds(s,v).level>0&&v.fullness>=35&&v.warmth>=30);
   const assign=(v,action,site)=>{
     busy.add(v.id);v.activity=action;v.gained=0;
     report.actions.push({id:v.id,action,site,gained:0});
@@ -1053,43 +1161,260 @@ function campVisits(s,adults,busy,report){
   if(camp){s.wood--;report.fieldCamp=camp;}
 }
 export function findHomesteadHealer(s){
-  if(!s.local||s.local.healerId!=null)return;
-  const women=s.villagers.filter(v=>v.gender==='female'&&adult(v,s.config)&&!s.local.daughter?.members.includes(v.id)&&!s.local.fieldCamp?.members.includes(v.id));
-  const v=women.sort((a,b)=>Number(b.traits.includes('Loner'))-Number(a.traits.includes('Loner'))||b.practice.curiosity-a.practice.curiosity)[0];
+  if(!s.local||s.villagers.some(v=>v.herbalist))return;
+  const candidates=s.villagers.filter(v=>adult(v,s.config)&&v.practice?.known.herbalism&&
+    (v.practice.known.herbalism>=2||v.remedyDoses>0)&&v.practice.skills.berries>=3&&
+    (!v.healerApprentice||healerTrainingComplete(v))&&
+    (healerTrainingComplete(v)||v.traits.includes('Loner')||v.traits.includes('Generous')||v.practice.curiosity>=.5)&&
+    assessNeeds(s,v).level>=2&&!s.local.daughter?.members.includes(v.id)&&!s.local.fieldCamp?.members.includes(v.id));
+  const score=v=>(v.practice.careExperience||0)+v.practice.curiosity+Number(v.traits.includes('Loner'));
+  const v=candidates.sort((a,b)=>Number(healerTrainingComplete(b))-Number(healerTrainingComplete(a))||score(b)-score(a)||a.id-b.id)[0];
   if(!v)return;
   s.local.healerId=v.id;
-  v.traits=v.traits.filter(t=>t!=='Sociable');if(!v.traits.includes('Loner'))v.traits.push('Loner');
-  v.household=-v.id;maintainHouseholds(s);
-  const [x,y]=campSites[v.tribe||0];
-  v.herbalist={home:[x-84,y-52],leaves:0,doses:0,visits:0};
+  const training=v.healerApprentice;
+  v.herbalist={leaves:0,doses:v.remedyDoses||0,visits:0};v.remedyDoses=0;
+  if(training){
+    v.herbalist.trainedBy=training.mentorName;v.herbalist.trainedById=training.mentorId;delete v.healerApprentice;
+    settlementEvent(s,v.name+' succeeded '+training.mentorName+' as the village healer after their apprenticeship.');
+  }else settlementEvent(s,v.name+' began preparing plant remedies for sick neighbors.');
+}
+function medicalTrainingSafe(s,v){
+  return !v.illnessDays&&v.health>=60&&v.fullness>=45&&v.warmth>=40&&v.practice.energy>=35&&
+    assessNeeds(s,v).level>=2&&s.food>=s.villagers.length*2&&
+    !s.local.daughter?.members.includes(v.id)&&!s.local.fieldCamp?.members.includes(v.id)&&
+    !s.villagers.some(child=>child.illnessDays&&child.carers?.includes(v.id));
+}
+function chooseHealerApprentice(s,teacher,order){
+  if(!medicalTrainingSafe(s,teacher)||
+    (teacher.practice.used.herbalism||0)<2&&teacher.herbalist.visits<2)return null;
+  const r=healerTrainingRules;
+  // Keep one place reserved even when its student is hungry, ill, or absent.
+  const current=s.villagers.find(v=>v.healerApprentice?.mentorId===teacher.id);
+  if(current)return order.includes(current)&&medicalTrainingSafe(s,current)?current:null;
+  const candidates=order.filter(v=>v!==teacher&&!v.herbalist&&v.age>=r.minAge&&v.age<=teacher.age-r.ageGap&&
+    v.practice.known.gathering&&(v.practice.skills.berries||0)>=1&&medicalTrainingSafe(s,v)&&
+    !s.local.daughter?.members.includes(v.id)&&!s.local.fieldCamp?.members.includes(v.id)&&
+    (!v.healerApprentice||!s.villagers.some(t=>t.id===v.healerApprentice.mentorId&&t.herbalist))&&
+    (v.healerApprentice||v.traits.includes('Generous')||v.traits.includes('Loner')||v.practice.curiosity>=.5));
+  candidates.sort((a,b)=>Number(!!b.healerApprentice)-Number(!!a.healerApprentice)||
+    (b.practice.careExperience||0)-(a.practice.careExperience||0)||b.practice.curiosity-a.practice.curiosity||a.id-b.id);
+  const pupil=candidates[0];if(!pupil)return null;
+  const previous=pupil.healerApprentice;
+  pupil.healerApprentice={...previous,mentorId:teacher.id,mentorName:teacher.name,startedDay:previous?.startedDay??s.day,
+    plantDays:previous?.plantDays||0,remedyDays:previous?.remedyDays||0,patientDays:previous?.patientDays||0};
+  settlementEvent(s,pupil.name+(previous?' continued their healing apprenticeship with ':' began a healing apprenticeship with ')+teacher.name+'.');
+  return pupil;
+}
+function teachHealing(s,teacher,pupil,stage,site,report){
+  if(!pupil||healerTrainingComplete(pupil))return;
+  const a=pupil.healerApprentice,p=pupil.practice,r=healerTrainingRules;
+  if(stage==='plants'){
+    a.plantDays=Math.min(r.plantDays,a.plantDays+1);
+    finishOrdinaryWork(s,pupil,'forage');
+    if(!p.properties.includes('perishable'))p.properties.push('perishable');
+  }else if(stage==='patient'){
+    a.patientDays=Math.min(r.patientDays,a.patientDays+1);
+    p.careExperience=(p.careExperience||0)+1;finishOrdinaryWork(s,pupil,'care');
+  }else if(stage==='remedy'&&a.plantDays>=r.plantDays&&a.patientDays>=r.patientDays&&
+    p.properties.includes(practices.herbalism.property)&&practices.herbalism.requires.every(id=>p.known[id])&&practices.herbalism.need(s,pupil)){
+    a.remedyDays=Math.min(r.remedyDays,a.remedyDays+1);
+    p.known.herbalism=(p.known.herbalism||0)+1;p.used.herbalism=(p.used.herbalism||0)+1;
+    s.local.first.herbalism??=s.day;finishOrdinaryWork(s,pupil,'forage');
+  }else return;
+  teacher.lastCompanyDay=pupil.lastCompanyDay=s.day;
+  pupil.activity='Learn healing from '+teacher.name;pupil.gained=0;
+  report.actions.push({id:pupil.id,action:pupil.activity,mentor:teacher.id,site,gained:0,healingLesson:stage});
+  if(healerTrainingComplete(pupil)){
+    a.readyDay=s.day;
+    settlementEvent(s,pupil.name+' completed their healing apprenticeship with '+teacher.name+' and can succeed them.');
+  }
+  return pupil.id;
+}
+function healerBuildingWork(s,v,report,order){
+  const c=s.config,p=v.practice,h=v.herbalist;
+  const pause=reason=>{report.healerProject={ownerId:v.id,reason};return false;};
+  if(assessNeeds(s,v).level<2||v.fullness<50||v.warmth<50||v.health<65||p.energy<32||s.food<s.villagers.length)
+    return pause('Meeting food, warmth, health or energy needs before building.');
+  const quiet=v.traits.includes('Loner')||p.curiosity>=.65&&h.visits>=3;
+  const aloneWithChild=s.villagers.some(child=>child.age<c.life.adult&&child.carers?.includes(v.id)&&
+    !child.carers.some(id=>id!==v.id&&s.villagers.some(other=>other.id===id&&other.age>=c.life.adult&&!other.herbalist?.home)));
+  const skilled=worker=>worker.practice.known.housing&&worker.practice.known.cordage&&(worker.practice.skills.wood||0)>=3;
+  const helper=order.find(worker=>worker!==v&&worker.age>=c.life.adult&&!worker.practice.lessonToday&&skilled(worker)&&
+    medicalTrainingSafe(s,worker)&&Math.hypot(...campSites[worker.tribe||0].map((x,i)=>x-campSites[v.tribe||0][i]))<320);
+  const worker=skilled(v)?v:helper;
+  const complete=(action,site,skill='hut',builder=v)=>{
+    finishOrdinaryWork(s,builder,skill);builder.activity=action;builder.gained=0;
+    report.actions.push({id:builder.id,action,site,gained:0});
+    if(builder!==v){
+      finishOrdinaryWork(s,v,skill);v.activity='Help '+builder.name+' with the herb shelter';v.gained=0;
+      v.lastCompanyDay=builder.lastCompanyDay=s.day;
+      report.actions.push({id:v.id,action:v.activity,site,mentor:builder.id,gained:0});report.healerBuilder=builder.id;
+    }
+    report.healerProject={ownerId:v.id,reason:action+'.'};return true;
+  };
+  let home=s.local.healerHome;
+  if(!home){
+    if(!quiet)return pause('Working from camp; no separate workspace planned.');
+    if(!readyToInvent(s,'healer hut')||!worker)return pause('Waiting for a villager with shelter construction, cordage and wood-working experience.');
+    const site=chooseQuietHealerSite(campSites[v.tribe||0],healerNeighbors(s,campSites,true),worldTrees(s));
+    if(!site)return pause('Looking for a quiet clearing with room away from other huts.');
+    home=s.local.healerHome={home:[...site],ownerId:v.id,founderId:v.id,founderName:v.name,
+      plannedDay:s.day,work:0,rackWork:0,markerWork:0,stock:{leaves:0,doses:0},spent:{}};
+    settlementEvent(s,v.name+' chose a quiet place near the trees for an herb shelter.');
+    return complete('Choose a quiet herb site',site,'explore');
+  }
+  if(home.ownerId!==v.id){
+    if(s.villagers.some(other=>other.id===home.ownerId&&other.herbalist))return pause('The shelter already has an owner.');
+    home.ownerId=v.id;
+    return complete('Inspect the old herb shelter',home.home,'explore');
+  }
+  // Old early frames can be moved through actual planning and dismantling,
+  // never by changing their drawing coordinates or moving completed houses.
+  if(home.work<3&&(home.relocation||crowdedHealerSite(home.home,healerNeighbors(s,campSites)))){
+    if(!worker)return pause('Waiting for a skilled builder to move the crowded frame.');
+    if(!home.relocation){
+      const site=chooseQuietHealerSite(campSites[v.tribe||0],healerNeighbors(s,campSites,true),worldTrees(s));
+      if(site&&Math.hypot(site[0]-home.home[0],site[1]-home.home[1])>30){
+        home.relocation={home:site,plannedDay:s.day};
+        return complete('Choose a quieter herb site',home.home,'explore');
+      }
+    }else{
+      const salvage={};
+      for(const [material,n] of Object.entries(home.spent)){
+        const recovered=material==='stone'?n:Math.floor(n*.75);salvage[material]=recovered;
+        if(material==='wood')s.wood+=recovered;else s.local.stock[material]+=recovered;
+      }
+      for(const [material,n] of Object.entries(home.materials||{})){
+        salvage[material]=(salvage[material]||0)+n;
+        if(material==='wood')s.wood+=n;else s.local.stock[material]+=n;
+      }
+      (home.previousSites??=[]).push({home:[...home.home],work:home.work,spent:{...home.spent},salvage,day:s.day,status:'dismantled'});
+      const oldSite=[...home.home];home.home=[...home.relocation.home];home.work=0;home.clearingWork=0;home.clearedTrees=[];home.spent={};home.materials={};delete home.relocation;
+      settlementEvent(s,v.name+' salvaged the early herb shelter frame to rebuild at a quieter clearing.');
+      return complete('Dismantle and salvage the herb frame',oldSite,'hut',worker);
+    }
+  }
+  if(home.work>=healerBuildingRules.hutWork&&!h.home){
+    if(aloneWithChild)return pause('Keeping the family home until a dependent child has another caregiver.');
+    h.home=[...home.home];v.household=-v.id;
+    home.stock.leaves+=h.leaves;home.stock.doses+=h.doses;h.leaves=0;h.doses=0;
+    settlementEvent(s,v.name+' moved into the herb hut after finishing its walls and roof.');
+    return complete('Move into the herb hut',home.home,'explore');
+  }
+  let field,limit,cost,action;
+  if(home.work<healerBuildingRules.hutWork){
+    if(!readyToInvent(s,'healer hut')||!worker)return pause('Waiting for a villager with shelter construction, cordage and wood-working experience.');
+    field='work';limit=healerBuildingRules.hutWork;cost={wood:1};
+    if(home.work===2||home.work===4)cost.fibre=1;
+    if(home.work===5)cost.stone=1;
+    action='Build the herb hut';
+  }else if((home.rackWork||0)<healerBuildingRules.rackWork){
+    if(!readyToInvent(s,'herb drying rack')||!worker||h.visits<2)return pause('Drying rack waits for a skilled builder and experience treating two patients.');
+    field='rackWork';limit=healerBuildingRules.rackWork;cost={wood:1,fibre:1};action='Build an herb drying rack';
+  }else if((home.markerWork||0)<healerBuildingRules.markerWork){
+    if(!readyToInvent(s,'healer marker')||!worker||h.visits<3||(worker.practice.skills.wood||0)<4)return pause('Sign and herb thatch wait for further patient care and wood-working experience.');
+    field='markerWork';limit=healerBuildingRules.markerWork;cost={wood:1,fibre:1};action='Fit a leaf sign and herb thatch';
+  }else return pause('Hut and fittings complete.');
+  if(field==='work'&&buildingSiteTree(s,home.home,'healer')!==null){
+    const cutter=canFellBuildingTree(s,worker)?worker:order.find(other=>other!==v&&other.age>=c.life.adult&&
+      !other.practice.lessonToday&&skilled(other)&&medicalTrainingSafe(s,other)&&canFellBuildingTree(s,other)&&
+      (other.tribe||0)===(v.tribe||0));
+    if(!cutter)return pause('Waiting for a usable hand axe or hafted tool to clear the small building patch.');
+    clearBuildingTree(s,cutter,home,home.home,report,'healer');
+    const gained=cutter.gained;
+    complete('Clear herb site',home.home,'wood',cutter);
+    cutter.gained=gained;report.actions.findLast(a=>a.id===cutter.id).gained=gained;
+    return true;
+  }
+  // Collect missing resources as a separate workday, preserving the hearth's
+  // fuel reserve. Construction never receives materials from its renderer.
+  const fuelReserve=c.settlement.fuelReserve+(s.tribeCount||1)*c.fire.dailyFuel;
+  const held=material=>home.materials?.[material]||0;
+  const free=material=>material==='wood'?Math.max(0,s.wood-fuelReserve):s.local.stock[material];
+  const reserveMaterials=()=>{
+    home.materials??={};
+    for(const [material,n] of Object.entries(cost)){
+      const qty=Math.min(n-held(material),free(material));if(qty<=0)continue;
+      home.materials[material]=(home.materials[material]||0)+qty;
+      if(material==='wood')s.wood-=qty;else s.local.stock[material]-=qty;
+    }
+  };
+  if(free('wood')+held('wood')<cost.wood){
+    if(s.local.deposits.wood<1)return pause('Waiting for timber while preserving the hearth fuel reserve.');
+    finishOrdinaryWork(s,worker,'wood');doWork(s,worker,'wood',report);
+    reserveMaterials();
+    if(worker!==v){
+      finishOrdinaryWork(s,v,'wood');v.activity='Help '+worker.name+' gather shelter timber';v.gained=0;
+      report.actions.push({id:v.id,action:v.activity,mentor:worker.id,gained:0});report.healerBuilder=worker.id;
+    }
+    report.healerProject={ownerId:v.id,reason:'Gathering timber for the shelter while keeping fuel for the hearth.'};return true;
+  }
+  for(const material of ['fibre','stone'])if(cost[material]&&free(material)+held(material)<cost[material]){
+    if(s.local.deposits[material]<1||material==='fibre'&&(valleySeason(s).frozen||s.lastUsed.flood>=s.day-1))return pause('Waiting for safe access to '+material+'.');
+    s.local.stock[material]+=takeDeposit(s,material,2);
+    reserveMaterials();
+    return complete('Collect '+material,materialSites[material].site,material==='fibre'?'reeds':'invent',worker);
+  }
+  reserveMaterials();
+  for(const [material,qty] of Object.entries(cost)){
+    home.materials[material]-=qty;
+    home.spent[material]=(home.spent[material]||0)+qty;
+  }
+  home[field]=(home[field]||0)+1;
+  worker.practice.used.housing=(worker.practice.used.housing||0)+1;
+  if(cost.fibre)worker.practice.used.cordage=(worker.practice.used.cordage||0)+1;
+  if(home[field]===limit)settlementEvent(s,v.name+' finished '+(field==='work'?'the herb hut':field==='rackWork'?'the herb drying rack':'the leaf sign and herb thatch')+'.');
+  return complete(action,home.home,'hut',worker);
 }
 function healerWork(s,order,report){
   const v=order.find(p=>p.herbalist),h=v?.herbalist;
-  if(!h||v.illnessDays||v.health<45||v.fullness<32||v.warmth<30)return;
+  const busy=new Set();
+  if(!h)return busy;
+  if(assessNeeds(s,v).level===0||v.illnessDays||v.health<45||v.fullness<32||v.warmth<30){
+    report.healerProject={ownerId:v.id,reason:'Meeting food, warmth, health or energy needs before building.'};return busy;
+  }
+  const supplies=healerMedicineStore(s,v),home=s.local.healerHome;
+  const capacity=home?.ownerId===v.id&&home.rackWork>=healerBuildingRules.rackWork?4:2;
   const patient=order.filter(p=>p!==v&&p.illnessDays>0).sort((a,b)=>a.health-b.health||a.id-b.id)[0];
-  let action,site=h.home;
-  if(patient&&h.doses){
-    h.doses--;h.visits++;patient.illnessDays--;changeNeed(patient,'health',4,s.config);rememberHelp(patient,v);
-    action='Care for '+patient.name;site=null;
+  const pupil=chooseHealerApprentice(s,v,order);
+  let action,lesson,site=h.home||campSites[v.tribe||0];
+  if(patient&&supplies.doses){
+    supplies.doses--;h.visits++;patient.illnessDays--;changeNeed(patient,'health',4,s.config);rememberHelp(patient,v);
+    v.practice.careExperience=(v.practice.careExperience||0)+1;
+    v.lastCompanyDay=patient.lastCompanyDay=s.day;
+    action='Care for '+patient.name;site=null;lesson='patient';finishOrdinaryWork(s,v,'care');
     settlementEvent(s,v.name+' brought a plant remedy to '+patient.name+'. Their illness shortened by a day.');
-  }else if(h.leaves&&h.doses<2&&v.practice.skills.berries){
-    h.leaves--;h.doses++;action='Crush leaves for a remedy';
-  }else if(!h.leaves&&h.doses<2&&v.practice.known.gathering&&s.local.deposits.berries>0){
-    s.local.deposits.berries--;h.leaves++;finishOrdinaryWork(s,v,'forage');action='Gather healing leaves';site=[h.home[0]-18,h.home[1]+12];
-  }else return;
+  }else if(supplies.leaves&&supplies.doses<capacity&&v.practice.known.herbalism){
+    supplies.leaves--;supplies.doses++;action='Crush leaves for a remedy';finishOrdinaryWork(s,v,'forage');
+    v.practice.used.herbalism=(v.practice.used.herbalism||0)+1;v.practice.known.herbalism++;
+    lesson='remedy';
+  }else if(!supplies.leaves&&supplies.doses<capacity&&v.practice.known.gathering&&s.local.deposits.berries>0){
+    takeDeposit(s,'berries',1);supplies.leaves++;finishOrdinaryWork(s,v,'forage');action='Gather healing leaves';site=materialSites.berries.site;lesson='plants';
+  }else if(pupil&&!healerTrainingComplete(pupil)&&pupil.healerApprentice.plantDays<healerTrainingRules.plantDays&&
+    supplies.leaves<healerTrainingRules.plantDays&&s.local.deposits.berries>=1){
+    takeDeposit(s,'berries',1);supplies.leaves++;finishOrdinaryWork(s,v,'forage');
+    action='Teach medicinal plant gathering';site=materialSites.berries.site;lesson='plants';
+  }else if(healerBuildingWork(s,v,report,order)){busy.add(v.id);if(report.healerBuilder!=null)busy.add(report.healerBuilder);return busy;}
+  else return busy;
   v.activity=action;v.gained=0;
   report.actions.push({id:v.id,action,site,patient:site?undefined:patient.id,gained:0});
-  return v.id;
+  report.healerProject={ownerId:v.id,reason:lesson==='patient'?'Treating a sick neighbor before optional building.':
+    'Gathering or preparing remedies before optional building.'};
+  busy.add(v.id);
+  const studentId=teachHealing(s,v,pupil,lesson,site||h.home||campSites[v.tribe||0],report);
+  if(studentId!=null)busy.add(studentId);
+  return busy;
 }
 function householdCare(s,order,report){
   const busy=new Set();
   if(!s.local)return busy;
   for(const patient of order.filter(v=>v.illnessDays||v.health<45)){
-    const helper=order.find(v=>v!==patient&&!busy.has(v.id)&&!v.illnessDays&&v.age>=5&&v.health>=50&&
+    const helper=order.find(v=>v!==patient&&!busy.has(v.id)&&assessNeeds(s,v).level>0&&!v.illnessDays&&v.age>=5&&v.health>=50&&
       v.household===patient.household&&(v.tribe||0)===(patient.tribe||0));
     if(!helper)continue;
     busy.add(helper.id);
     rememberHelp(patient,helper);
+    if(patient.illnessDays)helper.practice.careExperience=(helper.practice.careExperience||0)+1;
     let meal=false;
     const store=s.local.campStores[patient.tribe||0];
     if(patient.fullness<=s.config.needs.eatAtOrBelow){
@@ -1132,7 +1457,8 @@ function seasonalStores(s,report){
       continue;
     }
     let racks=store.racks||1;
-    if(store.saved>=24*racks+12*(store.tradeJars||0) && residents.length*4>24*racks+12*(store.tradeJars||0) && spareFresh>0 &&
+    const storageTarget=winterStorageTarget(s,residents,foodCapacity(s));
+    if(store.saved>=24*racks+12*(store.tradeJars||0) && storageTarget>24*racks+12*(store.tradeJars||0) && spareFresh>0 &&
        s.wood>=s.config.settlement.fuelReserve+3){
       s.wood-=3;store.racks=++racks;
       settlementEvent(s,dryer.name+' built another drying rack and food cache at Camp '+(camp+1)+'.');
@@ -1215,14 +1541,17 @@ function work(s, order, report) {
   const dice = c.traits ? order.map(() => traitRoll(s)) : [];
   report.behaviourRolls = dice;
   const resters = [];
+  if(c.learning)for(const v of order)v.motivation=assessNeeds(s,v);
   // One adult can spend the day making equipment while the others work.
-  const settlers=tendDaughter(s,order.filter(v=>!v.herbalist),report);
-  const healer=healerWork(s,order.filter(v=>!settlers.has(v.id)),report);
-  const carers=householdCare(s,order.filter(v=>!settlers.has(v.id)&&v.id!==healer),report);
-  if(healer!=null)carers.add(healer);
+  const visitors=c.learning?neighborWork(s,order,report,{unrelated,readyToInvent}):new Set();
+  const settlers=tendDaughter(s,order.filter(v=>!v.herbalist&&!visitors.has(v.id)),report);
+  const healer=healerWork(s,order.filter(v=>!settlers.has(v.id)&&!visitors.has(v.id)),report);
+  const carers=householdCare(s,order.filter(v=>!settlers.has(v.id)&&!healer.has(v.id)&&!visitors.has(v.id)),report);
+  for(const id of visitors)carers.add(id);
+  for(const id of healer)carers.add(id);
   for(const id of settlers)carers.add(id);
   const adults=c.settlement?order.filter(v=>v.age>=c.life.adult&&!v.illnessDays&&!carers.has(v.id)):[];
-  const stoneCrew = planStandingStones(s, adults, report);
+  const stoneCrew = planStandingStones(s, c.learning?adults.filter(v=>assessNeeds(s,v).level>=3):adults, report);
   campVisits(s,adults,stoneCrew,report);
   report.wildlife=passingWildlife(s);
   planWildlifeHunts(s,report.wildlife,adults,report,stoneCrew);
@@ -1232,7 +1561,7 @@ function work(s, order, report) {
     stoneCrew.add(id);hunter.activity='Watch the deer trail';hunter.gained=0;
     report.actions.push({id,action:hunter.activity,site:report.fieldCamp.site,gained:0});
   }
-  const available=adults.filter(v=>!stoneCrew.has(v.id)&&v.fullness>=40&&v.warmth>=35&&
+  const available=adults.filter(v=>!stoneCrew.has(v.id)&&(!c.learning||assessNeeds(s,v).level>0)&&v.fullness>=40&&v.warmth>=35&&
     !s.villagers.some(child=>child.age<c.life.adult&&child.illnessDays&&child.carers?.includes(v.id)));
   if(s.local&&s.food>=n*2+4&&available.length>=2){
     const guide=available.find(v=>v.rememberedPatch!=null&&
@@ -1254,7 +1583,10 @@ function work(s, order, report) {
   }
   const scouts=available.filter(v=>!stoneCrew.has(v.id)).sort((a,b)=>b.practice.curiosity-a.practice.curiosity);
   const scout=scouts.find(v=>!v.traits.includes('Timid')||scouts.length>=2);
-  if(s.local&&scout&&!report.outing&&(s.local.reaches||0)<explorationSites.length&&s.food>=n*2+4){
+  const needGatheringGround=s.local && s.local.season!=='Winter' && s.food<n &&
+    s.local.deposits.berries<n && !s.local.wildPatches?.some(q=>q>=n);
+  if(s.local&&scout&&!report.outing&&(s.local.reaches||0)<explorationSites.length&&
+     (s.food>=n*2+4 || needGatheringGround && (s.food>=3 || scout.travelMeals>=2))){
     const tracks=s.local.deerTracks;
     const cutTrees=Object.keys(s.local.stumps||{}).filter(id=>{
       const [x,y]=worldTrees(s)[id],home=campSites[scout.tribe||0];
@@ -1262,18 +1594,24 @@ function work(s, order, report) {
     }).length;
     const region=s.local.reaches||0;
     let reason;
-    if(tracks&&s.day-tracks.day<=2&&scout.gear&&Math.abs(campSites[scout.tribe||0][1]-tracks.y)<100)reason='Fresh deer tracks lead beyond our familiar ground.';
+    if(needGatheringGround)reason='There is too little food here. I am looking for another gathering ground.';
+    else if(tracks&&s.day-tracks.day<=2&&scout.gear&&Math.abs(campSites[scout.tribe||0][1]-tracks.y)<100)reason='Fresh deer tracks lead beyond our familiar ground.';
     else if(cutTrees>=3&&s.wood<fuelTarget(s,n)+4)reason='The nearest trees are stumps. I want to look farther for timber.';
     else if(s.local.surplusDays>=3)reason='We have food for the journey. I want to see what grows beyond camp.';
     if(reason){
-      const partner=scout.traits.includes('Timid')?trustedPartner(scout,scouts.filter(v=>v!==scout)):null;
+      const partner=scout.traits.includes('Timid')?trustedPartner(scout,scouts.filter(v=>v!==scout&&(s.food>=3||v.travelMeals>=1))):null;
+      if(scout.traits.includes('Timid')&&!partner)reason=null;
+      if(reason){
       report.outing={members:[scout.id],x:explorationSites[region][0],y:explorationSites[region][1],reason};
+      if(s.food<3)report.outing.packedMeals=true;
       finishOrdinaryWork(s,scout,'explore');doWork(s,scout,'explore',report);stoneCrew.add(scout.id);
       if(partner){
-        report.outing.members.push(partner.id);stoneCrew.add(partner.id);s.food--;
+        report.outing.members.push(partner.id);stoneCrew.add(partner.id);
+        if(report.outing.packedMeals)partner.travelMeals--;else s.food--;
         partner.activity='Scout upriver';partner.gained=0;finishOrdinaryWork(s,partner,'explore');
         report.actions.push({id:partner.id,action:partner.activity,gained:0});
         if(scout.rememberedPatch!=null)partner.rememberedPatch=scout.rememberedPatch;
+      }
       }
     }
   }
@@ -1286,17 +1624,56 @@ function work(s, order, report) {
   const heatTool=!tool?nextHeatTool(s):null;
   const maker=weaponMaker??(tool||heatTool?(adults.find(v=>v.traits.includes('Smart'))??adults[0]):null);
   const observers=[];
-  const trapMakers=adults.filter(v=>!v.fishTrap);
-  const trapMaker=adults.filter(v=>v.fishTrap).length<Math.ceil(n/6)
+  const trapMakers=adults.filter(v=>!hasFishingGear(v));
+  const trapMaker=adults.filter(v=>hasFishingGear(v)).length<Math.ceil(n/6)
     ? trapMakers.find(v=>v.reedBundle)??trapMakers.find(v=>v!==maker)??trapMakers[0] : null;
   const riverSafe=(s.lastUsed.flood===undefined||s.lastUsed.flood<s.day-1)&&!valleySeason(s).frozen;
   const artisans=adults.filter(v=>v!==trapMaker&&v!==maker);
   const potter=artisans.find(v=>v.traits.includes('Smart'))??artisans[0];
   const nextTextile=nextTextileCraft(s,potter?.tribe||0);
+  // A set net is checked at the start of the workday, before individual
+  // spear fishers exhaust the same shallow-water stock. One haul uses one
+  // workday and the same finite deposit; it does not create extra fish.
+  if(c.learning&&riverSafe&&s.food<n*c.work.foodTargetPerPerson&&s.local.deposits.fish>=1){
+    const netFisher=adults.find(v=>!stoneCrew.has(v.id)&&v.practice.gear['fishing net']&&
+      v.warmth>=40&&v.health>=50&&v.practice.energy>=22&&
+      (assessNeeds(s,v).level>0||assessNeeds(s,v).need==='food'));
+    if(netFisher){
+      finishOrdinaryWork(s,netFisher,'fish');doWork(s,netFisher,'fish',report,'net');stoneCrew.add(netFisher.id);
+    }
+  }
   order.forEach((v, i) => {
     if (stoneCrew.has(v.id)||carers.has(v.id)) return;
+    const motive=c.learning?assessNeeds(s,v):null;
+    if(motive)v.motivation=motive;
+    const preparingCold=c.learning&&coldOmen(s,v)&&s.wood<fuelTarget(s)+2;
+    const develop=(!motive||motive.level>=3)&&!preparingCold;
+    if(c.learning && v.outdoors && v.age>=c.life.adult && !v.illnessDays &&
+      !(v.beddingUntil>=s.day) && v.practice.known.gathering && s.local.deposits.wood>=1 &&
+      (v.travelMeals>0 || v.fullness>=35) && motive.level>0){
+      takeDeposit(s,'wood',1);
+      finishOrdinaryWork(s,v,'wood');
+      v.beddingUntil=s.day+5;
+      changeNeed(v,'warmth',c.needs.warmUp,c);
+      v.activity='Gather branches for bedding';v.gained=0;
+      report.actions.push({id:v.id,action:v.activity,gained:0});
+      return;
+    }
+    if(c.learning && v.outdoors && v.warmth<=c.needs.damageAtOrBelow &&
+      (v.travelMeals>0 || s.food<1 && s.local.deposits.berries<1 && !s.local.wildPatches?.some(q=>q>=1))){
+      finishOrdinaryWork(s,v,'warm');doWork(s,v,'warm',report);return;
+    }
     const die = c.traits ? dice[i] : 101;
     let action = chooseAction(s, v, weather, n, die, true);
+    if(c.learning&&motive.level>0&&action!=='warm'&&action!=='rest'&&action!=='wood'&&action!=='hut'){
+      const foodWork=cerealFoodWork(s,v,makePracticeProduct,report);
+      if(foodWork){
+        finishOrdinaryWork(s,v,foodWork==='Grind wheat into flour'?'harvest':'warm');
+        v.activity=foodWork;v.gained=foodWork==='Bake hearth flatbread'?wheatRules.bread:0;
+        report.actions.push({id:v.id,action:foodWork,gained:v.gained,site:foodWork==='Grind wheat into flour'?campSites[v.tribe||0]:[campSites[v.tribe||0][0]+32,campSites[v.tribe||0][1]+18]});
+        return;
+      }
+    }
     if (c.traits) {
       const plain = chooseAction(s, v, weather, n, die, false);
       const trait = creditTrait(s, v, weather, die, action, plain);
@@ -1306,18 +1683,18 @@ function work(s, order, report) {
       }
     }
     if(action==='forage'&&c.hunting&&s.gameAnimals>0&&(v.huntWear||0)<6&&huntingWeapons.includes(v.gear)&&v.age>=c.life.adult&&!v.illnessDays)action='hunt';
-    if(v===maker&&action!=='warm'&&s.food>=n*c.needs.mealCost){
+    if(develop&&v===maker&&!['warm','hut'].includes(action)&&(!c.learning||!['plant','harvest'].includes(action))&&s.food>=n*c.needs.mealCost){
       if(weaponMaker&&s.wood>=c.settlement.fuelReserve+2)action='craft';
       else if(tool&&(tool.wood===0||s.wood>=c.settlement.fuelReserve+tool.wood))action='invent';
       else if(heatTool&&s.wood>=c.settlement.fuelReserve+heatTool.wood&&(heatTool.name!=='burn bowl'||s.fireLit))action='invent heat tool';
     }
-    if(v===trapMaker&&action!=='warm'&&s.food>=n*c.needs.mealCost){
-      if(v.reedBundle)action='trap';
+    if(develop&&v===trapMaker&&!['warm','hut'].includes(action)&&(!c.learning||!['plant','harvest'].includes(action))&&s.food>=n*c.needs.mealCost){
+      if(v.reedBundle&&(!c.learning||v.practice.known.fishtraps&&readyToInvent(s,'fish trap')&&s.wood>=1&&s.local.stock.fibre>=2))action='trap';
       else if(riverSafe)action='reeds';
     }
-    if(v.fishTrap&&adults.includes(v)&&riverSafe&&['forage','hunt'].includes(action))action='fish';
+    if(hasFishingGear(v)&&adults.includes(v)&&riverSafe&&['forage','hunt'].includes(action))action='fish';
     const workshop=s.pottery;
-    if(v===potter&&(!c.learning||v.practice.known.shaping)&&workshop&&s.food>=n*c.needs.mealCost*2&&action!=='warm'&&(!workshop.kiln||workshop.jars<Math.ceil(n/4)+1)){
+    if(develop&&v===potter&&(!c.learning||v.practice.known.shaping)&&workshop&&s.food>=n*c.needs.mealCost*2&&!['warm','hut'].includes(action)&&(!c.learning||!['plant','harvest'].includes(action))&&(!workshop.kiln||workshop.jars<Math.ceil(n/4)+1)){
       const fuel=s.wood-c.settlement.fuelReserve;
       if(workshop.jars&&!workshop.kiln){
         if(workshop.clay<2&&riverSafe)action='Gather clay';
@@ -1327,36 +1704,49 @@ function work(s, order, report) {
       }else if(workshop.clay)action='Shape jar';
       else if(riverSafe)action='Gather clay';
     }
-    if(nextTextile&&s.pottery&&v===potter&&['rest','forage','wood','hunt'].includes(action)&&s.food>=n*c.needs.mealCost*2){
+    if(develop&&nextTextile&&s.pottery&&v===potter&&['rest','forage','wood','hunt'].includes(action)&&s.food>=n*c.needs.mealCost*2){
       if((s.fibre||0)<2){if(riverSafe)action='Gather fibre';}
       else if(nextTextile!=='loom'||s.wood>=c.settlement.fuelReserve+2)action='weave';
     }
     const weaving=['weave','Gather fibre'].includes(action);
     const prefersHousing=weaving&&craftPreference(s,v.tribe||0,'housing before textiles')>.5;
-    if(v===potter&&(prefersHousing||['rest','wood','forage','hunt'].includes(action))&&nextHutImprovement(s,v.tribe||0)&&s.food>=n*c.needs.mealCost*2&&s.wood>=c.settlement.fuelReserve+2)action='improve hut';
+    if(develop&&v===potter&&(prefersHousing||['rest','wood','forage','hunt'].includes(action))&&nextHutImprovement(s,v.tribe||0)&&s.food>=n*c.needs.mealCost*2&&s.wood>=c.settlement.fuelReserve+2)action='improve hut';
     if(c.learning){
-      if(v===pioneer&&s.food>=n*2+2){
+      if(develop&&v===pioneer&&s.food>=n*2+2){
         let outing;
         if(s.local.season!=='Winter'&&!s.farming.known&&!s.local.seedTrial&&s.local.seedFinds>=3)outing='seed trial';
         if(outing){finishOrdinaryWork(s,v,outing);doWork(s,v,outing,report);return;}
       }
       if(v.age>=4&&v.age<c.life.adult&&!v.practice.lessonToday&&v.fullness>=45&&v.warmth>=45&&!v.illnessDays&&v.practice.energy>=32&&s.food>=n*2){observers.push(v);return;}
       if(action==='fish'&&s.local.deposits.fish<1)action='forage';
-      const chosen=practiceWork(s,v,die);
-      if(chosen){v.activity=chosen;v.gained=0;report.actions.push({id:v.id,action:chosen,gained:0});return;}
-      if(v.fullness<=28)action='forage';
-      if(v.practice.energy<22&&v.fullness>28)action='rest';
+      const essential=motive.level<2||action==='warm'||action==='harvest'||action==='plant'&&!v.practice.lessonToday&&!cerealStudyReady(s,v)||action==='hut'&&(s.hutProject||shouldPlanHut(s))||preparingCold&&action==='wood'||
+        action==='wood'&&s.wood<(s.tribeCount||1)*c.fire.dailyFuel;
+      const chosen=essential?null:practiceWork(s,v,die,report);
+      if(chosen){
+        const ritual=report.magic?.find(r=>r.id===v.id),site=chosen==='Work ground bone into soil'?[680,539]:chosen==='Make saddle quern'?[campSites[v.tribe||0][0]-25,campSites[v.tribe||0][1]+25]:ritual?.spell==='hearthcharms'?campSites[v.tribe||0]:
+          chosen==='Collect a grinding stone'?materialSites.quernStone.site:ritual?.spell==='storewards'?[310,168]:v.herbalist?.home;
+        v.activity=chosen;v.gained=0;
+        report.actions.push({id:v.id,action:chosen,gained:0,...(site?{site}:{}),...(ritual?.targetId!=null?{patient:ritual.targetId}:{})});return;
+      }
+      if(v.fullness<=28&&motive.need==='food'&&action!=='harvest')action='forage';
+      if(v.practice.energy<22&&motive.need!=='food'&&action!=='warm')action='rest';
       if((action==='reeds'||action==='Gather fibre')&&s.local.deposits.fibre<1)action='forage';
       if(action==='Gather clay'&&s.local.deposits.clay<1)action='forage';
       if(action==='wood'&&s.local.deposits.wood<1&&!s.toolkit?.includes('hand axe')&&!v.practice.gear['hafted tool'])action='forage';
-      if(action==='forage'&&s.local.deposits.berries<1&&!s.local.wildPatches?.some(q=>q>=1))action=v.fishTrap&&riverSafe&&s.local.deposits.fish>=1?'fish':s.gameAnimals>0&&(v.huntWear||0)<6&&huntingWeapons.includes(v.gear)?'hunt':'rest';
+      if(action==='forage'&&s.local.deposits.berries<1&&!s.local.wildPatches?.some(q=>q>=1)){
+        action=hasFishingGear(v)&&riverSafe&&s.local.deposits.fish>=1?'fish':
+          s.gameAnimals>0&&(v.huntWear||0)<6&&huntingWeapons.includes(v.gear)?'hunt':
+          v.warmth<c.needs.warmUpBelow?'warm':
+          s.wood<fuelTarget(s,n)&&s.local.deposits.wood>=1?'wood':'rest';
+      }
       finishOrdinaryWork(s,v,action);
     }
     doWork(s, v, action, report);
     if (action === 'rest') resters.push(v);
   });
   for(const child of observers){
-    const skillByJob={Fish:'fish',Forage:'berries','Gather wood':'wood','Experiment with stone':'stone','Craft hammer stone':'stone','Craft stone blades':'stone','Make cutting tool':'stone'};
+    const skillByJob={Fish:'fish',Forage:'berries','Gather wood':'wood','Experiment with stone':'stone','Craft hammer stone':'stone','Craft stone blades':'stone','Make cutting tool':'stone',
+      'Make saddle quern':'stone','Shape a grinding stone':'stone','Grind wheat into flour':'stone','Bake hearth flatbread':'berries','Sow wheat':'berries','Harvest wheat':'berries'};
     const mentors=adults.filter(v=>(child.tribe||0)===(v.tribe||0)&&skillByJob[v.activity]);
     const mentor=mentors.find(v=>v.activity==='Fish')||mentors[(s.day+child.id)%mentors.length];
     if(!mentor){finishOrdinaryWork(s,child,'rest');doWork(s,child,'rest',report);resters.push(child);continue;}
@@ -1371,6 +1761,11 @@ function work(s, order, report) {
   // Rest happiness for everyone comes after all actions are chosen.
   const together = resters.length >= 2;
   for (const v of resters) {
+    if(c.learning){
+      const peer=resters.find(p=>p!==v&&(p.tribe||0)===(v.tribe||0));
+      if(peer){v.lastCompanyDay=s.day;rememberHelp(v,peer);}
+      else if(v.traits.includes('Loner'))v.lastCompanyDay=s.day;
+    }
     let gain = c.needs.restHappiness;
     if (hasTrait(s, v, 'Sociable')) {
       gain = together ? P.restTogether : P.restAlone;
@@ -1402,6 +1797,12 @@ export function mealPlan(order, threshold, fullness, food, generousOk) {
 // Meals: Grabby Gourdlings first (in rotation order), then everyone else.
 function meals(s, order, report) {
   const c = s.config, N = c.needs, P = c.personality, grabby = v => hasTrait(s, v, 'Grabby');
+  if(c.learning){
+    for(const v of order.filter(v=>v.campJourney))if(v.fullness<=N.eatAtOrBelow&&v.travelMeals>=N.mealCost){
+      v.travelMeals-=N.mealCost;changeNeed(v,'fullness',N.mealFullness,c);report.meals.push(v.id);
+    }
+    order=order.filter(v=>!v.campJourney);
+  }
   const post=s.local?.daughter;
   if(post?.members.length){
     for(const v of order.filter(v=>post.members.includes(v.id))){
@@ -1419,9 +1820,20 @@ function meals(s, order, report) {
     ...order.filter(v=>!grabby(v)&&v.outdoors)].map(v => v.id);
   const threshold = Object.fromEntries(order.map(v => [v.id, grabby(v) ? P.grabbyEatAtOrBelow : N.eatAtOrBelow]));
   const foodBefore = s.food;
-  const { fed, gave } = mealPlan(mealOrder, threshold, fullness, s.food, generousOk);
+  const localFed=[];
+  if(c.learning){
+    let shortfall=Math.max(0,mealOrder.filter(id=>fullness[id]<=threshold[id]).length-s.food);
+    for(const id of mealOrder){
+      const v=byId[id],store=s.local.campStores[v.tribe||0];
+      if(shortfall<=0)break;
+      if(fullness[id]>threshold[id]||!store?.saved)continue;
+      store.saved--;changeNeed(v,'fullness',N.mealFullness,c);localFed.push(id);report.meals.push(id);shortfall--;
+    }
+  }
+  const sharedOrder=mealOrder.filter(id=>!localFed.includes(id));
+  const plan=mealPlan(sharedOrder,threshold,fullness,s.food,generousOk),fed=[...localFed,...plan.fed],gave=plan.gave;
   for (const id of gave) traitEvent(s, report, byId[id], 'Generous', t('traitLog.Generous', {name:byId[id].name}));
-  for (const id of fed) {
+  for (const id of plan.fed) {
     const v = byId[id];
     s.food -= N.mealCost; if(s.bankFood)s.bankFood=Math.min(s.bankFood,s.food); changeNeed(v, 'fullness', N.mealFullness, c); report.meals.push(id);
     // Eating early is counted, never logged (design: Grabby line rule).
@@ -1436,14 +1848,17 @@ function meals(s, order, report) {
     // Re-run the meal with every Grabby treated as normal (rotation order, eats
     // at 75 or below). Anyone fed there who went without here is named.
     const normal = Object.fromEntries(order.map(v => [v.id, N.eatAtOrBelow]));
-    const counterfactual = mealPlan(order.map(v => v.id), normal, fullness, foodBefore, generousOk).fed;
-    const grabbyEaters = fed.filter(id => grabby(byId[id]));
+    const counterfactual = mealPlan(order.map(v => v.id).filter(id=>!localFed.includes(id)), normal, fullness, foodBefore, generousOk).fed;
+    const grabbyEaters = plan.fed.filter(id => grabby(byId[id]));
     for (const id of counterfactual) if (!fed.includes(id) && grabbyEaters.length && !grabbyEaters.includes(id)) {
       const g = byId[grabbyEaters[0]];
       traitEvent(s, report, g, 'Grabby-others-went-without', t('traitLog.grabbyOthers', {name:g.name,other:byId[id].name}));
     }
   }
   if(s.local)for(const v of order){
+    if(v.travelMeals>0 && v.fullness<=N.eatAtOrBelow && !report.meals.includes(v.id)){
+      v.travelMeals--;changeNeed(v,'fullness',N.mealFullness,c);report.meals.push(v.id);
+    }
     if(v.fullness<35&&!report.meals.includes(v.id)){
       s.local.campStores[v.tribe||0].lastHungryDay=s.day;
     }
@@ -1489,32 +1904,37 @@ function resolveLivesAndDiscovery(s, report) {
   }
   const eligibleAdults = s.villagers.filter(v => adult(v, c) && v.health >= c.birth.health
     && v.fullness >= c.birth.fullness && v.warmth >= c.birth.warmth && v.happiness >= c.birth.happiness
-    && (!c.birth.healthyParentsOnly || !v.illnessDays));
+    && (!c.birth.healthyParentsOnly || !v.illnessDays)&&(!c.learning||!v.campJourney));
   const daughter=s.local?.daughter;
   const easternParents=eligibleAdults.filter(v=>daughter?.members.includes(v.id));
-  function parentsAmong(group){
-    for(const mother of group.filter(v=>v.gender==='female'&&!(v.recoveryUntil>s.day))){
-      const father=group.find(v=>v.gender==='male'&&(v.tribe||0)===(mother.tribe||0)&&
-        !mother.parents?.includes(v.id)&&!v.parents?.includes(mother.id)&&
-        !v.parents?.some(id=>mother.parents?.includes(id)));
-      if(father)return [mother,father];
+  function parentsAmong(group,requireFood=false,neighbors=[]){
+    // Spread families across eligible adults instead of always choosing the
+    // first father, which can leave the next generation entirely half-siblings.
+    const children=v=>v.childrenBorn??s.villagers.filter(child=>child.parents?.includes(v.id)).length;
+    const fewest=group.slice().sort((a,b)=>children(a)-children(b)||a.id-b.id);
+    const fathers=[...group,...neighbors].sort((a,b)=>children(a)-children(b)||a.id-b.id);
+    for(const mother of fewest.filter(v=>v.gender==='female'&&!(v.recoveryUntil>s.day))){
+      const father=fathers.find(v=>v.gender==='male'&&(c.learning?communityOf(s,v)===communityOf(s,mother)||recentVillagePartner(s,mother,v):(v.tribe||0)===(mother.tribe||0))&&unrelated(mother,v));
+      if(father&&(!requireFood||familyFoodReady(s,mother)&&familyFoodStable(s,mother)))return [mother,father];
     }
     return [];
   }
-  const easternPair=parentsAmong(easternParents);
   const homeAdults=eligibleAdults.filter(v=>!daughter?.members.includes(v.id));
-  const homePair=parentsAmong(homeAdults);
+  const easternPair=parentsAmong(easternParents,false,c.learning?homeAdults:[]);
+  const homePair=parentsAmong(homeAdults,false,c.learning?easternParents:[]);
+  const readyHomePair=c.learning?parentsAmong(homeAdults,true,easternParents):homePair;
   const easternBirth=daughter?.settled&&easternPair.length===2&&
-    daughter.food>=c.birth.foodPerPerson*(daughter.members.length+1)+c.birth.extraFood;
+    daughter.food>=c.birth.foodPerPerson*(daughter.members.length+1)+c.birth.extraFood&&(!c.learning||familyFoodStable(s,easternPair[0]));
   const birthEligible = s.villagers.length < populationCap(s)
-    && s.food >= c.birth.foodPerPerson * s.villagers.length + c.birth.extraFood
+    && (c.learning?readyHomePair.length===2||easternBirth:s.food >= c.birth.foodPerPerson * s.villagers.length + c.birth.extraFood)
     && (c.birth.healthyParentsOnly || !s.villagers.some(v => v.illnessDays > 0))
     && ((c.settlement?homePair.length===2:homeAdults.length>=c.birth.adults)||easternBirth);
   s.birthCounter = birthEligible ? s.birthCounter + 1 : 0;
   if(s.local){
     const limits=[];
     if(s.villagers.length>=populationCap(s))limits.push('population cap reached');
-    if(s.food<c.birth.foodPerPerson*s.villagers.length+c.birth.extraFood)limits.push('too little stored food');
+    if(c.learning?(homePair.length>0||easternPair.length>0)&&!readyHomePair.length&&!easternBirth:s.food<c.birth.foodPerPerson*s.villagers.length+c.birth.extraFood)
+      limits.push(c.learning&&[...homePair,...easternPair].some(v=>v.gender==='female'&&familyFoodReady(s,v))?'waiting for a sustained food surplus':'too little stored food');
     if(!homePair.length&&!easternBirth)limits.push('no eligible pair ready');
     if(!c.birth.healthyParentsOnly&&s.villagers.some(v=>v.illnessDays>0))limits.push('illness in the village');
     s.local.birthConditions=limits.length?limits.join('; '):'conditions met ('+s.birthCounter+'/'+c.birth.consecutiveDays+' consecutive days)';
@@ -1524,15 +1944,20 @@ function resolveLivesAndDiscovery(s, report) {
     const child = villager(id, t('labels.newbornName', {id}), 0, c.newborn, c);
     assignIdentity(s,child);
     if(c.settlement){
-      const [mother,father]=easternBirth?easternPair:homePair;
+      const [mother,father]=easternBirth?easternPair:readyHomePair;
       child.parents=[mother.id,father.id];
       child.parentNames=[mother.name,father.name];
+      if(c.learning){
+        const origins=crossVillageParents(mother,father);
+        if(origins){child.parentCommunities=origins;report.crossVillageBirth=true;s.local.communication??={};s.local.communication.crossVillageBirths=(s.local.communication.crossVillageBirths||0)+1;rememberFamilyVisit(s,mother,father);}
+      }
       child.carers=[mother.id,father.id];child.tribe=mother.tribe||0;child.household=mother.household;
+      for(const parent of [mother,father])parent.childrenBorn=
+        (parent.childrenBorn??s.villagers.filter(v=>v.parents?.includes(parent.id)).length)+1;
       mother.recoveryUntil=s.day+7;
     }
     if(easternBirth){
       child.household=daughter.household;daughter.members.push(id);
-      settlementEvent(s,child.name+' was born in the eastern village.');
     }
     if(c.learning)initPractice(s,child);
     // Newborns are not in today's work/meal/age/timer loop.
@@ -1580,7 +2005,7 @@ function resolveLivesAndDiscovery(s, report) {
     log(s, t('log.shedPaid', {wood:c.shed.wood,places:c.shed.places}), 'discovery');
   }
   if(s.local)s.local.surplusDays=s.local.harvests>0&&s.food>=n*2+2?(s.local.surplusDays||0)+1:0;
-  s.farming.plots = s.farming.plots.map(x => x === null || x >= F.ripeAt ? x : Math.min(F.ripeAt, Math.max(0, x + growth)));
+  s.farming.plots = s.farming.plots.map((x,i) => x === null || x >= cropRipeAt(s,i) ? x : Math.min(cropRipeAt(s,i), Math.max(0, x + growth)));
 }
 
 // Explicit one-day tick. Useful for tests and the optional "Next day" button,
@@ -1606,6 +2031,7 @@ export function stepDay(previous) {
   }
   for (const v of s.villagers) { v.reaction = ''; v.gained = 0; }
   // 1. Apply exactly one queued command.
+  if(c.learning)report.foodAtDawn=foodLedger(s);
   applyQueued(s, report);
   // 2. Today's conditions: command weather, else last night's natural roll;
   // then last night's natural illness roll; then Bonfire fuel.
@@ -1652,8 +2078,8 @@ export function stepDay(previous) {
       +Number(v.age<c.life.adult)*2+Number(v.outdoors===false);
     bedOrder=[...order].sort((a,b)=>priority(b)-priority(a));
   }
-  const shelteredIds = new Set(bedOrder.filter(v=>!v.herbalist).slice(0,beds).map(v=>v.id));
-  for(const v of order)if(v.herbalist)shelteredIds.add(v.id);
+  const shelteredIds = new Set(bedOrder.filter(v=>!v.herbalist?.home).slice(0,beds).map(v=>v.id));
+  for(const v of order)if(v.herbalist?.home)shelteredIds.add(v.id);
   if(c.settlement)for(const v of order)v.outdoors=!shelteredIds.has(v.id);
   // 3. Lower everyone's needs, then recheck stocks after EACH person's one action.
   for (const v of order) {
@@ -1666,10 +2092,13 @@ export function stepDay(previous) {
       : report.weather === 'cold' ? (hasTrait(s, v, 'Hardy') ? P.hardyColdLoss : c.needs.coldWarmthLoss + shivery) : 0;
     const household=c.settlement?s.hutDetails?.[sleepingHut(s,v)]:null;
     const eastern=s.local?.daughter?.members.includes(v.id);
-    const localFire=v.herbalist?false:eastern?s.local.daughter.wood>0:campFireLit(s,v.tribe);
+    const visiting=v.campJourney?.to;
+    const localFire=v.herbalist?.home?false:visiting==='east'?s.local.daughter?.wood>0:
+      visiting!==undefined?campFireLit(s,visiting):eastern?s.local.daughter.wood>0:campFireLit(s,v.tribe);
     const heated=localFire&&household?(household.ondol?6:household.chimney?2:0):0;
     const shelterBonus=(c.settlement&&s.settlementWork>=c.settlement.shelterWork?c.settlement.shelterBonus:0)+heated;
-    changeNeed(v, 'warmth', -c.needs.warmthLoss - weatherLoss + (s.textiles?.includes('loom')?2:0) + (shelteredIds.has(v.id)?shelterBonus:0)
+    const bedding=v.outdoors && v.beddingUntil>=s.day ? c.needs.shelterWarmth : 0;
+    changeNeed(v, 'warmth', -c.needs.warmthLoss - weatherLoss + bedding + (s.textiles?.includes('loom')?2:0) + (shelteredIds.has(v.id)?shelterBonus:0)
       + (shelteredIds.has(v.id) ? c.needs.shelterWarmth : 0) + (localFire ? c.needs.fireWarmth : 0), c);
   }
   if(c.hunting){
@@ -1679,6 +2108,8 @@ export function stepDay(previous) {
   if(c.learning){beginSettlementDay(s);planLessons(s,order);}
   work(s, order, report);
   if(s.local){
+    completeMagicLessons(s,report);
+    completeCerealLessons(s,report);
     seasonalStores(s,report);
     wearCampPaths(s,report);
     weeklyWork(s,report);
@@ -1688,6 +2119,7 @@ export function stepDay(previous) {
   meals(s, order, report);
   if(s.local)s.local.inventions=inventionProgress(s).known;
   for (const v of order) resolveNeeds(s, v, shelteredIds.has(v.id), report);
+  if(c.learning)recordFoodBalance(s,report);
   // 5. Age, deaths, birth, then natural fire discovery.
   resolveLivesAndDiscovery(s, report);
   if(s.local){
@@ -1715,7 +2147,13 @@ export function stepDay(previous) {
       }
     }
     for(const id of lost)settlementEvent(s,'The last practitioner of '+id+' died.');
-    if(report.birth)settlementEvent(s,s.villagers.find(v=>v.id===report.birth).name+' was born.');
+    if(report.birth!=null){
+      const child=s.villagers.find(v=>v.id===report.birth),eastern=s.local.daughter?.members.includes(child.id);
+      const text=child.name+' was born'+(child.parentNames?.length?' to '+child.parentNames.join(' and '):'')+
+        (eastern?' in the eastern village':'')+'.';
+      const entry={day:s.day,type:'birth',id:child.id,name:child.name,parentNames:[...(child.parentNames||[])],text};
+      s.local.birthHistory.push(entry);settlementEvent(s,text);Object.assign(s.local.events.at(-1),entry);
+    }
   }
   if(c.tribeThresholds&&s.villagers.length){
     const count=s.tribeCount||1;
@@ -1742,8 +2180,10 @@ export function stepDay(previous) {
         s.tribeCount=count+1;
         log(s,founders.map(v=>v.name).join(' and ')+' founded a new camp together.','discovery');
       }
-    }else if(count>1){
+    }else if(count>1&&!c.learning){
       let mover=null,destination=0,gain=.99;
+      // Live homesteads move through paid neighbor visits. Preserve the
+      // original personality migration for reference-rule replays only.
       for(const v of s.villagers){
         const from=v.tribe||0;
         if(v.age<c.life.adult||adultsByCamp[from].length<=2)continue;
@@ -1768,6 +2208,7 @@ export function stepDay(previous) {
   if (s.weather.daysLeft > 0 && --s.weather.daysLeft === 0) s.weather.type = 'normal';
   for (const v of s.villagers) if (v.illnessDays > 0) v.illnessDays -= 1;
   rollNight(s); // Tomorrow's weather, illness and who falls ill.
+  finishDivinations(s,tomorrowWeather(s));
   log(s, t(c.power ? 'log.day' : 'log.homesteadDay', {food:report.gatheredFood,wood:report.gatheredWood,meals:report.meals.length,
     fire:s.fireKnown ? (s.fireLit?t('log.fireLit',{wood:report.burnedWood}):t('log.fireOut')):t('log.fireUnknown'),
     power:powerGain,cap:c.limits.power}));

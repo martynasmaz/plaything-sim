@@ -4,6 +4,18 @@ import {createState,stepDay,castText,advanceTime,shelterPlaces} from '../src/sim
 import {HOMESTEAD_RULES} from '../src/config.js';
 import {beginSettlementDay,canExperiment,practiceWork,planLessons,practices,takeDeposit} from '../src/practices.js';
 const fresh=()=>createState(HOMESTEAD_RULES,4);
+test('counted spawn commands add the full population even with every bed occupied',()=>{
+  const crowded=castText(fresh(),'spawn people 12').state;
+  assert.ok(crowded.villagers.length>shelterPlaces(crowded));
+  for(const phrase of ['spawn people 100','spawn 100 people','please spawn people 100!','call settlers 100']){
+    const result=castText(crowded,phrase);
+    assert.equal(result.ok,true,phrase);
+    assert.equal(result.state.villagers.length,crowded.villagers.length+100,phrase);
+  }
+  for(const phrase of ['spawn people lots','spawn -5 people','spawn 2.5 people','spawn 10 or 20 people']){
+    assert.equal(castText(crowded,phrase).ok,false,phrase);
+  }
+});
 test('basket experiments require experience, knowledge, usable materials, and spare energy',()=>{
   const s=fresh(),v=s.villagers[0],p=v.practice,r=practices.baskets;
   p.properties=['flexible'];p.lastSkill='berries';p.limitedTrips=2;

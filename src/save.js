@@ -3,7 +3,7 @@ import {initSettlement} from './practices.js';
 // browser's local storage, written at every day end and whenever the queued
 // command changes, and the "begin anew" fresh start. No rules live here: a
 // loaded run continues exactly as it would have without the reload.
-import { createState, assignIdentity, findHomesteadHealer } from './sim.js';
+import { createState, assignIdentity } from './sim.js';
 import { cleanWords } from './commands.js';
 
 // Not saved: the config (rebuilt from src/config.js), the previous day's report,
@@ -20,7 +20,7 @@ export function serialize(s) {
   const run = {};
   for (const [key, value] of Object.entries(s)) if (!NOT_SAVED.has(key)) run[key] = value;
   if(s.meteors?.length)run.elapsedMs=s.elapsedMs;
-  return JSON.stringify({ version: s.config.save.version, run });
+  return JSON.stringify({ version: s.config.save.version, dayMs:s.config.dayMs, run });
 }
 
 // Returns a playable state, or null when the text is missing, unreadable or
@@ -46,7 +46,18 @@ export function deserialize(text, overrides = {}) {
   const need = ['id', 'age', 'fullness', 'warmth', 'health', 'happiness', 'safety'];
   if (!run.villagers.every(v => v && need.every(k => Number.isFinite(v[k])))) return null;
   const s = { ...fresh, ...structuredClone(run), config: fresh.config, lastDay: null, elapsedMs: 0 };
-  if(s.meteors?.length&&Number.isFinite(run.elapsedMs)&&run.elapsedMs>=0&&run.elapsedMs<s.config.dayMs)s.elapsedMs=run.elapsedMs;
+  // Older homesteads used two-minute days. Keep saved discoveries, the phase
+  // of an active meteor, and remaining fire timers when playback gets slower.
+  const oldDayMs=Number.isFinite(data.dayMs)&&data.dayMs>0?data.dayMs:
+    fresh.config.learning&&run.local?120000:fresh.config.dayMs;
+  const oldElapsed=s.meteors?.length&&Number.isFinite(run.elapsedMs)&&run.elapsedMs>=0&&run.elapsedMs<oldDayMs?run.elapsedMs:0;
+  s.elapsedMs=oldElapsed*s.config.dayMs/oldDayMs;
+  if(oldDayMs!==s.config.dayMs){
+    const shift=s.day*(s.config.dayMs-oldDayMs)+s.elapsedMs-oldElapsed;
+    for(const key of Object.keys(s.castAt||{}))if(Number.isFinite(s.castAt[key]))s.castAt[key]+=shift;
+    for(const meteor of s.meteors||[])if(Number.isFinite(meteor.time))meteor.time+=shift;
+    for(const fire of s.hutFires||[])for(const key of ['start','end'])if(Number.isFinite(fire[key]))fire[key]+=shift;
+  }
   if (!fresh.config.power) delete s.power; // Migrate saves from before free casting.
   for(const person of s.villagers){
     assignIdentity(s,person);
@@ -60,7 +71,6 @@ export function deserialize(text, overrides = {}) {
     s.local.seasonOffset=Math.floor(elapsed*s.config.learning.seasonLength/10)-elapsed;
   }
   initSettlement(s);
-  findHomesteadHealer(s);
   s.speed = 0;
   return s;
 }
