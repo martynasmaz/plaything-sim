@@ -23,8 +23,8 @@ import {drawGranary,drawBridgeImprovements} from './settlement-view.js';
 import {drawRockRecord} from './paintings-view.js';
 import {paintingSite} from './paintings.js';
 import {fieldSite} from './development.js';
-import {villageLivestock,livestockKinds,livestockWinterNeed,livestockBuildingRules} from './husbandry.js';
-import {drawLivestockPen,drawLivestockAnimal,drawFodderBundle,livestockPosition} from './husbandry-view.js';
+import {villageLivestock,livestockWinterNeed,livestockBuildingRules} from './husbandry.js';
+import {drawLivestockPen,drawLivestockAnimal,drawFodderBundle,livestockLayout,livestockAppearance} from './husbandry-view.js';
 
 function ellipse(ctx,x,y,rx,ry,fill){
   ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,2*Math.PI);ctx.fillStyle=fill;ctx.fill();
@@ -814,25 +814,30 @@ export function createClearing(host,getState,{onRiverFall}={}){
     livestockHits.clear();
     const husbandry=s.local?.husbandry;
     if(husbandry){
+      const keepers=new Map();
+      if(hour>=7&&hour<18)for(const person of s.villagers){
+        const keeper=people.get(person.id);
+        if(keeper&&!keeper.swept&&person.activity==='Tend livestock and lead grazing')keepers.set(person.id,[keeper.x*1000/fieldWidth,keeper.y*640/fieldHeight]);
+      }
+      const stockPositions=livestockLayout(s,{width:fieldWidth,height:fieldHeight,phase:clock,keepers});
       for(const pen of husbandry.pens){
         const [x,y]=point(...pen.site),scale=fieldWidth/1000;
         layers.push({y:y-24*scale,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);drawLivestockPen(ctx,pen);ctx.restore();}});
         layers.push({y:y+24*scale,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);drawLivestockPen(ctx,pen,{front:true});ctx.restore();}});
       }
       for(const animal of villageLivestock(s)){
-        const keeper=people.get(animal.keeperId),person=s.villagers.find(v=>v.id===animal.keeperId);
-        const leading=hour>=7&&hour<18&&keeper&&!keeper.swept&&person?.activity==='Tend livestock and lead grazing'?[keeper.x*1000/fieldWidth,keeper.y*640/fieldHeight]:null;
-        const site=livestockPosition(s,animal,clock,leading);if(!site)continue;
+        const site=stockPositions.get(animal.id);if(!site)continue;
         const [x,y]=point(...site);livestockHits.set(animal.id,[x,y]);
-        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);drawLivestockAnimal(ctx,animal,{scale:fieldWidth/1000,phase:clock,young:animal.age<livestockKinds[animal.species].adult*4*s.config.learning.seasonLength,grazing:Math.sin(clock*.3+animal.id)>.2,direction:animal.id%2?1:-1});ctx.restore();}});
+        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);drawLivestockAnimal(ctx,animal,{...livestockAppearance(s,animal),phase:clock,grazing:Math.sin(clock*.3+animal.id)>.2,direction:animal.id%2?1:-1});ctx.restore();}});
       }
       for(const batch of [...husbandry.batches,...husbandry.compost]){
         const [x,y]=point(batch.site[0]+(batch.dryDays!==undefined?35:0),batch.site[1]+8);
         layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(fieldWidth/1000,fieldWidth/1000);drawFodderBundle(ctx,0,0,{compost:batch.readyDay!==undefined});ctx.restore();}});
       }
-      if(husbandry.contacts.herders)for(const [i,animal] of husbandry.animals.filter(a=>a.location==='regional'&&a.status==='alive').entries()){
-        const [x,y]=point(husbandry.regional.site[0]-32+i%5*17,husbandry.regional.site[1]+Math.floor(i/5)*13);
-        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);drawLivestockAnimal(ctx,animal,{scale:fieldWidth/1000,phase:clock,grazing:true});ctx.restore();}});
+      if(husbandry.contacts.herders)for(const animal of husbandry.animals.filter(a=>a.location==='regional'&&a.status==='alive')){
+        const site=stockPositions.get(animal.id);if(!site)continue;
+        const [x,y]=point(...site);
+        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);drawLivestockAnimal(ctx,animal,{...livestockAppearance(s,animal),phase:clock,grazing:Math.sin(clock*.3+animal.id)>.2,direction:animal.id%2?1:-1});ctx.restore();}});
       }
     }
     for(const [camp,store] of Object.entries(s.local?.campStores||{})){

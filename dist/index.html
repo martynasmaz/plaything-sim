@@ -8482,23 +8482,84 @@ function drawRockRecord(g,x,y,record){
 
 function stockOval(g,x,y,rx,ry,color){g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fillStyle=color;g.fill();}
 function stockLine(g,x,y,a,b,color,width=2){g.beginPath();g.moveTo(x,y);g.lineTo(a,b);g.strokeStyle=color;g.lineWidth=width;g.stroke();}
-function livestockPosition(s,animal,phase=0,keeper=null){
-  const pen=livestockPen(s,animal.camp??s.local.husbandry.pens.find(p=>p.id===animal.penId)?.camp);if(!pen)return null;
-  const year=4*s.config.learning.seasonLength,young=animal.age<livestockKinds[animal.species].adult*year;
-  const mother=young?villageLivestock(s).find(a=>a.id===animal.motherId):null;
-  const id=mother?.id??animal.id,slot=villageLivestock(s).filter(a=>a.penId===pen.id&&!a.motherId).findIndex(a=>a.id===id);
-  const index=slot>=0?slot:id%12;
-  let x=pen.site[0]-24+(index%4)*16+Math.sin(phase*.45+id*2.3)*2;
-  let y=pen.site[1]-7+Math.floor(index/4)*9+Math.cos(phase*.4+id)*1.5;
-  if(keeper&&pen.careDay===s.day&&Math.hypot(keeper[0]-pen.site[0],keeper[1]-pen.site[1])<80){
-    x=keeper[0]-12-(index%4)*9;y=keeper[1]+Math.floor(index/4)*8;
-  }
-  if(mother){x+=5+(animal.id%2)*4;y+=5;}
-  if(riverHabitat(x,y).water)return [pen.site[0]+index%4*6,pen.site[1]+index%3*5];
-  return [x,y];
+function livestockAppearance(s,animal){
+  const growth=Math.max(0,Math.min(1,animal.age/(livestockKinds[animal.species].adult*4*s.config.learning.seasonLength)));
+  return {young:growth<1,growthScale:.58+.42*growth};
 }
-function drawLivestockAnimal(g,animal,{scale=1,phase=0,young=false,direction=1,grazing=false}={}){
-  g.save();g.scale(scale*(young?.58:1)*direction,scale*(young?.58:1));g.lineCap='round';
+function stockNoise(seed,id,salt){
+  let n=Math.imul(seed^Math.imul(id+1,374761393)^Math.imul(salt+1,668265263),1274126177);
+  return ((n^(n>>>16))>>>0)/4294967296;
+}
+// Positions use map coordinates, but spacing uses the same drawing units as a
+// villager. Viewport width must never enlarge an animal relative to a person.
+// This is a pure visual layout: no animal, terrain or simulation dice are changed.
+function livestockLayout(s,{width=1000,height=640,phase=0,keepers=new Map()}={}){
+  const h=s.local?.husbandry,result=new Map();if(!h)return result;
+  const sx=width/1000,sy=height/640,flood=s.lastUsed.flood===s.day;
+  const trees=worldTrees(s).filter((_,id)=>s.local.stumps?.[id]===undefined);
+  const buildings=buildingPatches(s,campSites).filter(p=>p.kind!=='pen');
+  const groups=h.pens.map(p=>({pen:p,site:p.site,animals:villageLivestock(s).filter(a=>a.penId===p.id)}));
+  if(h.contacts.herders)groups.push({site:h.regional.site,animals:h.animals.filter(a=>a.location==='regional'&&a.status==='alive')});
+  for(const {pen,site,animals} of groups){
+    const placed=[],nearTrees=trees.filter(t=>Math.abs(t[0]-site[0])<150&&Math.abs(t[1]-site[1])<100);
+    const safe=(x,y,rx,ry)=>!Object.values(riverWaterAt(x,y,width,height,flood,s.local.terrain==='kaunas',-rx-3)).some(Boolean)&&
+      !nearTrees.some(t=>Math.abs(x-t[0]*sx)<rx+5*t[2]+3&&Math.abs(y-t[1]*sy)<ry+7)&&
+      !buildings.some(p=>Math.hypot((x/sx-p.site[0])/34,(y/sy-p.site[1])/30)<1);
+    // Parents first; grown animals with recorded parents still get their own space.
+    const ordered=animals.slice().sort((a,b)=>Number(livestockAppearance(s,a).young)-Number(livestockAppearance(s,b).young)||a.id-b.id);
+    for(const animal of ordered){
+      const {young,growthScale}=livestockAppearance(s,animal),cow=animal.species==='cattle';
+      const rx=(cow?21:16)*growthScale,ry=(cow?10:8)*growthScale;
+      const keeper=keepers.get(animal.keeperId),leading=pen&&pen.careDay===s.day&&keeper&&Math.hypot(keeper[0]-site[0],keeper[1]-site[1])<80;
+      const center=leading?[keeper[0]*sx-24,keeper[1]*sy+7]:[site[0]*sx,site[1]*sy];
+      const mother=young?placed.find(p=>p.id===animal.motherId):null;
+      let best=null,bestCost=Infinity;
+      for(let attempt=0;attempt<240;attempt++){
+        const angle=stockNoise(s.seed,animal.id,attempt*2)*Math.PI*2,r=Math.sqrt(stockNoise(s.seed,animal.id,attempt*2+1));
+        const reach=pen?(leading?[44,27]:[Math.max(0,35*sx-rx),Math.max(0,20*sx-ry)]):[Math.max(110,65*sx),Math.max(70,38*sy)];
+        const close=mother&&attempt<80;
+        const enclosed=pen&&!leading&&!close;
+        const x=(close?mother.x:center[0])+(enclosed?stockNoise(s.seed,animal.id,attempt*2)*2-1:Math.cos(angle)*r)*(close?42:reach[0]);
+        const y=(close?mother.y:center[1])+(enclosed?stockNoise(s.seed,animal.id,attempt*2+1)*2-1:Math.sin(angle)*r)*(close?28:reach[1]);
+        if(pen&&!leading&&(Math.abs(x-center[0])+rx>36*sx||Math.abs(y-center[1])+ry>22*sx))continue;
+        if(!safe(x,y,rx,ry))continue;
+        const cost=placed.reduce((sum,p)=>sum+Math.max(0,1-Math.hypot((x-p.x)/(rx+p.rx+5),(y-p.y)/(ry+p.ry+5))),0);
+        if(cost<bestCost){best={id:animal.id,x,y,rx,ry};bestCost=cost;}
+        if(cost===0)break;
+      }
+      // A crowded or obstructed saved pen still displays its real occupants.
+      // Use the least crowded dry candidate rather than inventing or hiding stock.
+      if(!best){const [x,y]=riverBankPoint(...center,width,height,flood,s.local.terrain==='kaunas',rx+4);best={id:animal.id,x,y,rx,ry};}
+      placed.push({...best,center,leading});
+    }
+    // A full pen needs a little settling: random sequential placement alone
+    // leaves gaps too small for the last animal even when the enclosure fits it.
+    const settle=(p,x,y)=>{
+      if(pen&&!p.leading){x=Math.max(p.center[0]-36*sx+p.rx,Math.min(p.center[0]+36*sx-p.rx,x));y=Math.max(p.center[1]-22*sx+p.ry,Math.min(p.center[1]+22*sx-p.ry,y));}
+      if(safe(x,y,p.rx,p.ry)){p.x=x;p.y=y;}
+    };
+    for(let pass=0;pass<60;pass++){
+      let crowded=false;
+      for(let i=0;i<placed.length;i++)for(let j=0;j<i;j++){
+        const a=placed[i],b=placed[j],dx=a.x-b.x||.01,dy=a.y-b.y||.01,d=Math.hypot(dx/(a.rx+b.rx+5),dy/(a.ry+b.ry+5));
+        if(d>=1)continue;crowded=true;
+        const push=Math.min(.25,(1/d-1)*.52);
+        settle(a,a.x+dx*push,a.y+dy*push);settle(b,b.x-dx*push,b.y-dy*push);
+      }
+      if(!crowded)break;
+    }
+    for(const p of placed){
+      const dx=Math.sin(phase*.16+p.id*2.3)*1.2,dy=Math.cos(phase*.13+p.id)*.7;
+      result.set(p.id,[(p.x+dx)/sx,(p.y+dy)/sy]);
+    }
+  }
+  return result;
+}
+function livestockPosition(s,animal,phase=0,keeper=null){
+  return livestockLayout(s,{phase,keepers:keeper?new Map([[animal.keeperId,keeper]]):new Map()}).get(animal.id)??null;
+}
+function drawLivestockAnimal(g,animal,{scale=1,phase=0,young=false,growthScale=young?.58:1,direction=1,grazing=false}={}){
+  g.save();g.scale(scale*growthScale*direction,scale*growthScale);g.lineCap='round';
   const cow=animal.species==='cattle',pig=animal.species==='pig',body=cow?'#8a6240':pig?'#9f8065':'#d0c4a2';
   const size=cow?1.45:pig?.94:1,step=Math.sin(phase*2+animal.id)*.7;
   g.scale(size,size);stockOval(g,0,0,10,3,'#30302030');
@@ -9330,25 +9391,30 @@ function createClearing(host,getState,{onRiverFall}={}){
     livestockHits.clear();
     const husbandry=s.local?.husbandry;
     if(husbandry){
+      const keepers=new Map();
+      if(hour>=7&&hour<18)for(const person of s.villagers){
+        const keeper=people.get(person.id);
+        if(keeper&&!keeper.swept&&person.activity==='Tend livestock and lead grazing')keepers.set(person.id,[keeper.x*1000/fieldWidth,keeper.y*640/fieldHeight]);
+      }
+      const stockPositions=livestockLayout(s,{width:fieldWidth,height:fieldHeight,phase:clock,keepers});
       for(const pen of husbandry.pens){
         const [x,y]=point(...pen.site),scale=fieldWidth/1000;
         layers.push({y:y-24*scale,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);drawLivestockPen(ctx,pen);ctx.restore();}});
         layers.push({y:y+24*scale,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);drawLivestockPen(ctx,pen,{front:true});ctx.restore();}});
       }
       for(const animal of villageLivestock(s)){
-        const keeper=people.get(animal.keeperId),person=s.villagers.find(v=>v.id===animal.keeperId);
-        const leading=hour>=7&&hour<18&&keeper&&!keeper.swept&&person?.activity==='Tend livestock and lead grazing'?[keeper.x*1000/fieldWidth,keeper.y*640/fieldHeight]:null;
-        const site=livestockPosition(s,animal,clock,leading);if(!site)continue;
+        const site=stockPositions.get(animal.id);if(!site)continue;
         const [x,y]=point(...site);livestockHits.set(animal.id,[x,y]);
-        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);drawLivestockAnimal(ctx,animal,{scale:fieldWidth/1000,phase:clock,young:animal.age<livestockKinds[animal.species].adult*4*s.config.learning.seasonLength,grazing:Math.sin(clock*.3+animal.id)>.2,direction:animal.id%2?1:-1});ctx.restore();}});
+        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);drawLivestockAnimal(ctx,animal,{...livestockAppearance(s,animal),phase:clock,grazing:Math.sin(clock*.3+animal.id)>.2,direction:animal.id%2?1:-1});ctx.restore();}});
       }
       for(const batch of [...husbandry.batches,...husbandry.compost]){
         const [x,y]=point(batch.site[0]+(batch.dryDays!==undefined?35:0),batch.site[1]+8);
         layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(fieldWidth/1000,fieldWidth/1000);drawFodderBundle(ctx,0,0,{compost:batch.readyDay!==undefined});ctx.restore();}});
       }
-      if(husbandry.contacts.herders)for(const [i,animal] of husbandry.animals.filter(a=>a.location==='regional'&&a.status==='alive').entries()){
-        const [x,y]=point(husbandry.regional.site[0]-32+i%5*17,husbandry.regional.site[1]+Math.floor(i/5)*13);
-        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);drawLivestockAnimal(ctx,animal,{scale:fieldWidth/1000,phase:clock,grazing:true});ctx.restore();}});
+      if(husbandry.contacts.herders)for(const animal of husbandry.animals.filter(a=>a.location==='regional'&&a.status==='alive')){
+        const site=stockPositions.get(animal.id);if(!site)continue;
+        const [x,y]=point(...site);
+        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);drawLivestockAnimal(ctx,animal,{...livestockAppearance(s,animal),phase:clock,grazing:Math.sin(clock*.3+animal.id)>.2,direction:animal.id%2?1:-1});ctx.restore();}});
       }
     }
     for(const [camp,store] of Object.entries(s.local?.campStores||{})){
