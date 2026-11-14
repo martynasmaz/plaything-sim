@@ -15,6 +15,16 @@ existing command form, which retains its parser, checks, effects and saving.
 The `magic` unlock is absent from the power tray; it must still be typed in
 Speak. Speak also accepts custom quantities and the existing text commands.
 
+After a successful tray cast, a large “↻ Cast [power]” button stays above the
+phone toolbar. Each tap repeats that same power through the shared command
+handler, without reopening a menu or the keyboard. A destructive power keeps
+its initial confirmation; subsequent deliberate taps repeat the chosen effect.
+The button updates when another power succeeds and disables whenever that
+power is unavailable. It is hidden during menus, on desktop and until a power
+has been used. Selection lasts for the current page session. Speak, time
+controls and the manually typed magic unlock do not become repeat buttons.
+Inspection cards move above the button so that neither covers the other.
+
 Observe opens the same notebook in a phone-sized modal sheet. Time provides
 pause, 1× and 3× speed, day stepping, rewind, undo skip and camera recentering.
 Pause and return-to-village buttons also remain reachable above the map.

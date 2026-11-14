@@ -1828,6 +1828,8 @@ THEME.css += `
 .phone-ui .command-panel{display:none}
 .phone-ui .phone-toolbar{position:fixed;z-index:20;left:8px;right:8px;top:calc(var(--phone-top,0px) + var(--phone-height,100dvh) - 72px - env(safe-area-inset-bottom,0px));height:64px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:5px;box-sizing:border-box;background:#354b32f5;border:2px solid #baaa80;border-radius:9px;box-shadow:0 2px 8px #242b2590}
 .phone-ui .phone-toolbar button{min-width:0;min-height:48px;padding:6px 2px;border:1px solid #ab9b75;border-radius:5px;background:#40593c;color:#fff1d5;font:16px Georgia,serif;touch-action:manipulation}
+.phone-ui .phone-repeat{position:fixed;z-index:15;right:max(8px,env(safe-area-inset-right,0px));top:calc(var(--phone-top,0px) + var(--phone-height,100dvh) - 128px - env(safe-area-inset-bottom,0px));min-height:48px;max-width:calc(100% - 16px);padding:10px 16px;border:2px solid #baaa80;border-radius:8px;background:#40593cf5;color:#fff1d5;font:bold 17px Georgia,serif;touch-action:manipulation;box-shadow:0 2px 7px #242b2560}
+.phone-ui .phone-repeat:disabled{opacity:.55}.phone-ui .phone-repeat:active:not(:disabled){background:#57734b}
 .phone-ui .phone-home,.phone-ui .phone-pause{position:fixed;z-index:15;top:calc(var(--phone-top,0px) + max(10px,env(safe-area-inset-top,0px)));min-height:48px;border:1px solid #bba77b;border-radius:7px;background:#354b32ed;color:#fff1d5;touch-action:manipulation}
 .phone-ui .phone-home{right:10px;width:48px;font-size:28px;padding:0}
 .phone-ui .phone-pause{right:66px;min-width:64px;font:16px Georgia,serif;padding:6px 10px}
@@ -1853,7 +1855,7 @@ THEME.css += `
 .phone-ui .phone-pause-setting{display:flex;align-items:center;gap:10px;margin-top:16px;min-height:48px}
 .phone-ui .phone-pause-setting input{width:24px;height:24px;flex-shrink:0;accent-color:#40593c}
 .phone-ui .phone-tray form{display:grid;gap:10px}.phone-ui .phone-tray input[type=text]{box-sizing:border-box;min-height:48px;width:100%;font:18px Georgia,serif;background:#fff7e5;color:#332e24;border:1px solid #9b8967;border-radius:4px;padding:10px}
-.phone-ui .villager-card{position:fixed;z-index:16;top:auto;bottom:calc(82px + env(safe-area-inset-bottom,0px));left:8px;right:8px;width:auto;max-height:36dvh;overflow:auto;padding:12px;pointer-events:auto;font-size:16px;border-radius:6px}
+.phone-ui .villager-card{position:fixed;z-index:16;top:auto;bottom:calc(82px + var(--phone-repeat-space,0px) + env(safe-area-inset-bottom,0px));left:8px;right:8px;width:auto;max-height:36dvh;overflow:auto;padding:12px;pointer-events:auto;font-size:16px;border-radius:6px}
 .phone-ui .villager-card>strong{display:block;padding-right:64px}.phone-ui .phone-card-close{position:absolute;right:6px;top:6px;min-width:48px;min-height:48px;padding:6px;font:15px Georgia,serif}
 .phone-ui .settlement-notebook{inset:auto 8px auto!important;top:calc(var(--phone-top,0px) + var(--phone-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)))!important;transform:translateY(-100%);width:calc(100% - 16px)!important;max-width:560px;max-height:calc(var(--phone-height,100dvh) - max(24px,env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px)))!important;margin:0 auto!important;box-sizing:border-box;border-radius:12px 12px 5px 5px;padding:12px!important;font-size:16px!important;overscroll-behavior:contain}
 .phone-ui .settlement-notebook summary{min-height:48px;padding-top:10px;box-sizing:border-box}.phone-ui .settlement-notebook select{max-width:100%;font-size:16px}

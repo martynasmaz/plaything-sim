@@ -10,7 +10,7 @@ function fixture(width=390,height=844,coarse=true,options={}){
   const dom=phoneDom(width,height,coarse),calls=[],settings=new Map();let state=setSpeed(createState(HOMESTEAD_RULES,4),3),notebook=false,centered=0;
   const phone=createPhoneControls({...dom,readState:()=>state,
     runCommand:words=>{calls.push(words);const result=castText(state,words);if(result.ok)state=result.state;return result.ok;},
-    checkCommand:words=>validateCommand(state,words,state.day,true),changeSpeed:speed=>{state=setSpeed(state,speed);},
+    checkCommand:words=>validateCommand(state,words==='spawn people 5'?'spawn people':words,state.day,true),changeSpeed:speed=>{state=setSpeed(state,speed);},
     openNotebook:()=>{notebook=true;},closeNotebook:()=>{notebook=false;},notebookOpen:()=>notebook,recenter:()=>{centered++;},
     storage:{getItem:k=>settings.get(k)??null,setItem:(k,v)=>settings.set(k,v)},...options});
   return {...dom,phone,calls,settings,get state(){return state;},get centered(){return centered;},get notebook(){return notebook;}};
@@ -75,4 +75,52 @@ test('touch inspection tolerates finger jitter but does not mistake dragging, pi
   g.start(1,10,10);assert.equal(g.move(1,25,10),true);assert.equal(g.end(1),false);
   g.start(1,0,0);g.start(2,20,20);assert.equal(g.end(1),false);assert.equal(g.end(2),false);
   g.start(1,0,0);g.cancel(1);assert.equal(g.end(1),false);
+});
+
+test('a confirmed phone power can be tapped repeatedly on the map without menus, another confirmation or keyboard focus',()=>{
+  const f=fixture(),before=structuredClone(f.state),repeat=f.doc.body.querySelector('.phone-repeat');
+  assert.equal(repeat.hidden,true);
+  f.phone.open('powers');f.findButton('Falling star').click();f.findButton('Continue').click();
+  assert.equal(repeat.hidden,true);assert.deepEqual(f.calls,[]);
+  f.findButton('Cast Falling star').click();
+  assert.equal(repeat.hidden,false);assert.equal(repeat.textContent,'↻ Cast Falling star');
+  for(let i=0;i<8;i++)repeat.click();
+  assert.deepEqual(f.calls,Array(9).fill('meteor'));assert.equal(f.state.meteors.length,9);
+  let expected=before;for(let i=0;i<9;i++)expected=castText(expected,'meteor').state;
+  assert.deepEqual(f.state,expected);assert.equal(f.phone.holdClock(),false);
+  assert.equal(f.doc.body.querySelector('dialog').open,false);assert.equal(f.doc.focusedInputs,0);
+});
+
+test('repeat keeps real power checks and only changes after another successful cast',()=>{
+  const f=fixture();f.phone.open('powers');f.findButton('Food').click();f.findButton('Cast').click();
+  const repeat=f.doc.body.querySelector('.phone-repeat');
+  for(let i=0;i<20;i++)repeat.click();
+  assert.equal(f.state.food,100);assert.equal(repeat.disabled,true);
+  assert.match(repeat.getAttribute('aria-label'),/full|capacity/i);
+  const casts=f.calls.length;repeat.click();assert.equal(f.calls.length,casts);
+  f.phone.open('powers');f.findButton('Heal').click();f.findButton('Cast').click();f.phone.close();
+  assert.equal(repeat.textContent,'↻ Cast Food');
+  f.phone.open('powers');f.findButton('Teach fire').click();f.findButton('Cast').click();
+  assert.equal(repeat.textContent,'↻ Cast Teach fire');assert.equal(repeat.disabled,true);
+  f.phone.open('powers');f.findButton('Rain').click();f.findButton('Cast').click();
+  assert.equal(repeat.textContent,'↻ Cast Rain');assert.equal(repeat.disabled,true,'already-active weather still applies');
+});
+
+test('repeat is hidden while reading and on desktop, and returns when phone play resumes',()=>{
+  const f=fixture();f.phone.open('powers');f.findButton('Call settlers').click();f.findButton('Cast').click();
+  const repeat=f.doc.body.querySelector('.phone-repeat');repeat.click();assert.equal(f.state.villagers.length,16);
+  f.findButton('Observe').click();assert.equal(repeat.hidden,true);repeat.click();assert.equal(f.state.villagers.length,16);
+  f.phone.open('time');assert.equal(repeat.hidden,true);f.phone.close();assert.equal(repeat.hidden,false);
+  f.resize(1440,900,false);assert.equal(repeat.hidden,true);repeat.click();assert.equal(f.state.villagers.length,16);
+  assert.equal(f.doc.documentElement.style.getPropertyValue('--phone-repeat-space'),'');
+  f.resize(390,844,true);assert.equal(repeat.hidden,false);repeat.click();assert.equal(f.state.villagers.length,21);
+  assert.equal(f.doc.documentElement.style.getPropertyValue('--phone-repeat-space'),'56px');
+});
+
+test('Speak and time controls do not turn the manual magic unlock into a repeatable button',()=>{
+  const f=fixture(),repeat=f.doc.body.querySelector('.phone-repeat');
+  f.phone.open('speak');const input=f.doc.body.querySelector('input');input.value='magic';
+  f.doc.body.querySelector('form').onsubmit({preventDefault(){}});
+  assert.equal(f.state.local.magic.enabled,true);assert.equal(repeat.hidden,true);
+  f.phone.open('time');f.findButton('Back one day').click();assert.equal(repeat.hidden,true);
 });

@@ -46,10 +46,14 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
   };
   const button=(text,action)=>{const b=make('button',text);b.type='button';b.onclick=action;return b;};
   const toolbar=make('nav',null,'phone-toolbar');toolbar.setAttribute('aria-label','Village controls');toolbar.hidden=true;
-  const powers=button('Powers',()=>open('powers')),observe=button('Observe',()=>{close();openNotebook();});
+  const powers=button('Powers',()=>open('powers')),observe=button('Observe',()=>{close();openNotebook();refresh();});
   const time=button('Time',()=>open('time')),speak=button('Speak',()=>open('speak'));
   for(const b of [powers,observe,time,speak])b.setAttribute('aria-haspopup','dialog');
   toolbar.append(powers,observe,time,speak);
+  const repeat=button('',()=>{
+    if(!active||!lastPower||view||notebookOpen()||otherMenuOpen())return;
+    castPower(lastPower);
+  });repeat.className='phone-repeat';repeat.hidden=true;
   const home=button('⌂',()=>{recenter();});home.className='phone-home';home.setAttribute('aria-label','Return to village');home.hidden=true;
   const pause=button('Pause',()=>{
     const s=readState();if(s.ended)return;
@@ -61,11 +65,18 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
   const header=make('header'),heading=make('h2');heading.id='phone-tray-title';
   const dismiss=button('Close',()=>close());dismiss.setAttribute('aria-label','Close phone menu');header.append(heading,dismiss);
   const body=make('div',null,'phone-tray-body'),reading=make('p',null,'phone-reading');tray.append(header,body,reading);
-  doc.body.append(toolbar,home,pause,toast,tray);
+  doc.body.append(toolbar,repeat,home,pause,toast,tray);
   let active=false,view=null,chosen=null,confirming=false,castButton=null,reason=null,draft='',resumeSpeed=readState().speed||1,noticeTimer;
+  let lastPower=null;
   let pauseMenus=true;
   try{pauseMenus=storage?.getItem('plaything.phone.pauseMenus')!=='false';}catch{}
   const persistPause=()=>{try{storage?.setItem('plaything.phone.pauseMenus',String(pauseMenus));}catch{}};
+  function castPower(power){
+    if(!checkCommand(power.command).ok){refresh();return;}
+    close();
+    if(runCommand(power.command))lastPower=power;
+    refresh();
+  }
   function close(){if(tray.open)tray.close();view=null;chosen=null;castButton=reason=null;refresh();}
   tray.addEventListener('close',()=>{if(tray.open)return;view=null;chosen=null;castButton=reason=null;refresh();});
   tray.addEventListener('click',event=>{if(event.target===tray){const r=tray.getBoundingClientRect();
@@ -90,7 +101,7 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
         castButton=button(chosen.danger&&!confirming?'Continue':confirming?'Cast '+chosen.name:'Cast',()=>{
           if(!checkCommand(chosen.command).ok){refresh();return;}
           if(chosen.danger&&!confirming){confirming=true;draw();refresh();return;}
-          const command=chosen.command;close();runCommand(command);
+          castPower(chosen);
         });
         castButton.className=confirming?'phone-cast phone-warning':'phone-cast';body.append(reason,castButton);
       }else{
@@ -128,6 +139,14 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
     const s=readState();if(s.speed)resumeSpeed=s.speed;
     pause.textContent=s.speed?'Pause':'Play';pause.disabled=s.ended;pause.setAttribute('aria-label',s.speed?'Pause time':'Resume time');
     pause.setAttribute('aria-pressed',String(!s.speed));time.textContent='Time';time.setAttribute('aria-label','Time controls, '+(s.speed?s.speed+' times speed':'paused'));
+    repeat.hidden=!lastPower||!!view||notebookOpen()||otherMenuOpen();
+    root.style.setProperty('--phone-repeat-space',repeat.hidden?'0px':'56px');
+    if(lastPower){
+      const check=checkCommand(lastPower.command);
+      repeat.textContent='↻ Cast '+lastPower.name;repeat.disabled=!check.ok;
+      repeat.title=check.ok?'Repeat '+lastPower.name:check.message;
+      repeat.setAttribute('aria-label','Repeat '+lastPower.name+(check.ok?'':': '+check.message));
+    }
     reading.textContent=!s.speed?'Time is paused.':pauseMenus?'Time pauses while this menu is open.':'The village keeps running while menus are open.';
     for(const b of body.querySelectorAll('[data-phone-rate]')){b.setAttribute('aria-pressed',String(Number(b.dataset.phoneRate)===s.speed));b.disabled=s.ended;}
     if(chosen&&castButton){const check=checkCommand(chosen.command);castButton.disabled=!check.ok;reason.textContent=check.ok?'':check.message;}
@@ -141,7 +160,7 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
   function update(){
     const wasActive=active;active=enabled&&media.matches;root.classList.toggle('phone-ui',active);
     toolbar.hidden=home.hidden=pause.hidden=!active;
-    if(!active){close();toast.hidden=true;root.style.removeProperty('--phone-height');root.style.removeProperty('--phone-top');if(wasActive)closeNotebook();}
+    if(!active){close();repeat.hidden=true;toast.hidden=true;root.style.removeProperty('--phone-height');root.style.removeProperty('--phone-top');root.style.removeProperty('--phone-repeat-space');if(wasActive)closeNotebook();}
     else{viewport();refresh();}
   }
   media.addEventListener('change',update);browser.visualViewport?.addEventListener('resize',viewport);browser.visualViewport?.addEventListener('scroll',viewport);
