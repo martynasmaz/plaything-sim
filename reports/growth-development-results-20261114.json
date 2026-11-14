@@ -1,0 +1,88 @@
+{
+  "matched": {
+    "n": 50,
+    "metrics": [
+      {
+        "key": "population",
+        "before": 14.56,
+        "after": 25.24,
+        "difference": 10.68,
+        "bootstrap95": [
+          6.06,
+          15.3
+        ]
+      },
+      {
+        "key": "annualPopulation",
+        "before": 14.45325,
+        "after": 25.566,
+        "difference": 11.11275,
+        "bootstrap95": [
+          6.613749999999999,
+          15.587500000000004
+        ]
+      }
+    ],
+    "survivedBefore": 32,
+    "survivedAfter": 40,
+    "medianBefore": 18.5,
+    "medianAfter": 30.5,
+    "improved": 35,
+    "worse": 10,
+    "tied": 5
+  },
+  "validation": {
+    "n": 100,
+    "metrics": [
+      {
+        "key": "population",
+        "before": 14.25,
+        "after": 24.96,
+        "difference": 10.71,
+        "bootstrap95": [
+          7.13,
+          14.27
+        ]
+      },
+      {
+        "key": "annualPopulation",
+        "before": 14.332749999999999,
+        "after": 25.739624999999997,
+        "difference": 11.406875000000005,
+        "bootstrap95": [
+          8.068374999999996,
+          14.787125000000005
+        ]
+      }
+    ],
+    "survivedBefore": 59,
+    "survivedAfter": 81,
+    "medianBefore": 17.5,
+    "medianAfter": 31,
+    "improved": 72,
+    "worse": 19,
+    "tied": 9
+  },
+  "detail": {
+    "fieldsMeanAlive": 21.765432098765434,
+    "foodDaysMeanAlive": 6.557392103105045,
+    "finishedFoodBefore": 91.51,
+    "finishedFoodAfter": 144.95,
+    "specialistWorkPercentBefore": 2.6915180975801163,
+    "specialistWorkPercentAfter": 2.8363656790530243,
+    "roles": {
+      "fisher": 126,
+      "farmer": 524,
+      "builder": 3,
+      "healer": 53,
+      "miller": 24,
+      "baker": 46,
+      "hunter": 54,
+      "teacher": 14
+    },
+    "apprentices": 14043,
+    "markers": 789
+  },
+  "sourceSha256": "398ddbfb5a2b9dbeec6fadbb0048f3ce0897070b328e6b2e461136b068124de3",
+  "baselineSha256": "6862ec9b5495ab1a6eb3ffa66fef62084bb57c88268151a4dd432be89dba62bd"
+}

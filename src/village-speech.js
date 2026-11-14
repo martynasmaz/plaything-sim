@@ -2,6 +2,11 @@
 // No simulation state, randomness, decisions, knowledge or timing is changed.
 export function activityEmoji(job,item=''){
   const text=(item||job).toLowerCase();
+  if(/milk|curds/.test(text))return '🥛';
+  if(/wool|fleece|sheep/.test(text))return '🐑';
+  if(/livestock|herder|yoke/.test(text))return '🐄';
+  if(/hay/.test(text))return '🌾';
+  if(/compost|manure/.test(text))return '🌱';
   if(/bread|flatbread/.test(text))return '🍞';
   if(/wheat|quern|flour|mill/.test(text))return '🌾';
   if(/basket|weav/.test(text))return '🧺';

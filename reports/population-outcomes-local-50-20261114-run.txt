@@ -1,0 +1,170 @@
+Seed 3: 0 alive at day 313, peak 19, visits 0, cross-village births 0 (1/50)
+Seed 7: 0 alive at day 274, peak 22, visits 1, cross-village births 0 (2/50)
+Seed 0: 0 alive at day 724, peak 33, visits 0, cross-village births 0 (3/50)
+Seed 11: 0 alive at day 506, peak 15, visits 4, cross-village births 1 (4/50)
+Seed 2: 0 alive at day 1245, peak 33, visits 2, cross-village births 0 (5/50)
+Seed 15: 0 alive at day 975, peak 33, visits 4, cross-village births 2 (6/50)
+Seed 19: 0 alive at day 1394, peak 34, visits 4, cross-village births 1 (7/50)
+Seed 1: 0 alive at day 2425, peak 35, visits 4, cross-village births 0 (8/50)
+Seed 5: 0 alive at day 419, peak 32, visits 4, cross-village births 0 (9/50)
+Seed 9: 0 alive at day 541, peak 10, visits 2, cross-village births 0 (10/50)
+Seed 23: 0 alive at day 1441, peak 33, visits 1, cross-village births 0 (11/50)
+Seed 4: 0 alive at day 2550, peak 34, visits 1, cross-village births 0 (12/50)
+Seed 27: 0 alive at day 1025, peak 33, visits 4, cross-village births 1 (13/50)
+Seed 6: 0 alive at day 2548, peak 35, visits 0, cross-village births 0 (14/50)
+Seed 10: 0 alive at day 400, peak 18, visits 0, cross-village births 0 (15/50)
+Seed 13: 0 alive at day 1585, peak 35, visits 6, cross-village births 1 (16/50)
+Seed 31: 0 alive at day 641, peak 32, visits 4, cross-village births 1 (17/50)
+Seed 14: 0 alive at day 526, peak 30, visits 2, cross-village births 0 (18/50)
+Seed 17: 0 alive at day 478, peak 33, visits 3, cross-village births 0 (19/50)
+Seed 8: 0 alive at day 1671, peak 34, visits 0, cross-village births 0 (20/50)
+Seed 18: 0 alive at day 720, peak 33, visits 1, cross-village births 0 (21/50)
+Seed 22: 0 alive at day 238, peak 21, visits 1, cross-village births 0 (22/50)
+Seed 12: 0 alive at day 2060, peak 34, visits 3, cross-village births 0 (23/50)
+Seed 16: 0 alive at day 410, peak 15, visits 0, cross-village births 0 (24/50)
+Seed 20: 0 alive at day 314, peak 8, visits 0, cross-village births 0 (25/50)
+Seed 21: 0 alive at day 2412, peak 34, visits 4, cross-village births 1 (26/50)
+Seed 35: 27 alive at day 3000, peak 35, visits 9, cross-village births 0 (27/50)
+Seed 26: 25 alive at day 3000, peak 35, visits 2, cross-village births 0 (28/50)
+Seed 24: 0 alive at day 2170, peak 34, visits 3, cross-village births 0 (29/50)
+Seed 25: 0 alive at day 2317, peak 34, visits 3, cross-village births 0 (30/50)
+Seed 39: 0 alive at day 1568, peak 35, visits 1, cross-village births 0 (31/50)
+Seed 30: 0 alive at day 1521, peak 35, visits 8, cross-village births 1 (32/50)
+Seed 29: 0 alive at day 1005, peak 33, visits 2, cross-village births 0 (33/50)
+Seed 33: 0 alive at day 515, peak 10, visits 3, cross-village births 0 (34/50)
+Seed 34: 0 alive at day 2235, peak 33, visits 1, cross-village births 0 (35/50)
+Seed 43: 0 alive at day 2499, peak 34, visits 4, cross-village births 0 (36/50)
+Seed 47: 0 alive at day 294, peak 8, visits 2, cross-village births 0 (37/50)
+Seed 28: 27 alive at day 3000, peak 35, visits 3, cross-village births 0 (38/50)
+Seed 32: 0 alive at day 486, peak 12, visits 1, cross-village births 0 (39/50)
+Seed 36: 0 alive at day 445, peak 30, visits 3, cross-village births 1 (40/50)
+Seed 37: 16 alive at day 3000, peak 35, visits 0, cross-village births 0 (41/50)
+Seed 40: 0 alive at day 1488, peak 33, visits 3, cross-village births 0 (42/50)
+Seed 38: 29 alive at day 3000, peak 36, visits 7, cross-village births 2 (43/50)
+Seed 41: 14 alive at day 3000, peak 33, visits 2, cross-village births 0 (44/50)
+Seed 44: 29 alive at day 3000, peak 34, visits 3, cross-village births 0 (45/50)
+Seed 45: 0 alive at day 1087, peak 37, visits 5, cross-village births 0 (46/50)
+Seed 48: 0 alive at day 2175, peak 34, visits 10, cross-village births 1 (47/50)
+Seed 42: 15 alive at day 3000, peak 35, visits 6, cross-village births 1 (48/50)
+Seed 46: 0 alive at day 844, peak 28, visits 5, cross-village births 1 (49/50)
+Seed 49: 23 alive at day 3000, peak 34, visits 7, cross-village births 0 (50/50)
+{
+  "createdAt": "2026-11-14T12:35:16.613Z",
+  "sourceSha256": "9f258c12b261a0080244f2a5d2d313bd15661fb76c25c2044d03bd398bace39a",
+  "sourceFiles": [
+    "config",
+    "provisions",
+    "needs",
+    "fishing",
+    "settlement-layout",
+    "healer-home",
+    "magic",
+    "farming",
+    "village-events",
+    "ecology",
+    "practices",
+    "neighbors",
+    "sim"
+  ],
+  "baselineSourceSha256": "1aa980f253e9e3aeea5940c17944c66c148590854fadf0417a28fc852900dbbb",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49
+  ],
+  "horizon": 3000,
+  "method": "Consecutive starting seeds, current local HOMESTEAD_RULES, no commands, gifts, immigration or magic unlock. Current stepDay is called directly; no observer-instrumented source. Changes tested together: accessible food accounting and experienced food planning, anticipatory physical housing, and paid neighboring-community visits/families. The archived ten seeds are compared separately. This combined comparison does not isolate each change causally. Endings are observations at the horizon, not guarantees of permanent survival.",
+  "baseline": {
+    "runs": 10,
+    "survived": 4,
+    "survivedDay1000": 8,
+    "finalPopulation": 70,
+    "births": 974,
+    "deaths": 964,
+    "hungerDeaths": 0,
+    "coldDeaths": 0,
+    "oldAgeDeaths": 951,
+    "meanPeak": 21.7
+  },
+  "matchedTen": {
+    "runs": 10,
+    "survived": 0,
+    "survivedDay1000": 5,
+    "finalPopulation": 0,
+    "births": 1480,
+    "deaths": 1540,
+    "hungerDeaths": 1151,
+    "coldDeaths": 3,
+    "oldAgeDeaths": 338,
+    "meanPeak": 28.7
+  },
+  "current": {
+    "runs": 50,
+    "survived": 9,
+    "survivedDay1000": 30,
+    "finalPopulation": 205,
+    "births": 9086,
+    "deaths": 9181,
+    "hungerDeaths": 6635,
+    "coldDeaths": 17,
+    "oldAgeDeaths": 2230,
+    "meanPeak": 29.4
+  },
+  "endings": {
+    "extinct": 41,
+    "at_risk": 0,
+    "recovering": 0,
+    "continuing": 9
+  },
+  "meetings": 148,
+  "householdMoves": 19,
+  "crossVillageBirths": 15,
+  "techniquesLearnedOnVisits": 2
+}

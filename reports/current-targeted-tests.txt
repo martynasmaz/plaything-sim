@@ -1,0 +1,110 @@
+✔ woodland is denser, mixed, deterministic, and keeps added trees out of channels and camp centers (57.8307ms)
+✔ existing tree coordinates and felled tree identities survive save/load and another world using the forest cache (34.9825ms)
+✔ new projects do not hide trees; loading old construction preserves its ground without renumbering trees (2.3993ms)
+✔ wading through the game ford is slower than bridge or ice travel and does not change simulation needs (0.6764ms)
+✔ the northern tributary crossing also uses wading speed (0.2271ms)
+▶ Starting state and replay
+  ✔ exact starting state and independent state/config objects (4.1131ms)
+  ✔ same inputs produce identical outputs without mutating any input (44.6825ms)
+  ✔ milestone does not end play and the log keeps the latest 10 entries (10.294ms)
+✔ Starting state and replay (60.8125ms)
+▶ Build check 2 · one normal day / priorities / rotation
+  ✔ 75 → 50 → 80; exactly one food per meal AFTER all work (0.9205ms)
+  ✔ full villagers above 75 do not eat; fullness clamps at 100 (0.9581ms)
+  ✔ emergency forage beats warming; rechecking stock lets the next cold person warm up (0.7878ms)
+  ✔ food reserve before wood; wood reserve before resting (0.5413ms)
+  ✔ visit order rotates by permanent number and meals use the same order (1.3343ms)
+  ✔ children gather less; drought child forage can yield honestly zero (1.1236ms)
+  ✔ health damage is combined; safety AFTER health; recovery is conditional (1.78ms)
+  ✔ power bonus uses living average happiness and caps at 100 (1.1496ms)
+✔ Build check 2 · one normal day / priorities / rotation (9.3795ms)
+▶ Build check · three-day weather
+  ✔ cloud wrangle on day 2 over a forecast cold snap: rain days 2–4, day 5 uses its natural roll (9.083ms)
+  ✔ cold snap: −40 extra warmth, normal yields; natural rain blocks cloud wrangle (1.0397ms)
+  ✔ rain cast day 2 affects yields/cold on 2, 3, 4 only; day 5 is normal (1.3251ms)
+  ✔ opposite weather replaces immediately with a fresh timer; same weather fails (1.2969ms)
+  ✔ same-weather rejection independent of cooldown (0.2506ms)
+✔ Build check · three-day weather (13.2758ms)
+▶ Build check 4 · command validation and effects
+  ✔ normalization accepts only exact fixed phrases (2.0124ms)
+  ✔ queue is free; only one slot; replace and cancel (0.5603ms)
+  ✔ successful command pays once, has one effect, and clears queue (0.5914ms)
+  ✔ unaffordable is no mutation/cost/cooldown; conditions checked again on application (1.4879ms)
+  ✔ cooldown of 5 cast on day 4 rejects day 8 but allows day 9 (4.2648ms)
+  ✔ all cooldowns use casting day + specified wait (1.7816ms)
+  ✔ plague, full food, known fire, insufficient wood, full bless are rejected (1.0738ms)
+  ✔ bless clamps, reports actual gains, and does not cure illness (0.775ms)
+  ✔ harvest clamps at capacity and uses actual stock gain in log (0.4845ms)
+  ✔ plague disabled means unknown/unavailable AND absent from visible vocabulary (0.2625ms)
+✔ Build check 4 · command validation and effects (13.8283ms)
+▶ Build check 5 · fire in both routes
+  ✔ teach with 3 wood spends 2 to learn, 1 to burn today (0.5811ms)
+  ✔ natural discovery uses consecutive days 20–22, costs 2, first burns on 23 (4.9247ms)
+  ✔ a failed discovery check resets the counter (3.5974ms)
+  ✔ no wood preserves knowledge; warm-up uses shelter +20, not fire +40 (0.5475ms)
+  ✔ lit fire warms +10 before work and boosts warm-up to +40 (0.2915ms)
+✔ Build check 5 · fire in both routes (10.1471ms)
+▶ Build check 6 · illness and death
+  ✔ sick hex takes 100 health to 40 over 3 days (20/day), never a fourth; no recovery while ill (0.8741ms)
+  ✔ illness happiness loss is 5; no happy bonus at safety 40 (0.4066ms)
+  ✔ health 0 removes once; multiple causes include reaching age 300 (0.5957ms)
+  ✔ elder works the same as adult, but dies reaching 300 (0.2845ms)
+✔ Build check 6 · illness and death (2.2923ms)
+▶ Build check 7 · birth and population cap
+  ✔ 5 eligible checks create one age-0 child with exact starting needs; first turn tomorrow (1.021ms)
+  ✔ one illness day resets counter, even though it expires that evening (0.9562ms)
+  ✔ children and elders do not count as eligible parents; at least 2 adults needed (0.4531ms)
+  ✔ insufficient reserves reset the counter after meals, not before (0.2488ms)
+  ✔ cap 8 holds in a long no-command run; identities are never reused (66.1161ms)
+✔ Build check 7 · birth and population cap (69.0029ms)
+▶ Build check 8 · pause / speed / reset / ending
+  ✔ initial pause freezes time, effects, cooldowns and queued command (0.8554ms)
+  ✔ normal is 30 seconds/day; 3× is 10; partial day survives pause (0.783ms)
+  ✔ restart exactly clears every value, timer, discovery and pending command, with a NEW seed (4.7973ms)
+  ✔ last death ends before close-of-day; pauses and rejects all future commands (0.5503ms)
+  ✔ empty diagnostic state ends cleanly without NaN averages (0.2337ms)
+✔ Build check 8 · pause / speed / reset / ending (7.4198ms)
+✔ wheat is a later discovery requiring observed seasons, garden experience, seed and a digging tool (7.9209ms)
+✔ seed samples come from finite warm-season gathering and observations persist across generations (0.925ms)
+✖ new wheat beds use real seed while existing garden beds retain their crops (14.7701ms)
+✔ wheat grows over multiple weeks, waits through winter, and yields grain rather than instant meals (5.7018ms)
+✔ a full grain store leaves the rest of the crop standing without repeated fertilizer bonuses (2.094ms)
+✔ querns require a harvest, hammer, personal stone work and real stone, and remain after the maker dies (1.5697ms)
+✔ milling and baking consume separate batches and workdays, protect seed and need a local quern and hearth (0.9293ms)
+✔ food processing is useful work when reserves run low, while urgent needs interrupt it immediately (2.0338ms)
+✔ lessons respect the new recipe dependencies instead of giving children advanced bread knowledge (1.6178ms)
+✔ old fields and discoveries survive loading, together with real crop, quern, seed and flour progress (5.4591ms)
+✔ a younger generation learns bread only after two actual paired lessons with a practiced baker (1.1202ms)
+ℹ tests 61
+ℹ suites 8
+ℹ pass 60
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 355.3569
+
+✖ failing tests:
+
+test at tests\wheat.test.js:37:1
+✖ new wheat beds use real seed while existing garden beds retain their crops (14.7701ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'Plant'
+  - 'Sow wheat'
+  
+      at TestContext.<anonymous> (file:///C:/Users/mrmar/OneDrive/Documents/Game/tests/wheat.test.js:40:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Plant',
+    expected: 'Sow wheat',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

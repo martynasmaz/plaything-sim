@@ -12,6 +12,9 @@ import {paintingRecipe,paintingReady,paintMemory,discoverPainting,paintingSite} 
 import {inspirationBonus} from './inspiration.js';
 import {developmentEnabled,fieldRecipe,fieldPlanningReady} from './development.js';
 import {advanceDryingRacks} from './provisions.js';
+import {granaryRecipe,granaryStudyReady,rememberStorageSites} from './storage.js';
+import {bridgeRecipe,bridgeStudyReady} from './river.js';
+import {husbandryRecipes,husbandryIds,husbandryEnabled,initHusbandry,husbandryDependencies,livestockBuildingRules} from './husbandry.js';
 /* Personal knowledge in the live homestead. A workday is one decision and one
    finished activity. Stocks and finished objects are physical, knowledge isn't. */
 export const materialSites={
@@ -175,13 +178,14 @@ const projects=[
     (s,v)=>fishingDependencies(s,'fishing net')&&(v.practice.skills.fibre||0)>=3&&(v.practice.skills.fish||0)>=3],
   ['hafting','Hafted stone tools','wood','sticky',['knapping','cordage'],{stone:1,wood:1,resin:1},'hafted tool',()=>true],
   ['baskets','Basket weaving','berries','flexible',['cordage'],{fibre:2},'basket',(s,v)=>v.practice.limitedTrips>=2],
-  ['housing','Improved shelter construction','wood','insulating',['cordage'],{hide:1,wood:2},'lined bed',(s,v)=>v.warmth<90||v.outdoors||!!v.herbalist],
+  ['housing','Improved shelter construction','wood','insulating',['cordage'],{hide:1,wood:2},'lined bed',(s,v)=>v.warmth<90||v.outdoors||!!v.herbalist||
+    !!s.local?.husbandry?.pens.some(p=>p.camp===(v.tribe||0)&&p.work>=livestockBuildingRules.enclosure.work&&p.shelterWork<livestockBuildingRules.shelter.work)],
   ['drying','Food drying','berries','perishable',[],{food:1,wood:1},'dried food',surplus],
   ['shaping','Clay shaping','clay','mouldable',[],{clay:1},'clay vessel',surplus],
   ['pottery','Fired pottery','clay','mouldable',['shaping'],{clay:2,wood:1},'storage jar',surplus],
   ['charcoal','Charcoal production','wood','rigid',[],{wood:2},'charcoal',surplus],
   ['kilns','Improved kilns','clay','mouldable',['pottery','charcoal'],{clay:2,charcoal:1},'efficient kiln',surplus],
-  ...cerealRecipes,boneMealRecipe,fieldRecipe,paintingRecipe,...magicRecipes
+  ...cerealRecipes,boneMealRecipe,fieldRecipe,granaryRecipe,bridgeRecipe,paintingRecipe,...magicRecipes,...husbandryRecipes
 ];
 export const practices=Object.fromEntries(projects.map(([id,name,skill,property,requires,cost,product,need])=>[id,{
   id,name,skill,property,requires,cost,product,need,work:3,
@@ -190,7 +194,7 @@ export const practices=Object.fromEntries(projects.map(([id,name,skill,property,
 for(const [id] of magicRecipes){practices[id].magic=magicActions[id]?'ritual':'tool';practices[id].action=magicActions[id];}
 practices.bonemeal.action='Grind bones for fertilizer';
 practices.milling.action='Grind wheat into flour';practices.breadmaking.action='Bake hearth flatbread';
-export function availablePractices(s){return Object.values(practices).filter(r=>(!r.magic||magicEnabled(s))&&(r.id!=='fieldplanning'||s.config.learning?.development?.fields||s.local.first.fieldplanning!==undefined));}
+export function availablePractices(s){return Object.values(practices).filter(r=>(!husbandryIds.includes(r.id)||husbandryEnabled(s)||s.local.first[r.id]!==undefined)&&(!r.magic||magicEnabled(s))&&(r.id!=='fieldplanning'||s.config.learning?.development?.fields||s.local.first.fieldplanning!==undefined));}
 const byActivity={};
 for(const recipe of Object.values(practices))(byActivity[recipe.skill]??=[]).push(recipe);
 byActivity.berries.push(practices.bonemeal); // Farmers can connect field observations with earlier crushing work.
@@ -217,10 +221,12 @@ export function initSettlement(s){
   }
   for(const v of s.villagers)initPractice(s,v);
   s.local.campStores??={};
+  rememberStorageSites(s,campSites,()=>worldTrees(s).filter((_,id)=>standingTree(s,id)));
   s.local.stock.bone??=0;
   s.local.stock.herbs??=0;
   s.local.stock.boneMeal??=0;
   initCereals(s);
+  initHusbandry(s);
   rememberResources(s);
   s.local.deposits.wheat??=16;
   s.local.deposits.quernStone??=24;
@@ -301,6 +307,7 @@ function spend(s,cost){for(const [k,n] of Object.entries(cost))stockOf(s,k)[k]-=
 export function canExperiment(s,v,r){
   const p=v.practice;
   return assessNeeds(s,v).level>=3&&!p.known[r.id]&&v.fullness>28&&p.energy>=32&&v.health>30&&
+    (!husbandryIds.includes(r.id)||husbandryDependencies(s,r.id))&&
     p.properties.includes(r.property)&&r.requires.every(id=>p.known[id])&&
     (!r.heat||s.fireLit)&&r.need(s,v)&&affordable(s,r.cost);
 }
@@ -310,11 +317,22 @@ export function planLessons(s,order){
   // lessons must not promise a teacher who is treating patients elsewhere.
   const medical=v=>!!v.herbalist||!!(v.healerApprentice&&order.some(t=>t.id===v.healerApprentice.mentorId&&t.herbalist));
   const traveling=new Set([s.local.campVisit?.traveler,s.local.campVisit?.host]);
-  const available=order.filter(v=>(!medical(v)||magicEnabled(s))&&!traveling.has(v.id));
+  const keepers=new Set();
+  for(const pen of s.local.husbandry?.pens||[]){
+    if(pen.careDay>=s.day-1||!s.local.husbandry.animals.some(a=>a.status==='alive'&&a.location==='village'&&a.penId===pen.id))continue;
+    const keeper=order.find(v=>(v.tribe||0)===pen.camp&&v.age>=s.config.life.adult&&!v.illnessDays&&!medical(v)&&v.practice.known.herding&&
+      v.fullness>=40&&v.warmth>=45&&v.health>=50&&v.practice.energy>=32);
+    if(keeper)keepers.add(keeper.id);
+  }
+  if(s.local.husbandry?.journey)traveling.add(s.local.husbandry.journey.travelerId);
+  const available=order.filter(v=>(!medical(v)||magicEnabled(s))&&!traveling.has(v.id)&&!keepers.has(v.id));
   for(const student of available){
     const p=student.practice;
     if(booked.has(student.id)||assessNeeds(s,student).level<2||student.warmth<40||p.energy<35||student.fullness<36||s.food<s.villagers.length*2)continue;
     const teachable=(id,t)=>!!practices[id]&&!p.known[id]&&
+      (!husbandryIds.includes(id)||practices[id].requires.every(key=>p.known[key])&&p.properties.includes(practices[id].property)&&practices[id].need(s,student))&&
+      (id!=='granaries'||practices[id].requires.every(key=>p.known[key])&&granaryStudyReady(s,student))&&
+      (id!=='bridgecraft'||practices[id].requires.every(key=>p.known[key])&&bridgeStudyReady(s,student))&&
       (id!=='fieldplanning'||practices[id].requires.every(key=>p.known[key])&&fieldPlanningReady(s,student)&&affordable(s,practices[id].cost))&&(!(medical(student)||medical(t))||practices[id]?.magic&&
       (student.healerApprentice?.mentorId===t.id||t.healerApprentice?.mentorId===student.id))&&
       (id!=='bonemeal'||boneFertilizerReady(s,student))&&
@@ -336,6 +354,8 @@ export function planLessons(s,order){
   }
 }
 function useTechnique(s,v,r,report){
+  if(['granaries','bridgecraft'].includes(r.id))return false; // Plans become physical work only in the simulation.
+  if(husbandryIds.includes(r.id))return false; // These products require actual husbandry work.
   const p=v.practice,stationary=['charcoal','drying','herbalism','bonemeal','milling','breadmaking','cavepainting'].includes(r.id)||r.magic==='ritual';
   if(r.id==='cavepainting'&&!r.requires.every(id=>p.known[id]))return false;
   if(cerealIds.includes(r.id)&&!r.requires.every(id=>p.known[id]))return false;
@@ -396,7 +416,7 @@ function experiment(s,v,die,onlyCereals=false){
   // prerequisites whether curiosity or a wish for competence motivates them.
   const candidates=[...(byActivity[p.lastSkill]||[])].sort((a,b)=>Number(cerealIds.includes(b.id))-Number(cerealIds.includes(a.id)));
   for(const r of candidates){
-    if(onlyCereals&&!cerealIds.includes(r.id)&&r.id!=='fieldplanning')continue;
+    if(onlyCereals&&!cerealIds.includes(r.id)&&!['fieldplanning','granaries','bridgecraft'].includes(r.id))continue;
     if(!canExperiment(s,v,r)||die>c.experimentChance+p.curiosity*20+inspirationBonus(s,v,r))continue;
     spend(s,r.cost);p.energy-=c.workCost;p.currentSkill=r.skill;
     p.progress[r.id]=(p.progress[r.id]||0)+c.progress*(.55+p.curiosity+(p.skills[r.skill]||0)/16);
@@ -420,9 +440,14 @@ export function practiceWork(s,v,die,report){
   if(v.fullness<=28||p.energy<32||v.health<=30)return null;
   const lesson=p.lessonToday;
   if(lesson){
+    if(['granaries','bridgecraft'].includes(lesson.id)&&(!practices[lesson.id].requires.every(id=>p.known[id])||!practices[lesson.id].need(s,v)))return null;
     p.energy-=c.workCost;
     if(lesson.teacher){
       const t=s.villagers.find(person=>person.id===lesson.teacher);
+      if(husbandryIds.includes(lesson.id)){
+        if(report)(report.husbandryLessons??=[]).push({studentId:v.id,teacherId:t.id,id:lesson.id,key:lesson.key});
+        return 'Learn from '+t.name;
+      }
       if(cerealIds.includes(lesson.id)){
         if(report)(report.cerealLessons??=[]).push({studentId:v.id,teacherId:t.id,id:lesson.id,key:lesson.key});
         return 'Learn from '+t.name;
@@ -553,6 +578,20 @@ export function completeCerealLessons(s,report){
     teacher.lastCompanyDay=student.lastCompanyDay=s.day;
     if(p.lessons[lesson.key]>=s.config.learning.lessonDays&&!p.known[r.id]){
       p.known[r.id]=1;settlementEvent(s,student.name+' learned '+r.name+' in lessons with '+teacher.name+'.');
+    }
+  }
+}
+export function completeHusbandryLessons(s,report){
+  for(const lesson of report.husbandryLessons||[]){
+    const student=s.villagers.find(v=>v.id===lesson.studentId),teacher=s.villagers.find(v=>v.id===lesson.teacherId),r=practices[lesson.id];
+    if(!student||!teacher||!husbandryIds.includes(lesson.id)||!teacher.practice.known[r.id]||!teacher.practice.used[r.id]||
+      !r.requires.every(id=>student.practice.known[id])||!student.practice.properties.includes(r.property)||!r.need(s,student)||
+      !report.actions.some(a=>a.id===teacher.id&&a.action==='Teach '+r.name)||
+      !report.actions.some(a=>a.id===student.id&&a.action==='Learn from '+teacher.name))continue;
+    const p=student.practice;p.lessons[lesson.key]=(p.lessons[lesson.key]||0)+1;
+    teacher.lastCompanyDay=student.lastCompanyDay=s.day;
+    if(p.lessons[lesson.key]>=s.config.learning.lessonDays&&!p.known[r.id]){
+      p.known[r.id]=1;s.local.first[r.id]??=s.day;settlementEvent(s,student.name+' learned '+r.name+' in lessons with '+teacher.name+'.');
     }
   }
 }

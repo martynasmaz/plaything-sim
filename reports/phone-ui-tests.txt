@@ -1,0 +1,48 @@
+✔ phone controls activate for small touch screens in both orientations; narrow desktop windows keep desktop controls (5.8197ms)
+✔ choosing a phone power requires Cast, uses the same simulation command, and never focuses a text input (5.5911ms)
+✔ destructive powers require an additional deliberate confirmation and respect current command validation (1.5955ms)
+✔ the magic unlock is absent from all power buttons and works only through manually entered Speak text (1.0031ms)
+✔ reading pauses playback without changing world state or the chosen speed; the preference persists separately (1.0487ms)
+✖ phone pause resumes the last speed, the camera button recenters, and time actions use the shared command route (1.9461ms)
+✔ orientation and keyboard viewport changes keep the phone interface usable; leaving phone mode closes its menus (0.5472ms)
+✔ a queued native close event does not clear a newly reopened phone menu (0.5805ms)
+✔ touch inspection tolerates finger jitter but does not mistake dragging, pinching or canceled touches for taps (0.2291ms)
+✔ a confirmed phone power can be tapped repeatedly on the map without menus, another confirmation or keyboard focus (5.4233ms)
+✔ repeat keeps real power checks and only changes after another successful cast (3.6412ms)
+✔ repeat is hidden while reading and on desktop, and returns when phone play resumes (2.3639ms)
+✔ Speak and time controls do not turn the manual magic unlock into a repeatable button (0.6796ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 149.2869
+
+✖ failing tests:
+
+test at tests\phone-ui.test.js:57:1
+✖ phone pause resumes the last speed, the camera button recenters, and time actions use the shared command route (1.9461ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   'back 1'
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/mrmar/OneDrive/Documents/Game/tests/phone-ui.test.js:60:68)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'back 1' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

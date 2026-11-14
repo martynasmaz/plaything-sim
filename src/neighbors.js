@@ -3,12 +3,13 @@ import {assessNeeds} from './needs.js';
 import {campSites,practices,canExperiment,finishOrdinaryWork,settlementEvent} from './practices.js';
 import {developmentEnabled} from './development.js';
 import {unsafeRiverWeather} from './climate.js';
+import {canLeaveLivestock} from './husbandry.js';
 
 export const neighborRules={interval:12,partnerInterval:6,meetingsToJoin:2,familyContactDays:20,rations:3};
 export function communitySite(s,key){return key==='east'?s.local.daughter?.site:campSites[key];}
 const label=key=>key==='east'?'the eastern village':'camp '+(key+1);
 function dependentChildren(s,v){return s.villagers.filter(child=>child.age<s.config.life.adult&&child.carers?.includes(v.id));}
-function canLeaveCare(s,v){return dependentChildren(s,v).every(child=>!child.illnessDays&&child.carers.some(id=>{
+function canLeaveCare(s,v){return canLeaveLivestock(s,v)&&dependentChildren(s,v).every(child=>!child.illnessDays&&child.carers.some(id=>{
   const carer=s.villagers.find(p=>p.id===id);return carer&&carer!==v&&carer.age>=s.config.life.adult&&!carer.campJourney&&communityOf(s,carer)===communityOf(s,child);
 }));}
 export function crossVillageParents(mother,father){

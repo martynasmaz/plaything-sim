@@ -1,0 +1,45 @@
+✔ field layout requires crop experience, tools, personal prerequisites and real markers (5.4208ms)
+✔ paid field work clears only its small patch, survives a death/load, and finishes as an unplanted plot (39.9423ms)
+✔ hunger, cold, illness and exhaustion interrupt expansion without losing a paid project (3.6642ms)
+✔ drying racks and preserved food require separate paid work, ingredients and accessible meals (1.4519ms)
+✔ seasonal food targets use actual storage capacity and brewing no free meals (0.8177ms)
+✔ a regular role requires repeated actual work and does not change personal needs or traits (19.7066ms)
+✔ housing is anticipated and investment tolerance cannot excuse recent hunger or an ordinary food deficit (0.8136ms)
+✔ finished local provisions support family readiness without spending or duplicating food (6.1531ms)
+✔ a camp cannot pay for another occupied camp from its inaccessible preserved stock (1.1268ms)
+✔ the eastern village uses its own supplies and is not blocked by the main pantry (0.6734ms)
+✔ shared provisions first support camps with fewer private stores, without claiming inaccessible food (0.9073ms)
+✔ a well-stocked camp does not take the shared meals needed by a camp without stores (16.1857ms)
+✔ actual births use stored meals while retaining the three-day check and maternal recovery (50.9822ms)
+✔ early housing plans create physical work before a split village hits its birth cap (5.6526ms)
+✔ hungry, cold villagers do not get locked onto early construction (1.4508ms)
+✔ an old food stockpile does not permit births while current production runs below consumption (0.468ms)
+✔ moving meals into a camp store or a travel packet is not food production (0.437ms)
+✔ winter storage planning requires experienced living preservers and learned winter yields (0.431ms)
+✔ observing a winter records food income once and keeps experience through a save (1.3933ms)
+✔ cross-village families require two paid meetings and residence changes at the visited community (1.2088ms)
+✔ children of a couple introduced through visits retain both parents and their communities (3.0749ms)
+✔ parents can remain in different villages after actual visits, with one family opportunity per fresh meeting (2.6823ms)
+✔ neighbor communication does not permit siblings to form a reproductive household (0.658ms)
+✔ a neighbor can teach a practised technique through repeated meetings, with recipe prerequisites (1.1023ms)
+✔ urgent needs, floods and sole childcare duties take priority over optional trips (1.2195ms)
+✔ a saved journey resumes deterministically; a missing host does not conjure a meeting (1.1668ms)
+✔ wheat is a later discovery requiring observed seasons, garden experience, seed and a digging tool (7.3391ms)
+✔ seed samples come from finite warm-season gathering and observations persist across generations (1.1456ms)
+✔ new wheat beds use real seed while existing garden beds retain their crops (14.1158ms)
+✔ wheat grows over multiple weeks, waits through winter, and yields grain rather than instant meals (9.0492ms)
+✔ a full grain store leaves the rest of the crop standing without repeated fertilizer bonuses (3.5785ms)
+✔ querns require a harvest, hammer, personal stone work and real stone, and remain after the maker dies (1.4346ms)
+✔ milling and baking consume separate batches and workdays, protect seed and need a local quern and hearth (0.6757ms)
+✔ food processing is useful work when reserves run low, while urgent needs interrupt it immediately (1.1203ms)
+✔ lessons respect the new recipe dependencies instead of giving children advanced bread knowledge (1.0916ms)
+✔ old fields and discoveries survive loading, together with real crop, quern, seed and flour progress (3.9106ms)
+✔ a younger generation learns bread only after two actual paired lessons with a practiced baker (1.2181ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 265.139

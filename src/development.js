@@ -1,7 +1,8 @@
+import {SCENARIO} from './scenario.js';
 // Development is earned through work. Flags allow matched-seed experiments
 // without changing the original reference rules or erasing saved discoveries.
 export const developmentEnabled=(s,feature)=>!!s.config.learning?.development?.[feature]&&!!s.local?.lastWinterFood;
-export const fieldRules={work:3,maxPlots:44};
+export const fieldRules=SCENARIO.progression.fields;
 export function fieldSite(s,index){
   if(s.farming.sites?.[index])return s.farming.sites[index];
   if(index<4)return [650+index*19,522+index%2*6];
@@ -19,7 +20,9 @@ export function fieldTarget(s){
 export function regularWorkSafe(s,v){
   return !!s.config.learning&&!!v.practice&&v.age>=s.config.life.adult&&!v.illnessDays&&v.health>=50&&v.fullness>=40&&v.warmth>=45&&v.practice.energy>=32;
 }
-const workRole=action=>/^(Harvest|Plant|Sow wheat|Prepare a field|Clear field)/.test(action)?'farmer':
+const workRole=action=>/^(Tend livestock|Tend and milk|Milk |Lead livestock|Clean livestock|Cut and bundle winter hay|Gather and clean sheep|Slaughter )/.test(action)?'herder':
+  /^(Spin wool|Weave wool|Sew a wool)/.test(action)?'weaver':
+  /^(Harvest|Plant|Sow wheat|Prepare a field|Clear field)/.test(action)?'farmer':
   action==='Grind wheat into flour'?'miller':action==='Bake hearth flatbread'?'baker':action==='Fish'?'fisher':
   /^(Hunt|Track )/.test(action)?'hunter':/^(Build |Clear hut|Clear herb)/.test(action)?'builder':
   /^(Teach )/.test(action)?'teacher':/^(Shape jar|Fire jar|Make storage jar|Make clay vessel)/.test(action)?'potter':

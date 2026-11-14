@@ -1,0 +1,11 @@
+seed,observed_day,extinct,population_day_100,population_day_300,population_day_1000,population_final,peak,births,deaths,child_deaths,old_age_deaths,hunger_deaths,cold_deaths,illness_deaths,last_birth_day,births_final_300,huts_final,population_cap,meetings,household_moves,cross_village_births,neighbor_lessons,food_blocked_checks,cap_blocked_checks,births_supported_by_local_stores
+0,2614,true,12,24,29,0,37,385,391,3,65,318,0,17,2314,0,13,51,7,2,1,0,653,94,365
+1,986,true,8,24,0,0,39,120,126,1,18,103,0,7,698,4,12,48,2,0,0,0,151,83,112
+2,928,true,9,20,0,0,38,147,153,4,22,127,0,12,842,54,12,48,4,0,0,0,211,81,131
+3,1664,true,7,23,12,0,39,214,220,4,34,183,0,7,1364,0,15,57,0,0,0,0,414,2,199
+4,2268,true,8,23,30,0,39,314,320,4,50,258,1,15,1968,0,14,54,1,0,0,0,560,57,294
+5,941,true,15,28,0,0,36,140,146,5,23,116,0,9,838,30,14,54,3,1,0,0,249,32,134
+6,1684,true,13,36,19,0,37,251,257,6,40,209,2,17,1412,9,13,51,1,0,0,0,421,1,244
+7,3000,false,13,26,29,30,38,510,486,14,84,386,2,28,2998,57,13,51,4,0,0,0,983,0,490
+8,1685,true,9,32,18,0,39,267,273,4,43,224,0,9,1565,39,12,48,2,0,0,0,465,121,247
+9,542,true,8,11,0,0,13,11,17,0,17,0,0,0,242,0,3,21,4,0,0,0,25,134,4

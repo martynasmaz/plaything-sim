@@ -6,8 +6,12 @@ import {visibleResources} from './resources.js';
 import {createFamilyTree} from './genealogy.js';
 import {createEncyclopedia} from './encyclopedia.js';
 import {drawRockRecord} from './paintings-view.js';
+import {SCENARIO} from './scenario.js';
+import {createLivestockNotebook} from './husbandry-notebook.js';
+import {storageCapacity,granaryRules,granaryFinished} from './storage.js';
+import {bridgeUpgradeRules} from './river.js';
 
-const resourceIcons={food:'🍲',wood:'🪵',stone:'🪨',fibre:'🌾',clay:'🏺',resin:'💧',hide:'🦌',charcoal:'🔥',fish:'🐟',berries:'🫐',bone:'🦴',herbs:'🌿',boneMeal:'🌱',wheat:'🌾',flour:'🥣',quernStone:'🪨'};
+const resourceIcons={food:'🍲',wood:'🪵',stone:'🪨',fibre:'🌾',clay:'🏺',resin:'💧',hide:'🦌',charcoal:'🔥',fish:'🐟',berries:'🫐',bone:'🦴',herbs:'🌿',boneMeal:'🌱',wheat:'🌾',flour:'🥣',quernStone:'🪨',hay:'🌾',milk:'🥛',curds:'🥣',wool:'🐑',woolYarn:'🧶',woolCloth:'🧵',manure:'🌱',compost:'🌱',fodderGrain:'🌾'};
 
 function notebookResources(host,title){
   const heading=document.createElement('h3'),grid=document.createElement('dl');
@@ -23,7 +27,8 @@ function notebookResources(host,title){
         const icon=document.createElement('span'),value=document.createElement('dd');
         icon.setAttribute('aria-hidden','true');
         icon.textContent=resourceIcons[key]||'•';
-        label.append(icon,key==='boneMeal'?'Bone meal':key==='quernStone'?'Grinding stone':key[0].toUpperCase()+key.slice(1));
+        const names={boneMeal:'Bone meal',quernStone:'Grinding stone',woolYarn:'Wool yarn',woolCloth:'Wool cloth',fodderGrain:'Fodder grain'};
+        label.append(icon,names[key]||key[0].toUpperCase()+key.slice(1));
         row.append(label,value);grid.append(row);cells.set(key,value);
       }
       const value=cells.get(key),count=Math.floor(amount);
@@ -48,6 +53,7 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
   el('nav').after(census);
   const familyTree=createFamilyTree(panel,readState);
   const encyclopedia=createEncyclopedia(panel,readState);
+  const livestockNotebook=createLivestockNotebook(panel,readState);
   const paintings=document.createElement('details');paintings.hidden=true;paintings.innerHTML='<summary>Discovered rock paintings</summary><div></div>';panel.append(paintings);
   let paintingKey='';
   function drawCensus(s){
@@ -96,6 +102,7 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
     const s=readState(),l=s.local;if(!l)return;
     familyTree.draw();
     encyclopedia.draw();
+    livestockNotebook.draw();
     const found=(l.paintings||[]).filter(p=>p.discoveredDay!==undefined);
     paintings.hidden=!found.length;
     const nextPaintingKey=s.seed+'/'+found.map(p=>p.id+':'+p.readBy.length).join('/');
@@ -105,7 +112,7 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
       caption.textContent=p.motif+' · painted by '+p.authorName+' on day '+p.day+' · '+p.readBy.length+' readers. Pictures offer clues; they do not replace practice.';row.append(image,caption);return row;
     }));}
     if(census.open)drawCensus(s);
-    el('[data-clock]').textContent='Seed '+s.seed+' · Day '+s.day+' · '+l.season+' · '+s.villagers.length+' people · '+(s.speed?s.speed+'×':'paused');
+    el('[data-clock]').textContent=SCENARIO.name+' r'+SCENARIO.revision+' · Seed '+s.seed+' · Day '+s.day+' · '+l.season+' · '+s.villagers.length+' people · '+(s.speed?s.speed+'×':'paused');
     const stocks={food:s.food,wood:s.wood,...l.stock};
     magicNotes.hidden=!magicEnabled(s);
     if(magicEnabled(s)){
@@ -124,8 +131,12 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
     showStores(visibleResources(s,stocks));
     showDeposits(visibleResources(s,l.deposits));
     winterStores.textContent=Object.entries(l.campStores||{}).filter(([,r])=>r.built)
-      .map(([camp,r])=>'Camp '+(Number(camp)+1)+' · '+r.rack+' drying · '+r.saved+' / '+(24*(r.racks||1)+12*(r.tradeJars||0))+' stored for winter').join(' | ');
+      .map(([camp,r])=>'Camp '+(Number(camp)+1)+' · '+r.rack+' drying · '+r.saved+' / '+storageCapacity(r)+' stored for winter'+
+        (r.granary?' · granary '+r.granary.work+'/'+granaryRules.work+(granaryFinished(r)?' · '+(r.granary.bins||0)+' extra bin sets': ' under construction'):'')).join(' | ');
+    if(l.bridgeUpgrade)winterStores.textContent+=' Bridge: handrails '+l.bridgeUpgrade.railWork+'/'+bridgeUpgradeRules.railWork+' · bracing '+l.bridgeUpgrade.braceWork+'/'+bridgeUpgradeRules.braceWork+'.';
     const soil=Object.entries(s.farming.boneSoil||{}).filter(([,f])=>f.remaining>0);
+    const composted=Object.entries(s.farming.manureSoil||{}).filter(([,f])=>f.remaining>0);
+    if(composted.length)winterStores.textContent+=' Compost-fed plots: '+composted.map(([i,f])=>(Number(i)+1)+' ('+f.remaining+' harvests remaining)').join(', ')+'.';
     if(soil.length)winterStores.textContent+=' Bone-fed plots: '+soil.map(([i,f])=>(Number(i)+1)+' ('+
       (f.readyDay>s.day?'available from day '+f.readyDay:f.remaining+' harvests remaining')+')').join(', ')+'.';
     if(s.farming.querns?.length||s.farming.wheatHarvests)winterStores.textContent+=' Wheat: '+(s.farming.wheatHarvests||0)+
@@ -193,7 +204,7 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
       const li=document.createElement('li');li.textContent='Day '+e.day+' · '+e.text;return li;
     }));
   }
-  select.onchange=draw;el('[data-event-filter]').onchange=draw;
-  return {draw,close(){if(panel.open)panel.close();},isOpen:()=>panel.open,
+  select.onchange=()=>{familyTree.setPerson(Number(select.value));draw();};el('[data-event-filter]').onchange=draw;
+  return {draw,close(){familyTree.close();if(panel.open)panel.close();},isOpen:()=>panel.open,
     open(){if(!panel.open){if(isPhone())panel.showModal();else panel.show();}draw();}};
 }

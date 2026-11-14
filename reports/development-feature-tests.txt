@@ -1,0 +1,18 @@
+✔ field layout requires crop experience, tools, personal prerequisites and real markers (7.0908ms)
+✔ founding work remains unchanged until the community has experience of a winter (1039.8604ms)
+✔ paid field work clears only its small patch, survives a death/load, and finishes as an unplanted plot (7.2907ms)
+✔ hunger, cold, illness and exhaustion interrupt expansion without losing a paid project (3.8666ms)
+✔ drying racks and preserved food require separate paid work, ingredients and accessible meals (2.643ms)
+✔ seasonal food targets use actual storage capacity and brewing no free meals (1.5368ms)
+✔ odd-sized villages preserve whole portions and never consume a fractional cache as a full meal (9.1001ms)
+✔ a regular role requires repeated actual work and does not change personal needs or traits (10.7195ms)
+✔ a regular farmer harvests ripe food before sowing another bed (2.7705ms)
+✔ housing is anticipated and investment tolerance cannot excuse recent hunger or an ordinary food deficit (1.5306ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1302.268

@@ -1,0 +1,1 @@
+{"population":32,"pens":[],"stats":{"births":0,"deaths":0,"slaughtered":0,"escaped":0,"traded":0,"milk":0,"curds":0,"wool":0,"cloth":0,"hay":0,"manured":0,"traction":0}}

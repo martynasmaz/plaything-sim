@@ -1,0 +1,10 @@
+{"seed":1,"day":397,"population":0,"bread":0,"rawFoodHungerDays":0,"lessons":0}
+{"seed":3,"day":331,"population":0,"bread":0,"rawFoodHungerDays":0,"lessons":0}
+{"seed":5,"day":476,"population":0,"bread":0,"rawFoodHungerDays":0,"lessons":0}
+{"seed":0,"day":3000,"population":10,"bread":3088,"rawFoodHungerDays":4,"lessons":3}
+{"seed":7,"day":3000,"population":28,"bread":3080,"rawFoodHungerDays":1,"lessons":2}
+{"seed":2,"day":3000,"population":30,"bread":2808,"rawFoodHungerDays":18,"lessons":0}
+{"seed":9,"day":3000,"population":32,"bread":3208,"rawFoodHungerDays":13,"lessons":4}
+{"seed":4,"day":3000,"population":27,"bread":3088,"rawFoodHungerDays":1,"lessons":8}
+{"seed":6,"day":349,"population":0,"bread":0,"rawFoodHungerDays":0,"lessons":0}
+{"seed":8,"day":1443,"population":0,"bread":1072,"rawFoodHungerDays":12,"lessons":11}

@@ -1,0 +1,10 @@
+{"seed":50,"baseline":45,"population":41,"contact":85,"animals":0,"maxAnimals":{"sheep":2,"pig":0,"cattle":0}}
+{"seed":51,"baseline":23,"population":40,"contact":85,"animals":0,"maxAnimals":{"sheep":0,"pig":0,"cattle":0}}
+{"seed":52,"baseline":37,"population":27,"contact":85,"animals":0,"maxAnimals":{"sheep":2,"pig":0,"cattle":0}}
+{"seed":53,"baseline":20,"population":0,"contact":95,"animals":0,"maxAnimals":{"sheep":0,"pig":0,"cattle":0}}
+{"seed":54,"baseline":43,"population":40,"contact":85,"animals":0,"maxAnimals":{"sheep":0,"pig":0,"cattle":0}}
+{"seed":55,"baseline":30,"population":36,"contact":83,"animals":0,"maxAnimals":{"sheep":2,"pig":0,"cattle":0}}
+{"seed":56,"baseline":39,"population":45,"contact":202,"animals":0,"maxAnimals":{"sheep":0,"pig":0,"cattle":0}}
+{"seed":57,"baseline":0,"population":41,"contact":83,"animals":0,"maxAnimals":{"sheep":2,"pig":0,"cattle":0}}
+{"seed":58,"baseline":36,"population":38,"contact":141,"animals":0,"maxAnimals":{"sheep":2,"pig":0,"cattle":0}}
+{"seed":59,"baseline":0,"population":34,"contact":141,"animals":0,"maxAnimals":{"sheep":0,"pig":0,"cattle":0}}

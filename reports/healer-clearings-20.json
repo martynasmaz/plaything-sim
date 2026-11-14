@@ -1,0 +1,113 @@
+{
+  "sourceSha256": "1c330c1dfbea020ea3ee37d0c4fc969df5c6537ab804bfe2d0cfd09c2d22d6c6",
+  "runs": 20,
+  "firstSeed": 0,
+  "horizon": 1000,
+  "method": "Fresh HOMESTEAD_RULES worlds, seeds 0 through count-1, no commands or state edits. Timings count first-ever emergence, including structures whose owners later die. Medians include only villages reaching each milestone; unreached runs are censored at extinction or horizon.",
+  "herbalism": {
+    "count": 20,
+    "earliest": 23,
+    "median": 47.5,
+    "latest": 78
+  },
+  "healer": {
+    "count": 20,
+    "earliest": 34,
+    "median": 64,
+    "latest": 98
+  },
+  "plannedSite": {
+    "count": 16,
+    "earliest": 129,
+    "median": 268,
+    "latest": 927
+  },
+  "completedHut": {
+    "count": 3,
+    "earliest": 348,
+    "median": 466,
+    "latest": 838
+  },
+  "occupiedHut": {
+    "count": 3,
+    "earliest": 349,
+    "median": 467,
+    "latest": 839
+  },
+  "completedRack": {
+    "count": 1,
+    "earliest": 972,
+    "median": 972,
+    "latest": 972
+  },
+  "fullyFittedHut": {
+    "count": 0
+  },
+  "apprenticeship": {
+    "villagesWithApprentices": 20,
+    "villagesWithGraduates": 17,
+    "villagesWithTrainedSuccession": 8,
+    "apprentices": 118,
+    "graduates": 29,
+    "trainedSuccessions": 12,
+    "firstApprentice": {
+      "count": 20,
+      "earliest": 51,
+      "median": 82.5,
+      "latest": 122
+    },
+    "firstGraduation": {
+      "count": 17,
+      "earliest": 125,
+      "median": 259,
+      "latest": 842
+    },
+    "firstTrainedSuccession": {
+      "count": 8,
+      "earliest": 231,
+      "median": 565.5,
+      "latest": 899
+    },
+    "maxSimultaneousHealers": 1,
+    "maxSimultaneousActiveApprentices": 1
+  },
+  "daysFromPlanToHut": {
+    "count": 3,
+    "earliest": 91,
+    "median": 127,
+    "latest": 193
+  },
+  "checkpoints": [
+    {
+      "day": 100,
+      "villagesReachingDay": 20,
+      "healerEver": 20,
+      "hutEverCompleted": 0,
+      "fullyFittedEver": 0
+    },
+    {
+      "day": 300,
+      "villagesReachingDay": 20,
+      "healerEver": 20,
+      "hutEverCompleted": 0,
+      "fullyFittedEver": 0
+    },
+    {
+      "day": 500,
+      "villagesReachingDay": 18,
+      "healerEver": 20,
+      "hutEverCompleted": 2,
+      "fullyFittedEver": 0
+    },
+    {
+      "day": 1000,
+      "villagesReachingDay": 16,
+      "healerEver": 20,
+      "hutEverCompleted": 3,
+      "fullyFittedEver": 0
+    }
+  ],
+  "survivedHorizon": 16,
+  "builderHelpDays": 326,
+  "plannedButUnfinished": 13
+}

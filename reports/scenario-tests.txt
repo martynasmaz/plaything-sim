@@ -1,0 +1,17 @@
+✔ the summary settings drive the playable defaults and progression tables (1.9482ms)
+✔ the scenario can fix fresh-world seeds while an explicit URL seed wins (0.1857ms)
+✔ invalid probabilities, zero timing, NaN inputs and impossible lifespans are rejected clearly (0.6604ms)
+✔ weather modifiers change the measured baseline without changing the seed (3.1973ms)
+✔ river probabilities support zero and one while default outcomes retain the old sequence (1.4255ms)
+✔ natural inspiration probability can be disabled or made certain for an eligible opportunity (1.3525ms)
+✔ configured contact odds gate an otherwise eligible paid journey (2.5218ms)
+✔ configured breeding probability gates pregnancy without consuming nightly dice (1.9512ms)
+✔ the same settings and seed replay the same simulation, and ordinary overrides still work (195.8272ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 349.604

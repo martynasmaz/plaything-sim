@@ -1,0 +1,46 @@
+{
+  "sourceSha256": "4fe894f1b909a12900d39d7e38a7f8b53805b80957416807d19f55ab917be8f8",
+  "seeds": 10,
+  "horizon": 1000,
+  "method": "Seeds 0 through count-1, each run twice with current HOMESTEAD_RULES. No interventions in controls; only castText(state,\"magic\") at day 0 in enabled runs. Observe until horizon or extinction. No material, knowledge, population or weather edits.",
+  "arms": [
+    {
+      "magic": false,
+      "runs": 10,
+      "survived": 8,
+      "villagesWithDiviningBones": 0,
+      "villagesWithRites": 0,
+      "rites": 0,
+      "methods": {
+        "foretelling": 0,
+        "hearthcharms": 0,
+        "mendingrites": 0,
+        "storewards": 0
+      },
+      "villagesLearningBoneFertilizer": 10,
+      "bonesGround": 872,
+      "fertilizerApplications": 428,
+      "fertilizedHarvests": 1222,
+      "bonusFood": 2444
+    },
+    {
+      "magic": true,
+      "runs": 10,
+      "survived": 7,
+      "villagesWithDiviningBones": 10,
+      "villagesWithRites": 10,
+      "rites": 1003,
+      "methods": {
+        "foretelling": 845,
+        "hearthcharms": 0,
+        "mendingrites": 118,
+        "storewards": 40
+      },
+      "villagesLearningBoneFertilizer": 9,
+      "bonesGround": 552,
+      "fertilizerApplications": 276,
+      "fertilizedHarvests": 791,
+      "bonusFood": 1582
+    }
+  ]
+}

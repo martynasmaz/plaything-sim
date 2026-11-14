@@ -39,7 +39,7 @@ export function foodDaysFor(s,v){
   if(community==='east')return s.local.daughter.food/count+(v.travelMeals||0);
   const counts=new Map();for(const person of s.villagers){const camp=communityOf(s,person);if(camp!=='east')counts.set(camp,(counts.get(camp)||0)+1);}
   const groups=[...counts].map(([camp,n])=>({n,days:(s.local?.campStores?.[camp]?.saved||0)/n})).sort((a,b)=>a.days-b.days);
-  let level=groups[0]?.days||0,covered=0,shared=s.food;
+  let level=groups[0]?.days||0,covered=0,shared=s.food+(s.local?.stock.curds||0);
   // The shared pantry first raises the least-provisioned camps toward the
   // others. A well-stocked camp uses its own food rather than counting both
   // its private reserve and an equal share of the poorer camp's only meals.
@@ -59,7 +59,7 @@ export function mainFoodRequired(s,parentCamp,perPerson=s.config.birth.foodPerPe
     const target=count*perPerson+(camp===parentCamp?extra:0);
     needed+=Math.max(0,target-(s.local?.campStores?.[camp]?.saved||0));
   }
-  return needed;
+  return Math.max(0,needed-(s.local?.stock.curds||0));
 }
 export function familyFoodReady(s,mother){
   if(communityOf(s,mother)==='east'){
@@ -69,7 +69,7 @@ export function familyFoodReady(s,mother){
   return s.food>=mainFoodRequired(s,mother.tribe||0);
 }
 export function foodLedger(s){
-  let home=s.food,east=(s.local?.daughter?.food||0)+(s.local?.daughter?.returnFood||0);
+  let home=s.food+(s.local?.stock.curds||0),east=(s.local?.daughter?.food||0)+(s.local?.daughter?.returnFood||0);
   for(const store of Object.values(s.local?.campStores||{}))home+=(store.saved||0)+(store.rack||0);
   for(const v of s.villagers){if(communityOf(s,v)==='east')east+=v.travelMeals||0;else home+=v.travelMeals||0;}
   return {home,east};
@@ -94,7 +94,7 @@ export function recordFoodBalance(s,report){
       v.practice.winterFoodDays=(v.practice.winterFoodDays||0)+1;
   }else if(s.local.winterFoodObservation){
     const observed=s.local.winterFoodObservation;
-    if(observed.days>=7)s.local.lastWinterFood={home:observed.home/observed.days,east:observed.east/observed.days};
+    if(observed.days>=7){s.local.completedWinters=(s.local.completedWinters??(s.local.lastWinterFood?1:0))+1;s.local.lastWinterFood={home:observed.home/observed.days,east:observed.east/observed.days};}
     delete s.local.winterFoodObservation;
   }
 }

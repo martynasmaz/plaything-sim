@@ -1,0 +1,128 @@
+{
+  "method": "100,000 paired percentile bootstrap samples of the same 50 seeds. Extinct worlds remain zero. Descriptive uncertainty under seed resampling; no independent holdout validation. The 80-day annual mean controls season phase within the game calendar.",
+  "startingPopulation": 6,
+  "metrics": [
+    {
+      "metric": "day_100",
+      "before": 10.28,
+      "local": 10.14,
+      "difference": -0.14,
+      "relativeChangePercent": -1.361867704280144,
+      "pairedBootstrap95": [
+        -1.06,
+        0.78
+      ],
+      "localMeanBootstrap95": [
+        9.4,
+        10.96
+      ]
+    },
+    {
+      "metric": "day_300",
+      "before": 20.56,
+      "local": 21.22,
+      "difference": 0.66,
+      "relativeChangePercent": 3.2101167315175108,
+      "pairedBootstrap95": [
+        -3.28,
+        4.6
+      ],
+      "localMeanBootstrap95": [
+        18.12,
+        24.16
+      ]
+    },
+    {
+      "metric": "day_1000",
+      "before": 10.64,
+      "local": 14.56,
+      "difference": 3.92,
+      "relativeChangePercent": 36.84210526315789,
+      "pairedBootstrap95": [
+        -0.92,
+        8.68
+      ],
+      "localMeanBootstrap95": [
+        11.02,
+        18.08
+      ]
+    },
+    {
+      "metric": "year_ending_day_1000",
+      "before": 11.328500000000002,
+      "local": 14.45325,
+      "difference": 3.1247499999999993,
+      "relativeChangePercent": 27.583086904709347,
+      "pairedBootstrap95": [
+        -1.3882500000000004,
+        7.595749999999999
+      ],
+      "localMeanBootstrap95": [
+        11.113,
+        17.74175000000001
+      ]
+    },
+    {
+      "metric": "day_3000",
+      "before": 3.6,
+      "local": 12.98,
+      "difference": 9.38,
+      "relativeChangePercent": 260.5555555555556,
+      "pairedBootstrap95": [
+        4.74,
+        13.9
+      ],
+      "localMeanBootstrap95": [
+        9.22,
+        16.74
+      ]
+    }
+  ],
+  "curve": [
+    {
+      "day": 0,
+      "before": 6,
+      "local": 6
+    },
+    {
+      "day": 100,
+      "before": 10.28,
+      "local": 10.14
+    },
+    {
+      "day": 300,
+      "before": 20.56,
+      "local": 21.22
+    },
+    {
+      "day": 500,
+      "before": 15.18,
+      "local": 15.2
+    },
+    {
+      "day": 750,
+      "before": 11.66,
+      "local": 14.7
+    },
+    {
+      "day": 1000,
+      "before": 10.64,
+      "local": 14.56
+    },
+    {
+      "day": 1500,
+      "before": 10.44,
+      "local": 16.9
+    },
+    {
+      "day": 2000,
+      "before": 4.6,
+      "local": 11.9
+    },
+    {
+      "day": 3000,
+      "before": 3.6,
+      "local": 12.98
+    }
+  ]
+}

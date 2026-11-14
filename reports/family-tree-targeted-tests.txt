@@ -1,0 +1,59 @@
+file:///C:/Users/mrmar/OneDrive/Documents/Game/src/clearing.js:22
+import {drawGranary,drawBridgeImprovements} from './settlement-view.js';
+                    ^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: The requested module './settlement-view.js' does not provide an export named 'drawBridgeImprovements'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:455:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:553:5)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.22.1
+✖ tests\local-progression.test.js (205.958ms)
+✔ needs rank physiology, security, belonging, competence and growth (6.1737ms)
+✔ local preserved meals count as security but another camp’s cache does not (2.4972ms)
+✔ personality changes social rhythm without overriding urgent needs (25.1715ms)
+✔ urgent warmth and recovery cannot be replaced by crafting or experiments (7.9454ms)
+✔ a hungry villager harvests ripe crops before searching depleted ground (2.9488ms)
+✔ established farmers plant before the full foraging target, with seed and supper reserved (8.5546ms)
+✔ experiments wait for security and retain their material and knowledge prerequisites (0.6216ms)
+✔ competence favors useful repetition while growth gives a new experiment priority (1.4201ms)
+✔ safe villagers satisfy belonging through actual company (2.2121ms)
+✔ empty winter gathering grounds lead to warmth and fuel rather than idle starvation (2.2617ms)
+✔ adults can leave an isolated camp to find an unrelated partner (95.2008ms)
+✔ births diversify eligible families without allowing siblings to become parents (10.5976ms)
+✔ saves replay new needs and family history deterministically (111.6041ms)
+✔ saves from before motivations and family counters retain earlier discoveries (4.9012ms)
+▶ Save and load
+  ✔ a save holds every run field and round-trips exactly (34.3045ms)
+  ✔ reload mid-run then play to day 60: the day log equals an uninterrupted run (several seeds and strategies) (727.1864ms)
+  ✔ the queued command, Wonder and cooldowns survive a reload (1.134ms)
+  ✔ an ended run reloads ended (the page shows its end screen) (2.501ms)
+  ✔ no save, an unreadable save or an older save format gives null (a new run starts) (0.991ms)
+  ✔ the slot uses one key and never throws when storage fails (1.5516ms)
+✔ Save and load (769.0798ms)
+▶ "begin anew" (fake clock)
+  ✔ config: phrase, confirmation and the 10-second window (0.4095ms)
+  ✔ it is not a keyword synonym, so the matcher alone would ignore it (0.167ms)
+  ✔ the first time only asks; the game state is untouched and no Wonder is spent (0.4388ms)
+  ✔ typed again within 10 real seconds restarts (10.000 s still counts) (0.208ms)
+  ✔ after the timeout it cancels quietly; the next "begin anew" asks again (0.1489ms)
+  ✔ any other input cancels and then runs as a normal command (0.3301ms)
+  ✔ exact match only: extra words, partial phrases and lookalikes are ordinary input (0.1255ms)
+  ✔ a reload cancels the pending restart (a new controller starts clean) (0.0966ms)
+  ✔ with requireConfirm false the first "begin anew" restarts (0.0908ms)
+  ✔ the phrase is configurable (0.0729ms)
+✔ "begin anew" (fake clock) (2.5789ms)
+ℹ tests 31
+ℹ suites 2
+ℹ pass 30
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1017.5608
+
+✖ failing tests:
+
+test at tests\local-progression.test.js:1:1
+✖ tests\local-progression.test.js (205.958ms)
+  'test failed'

@@ -1,0 +1,10 @@
+{
+  "sourceSha256": "689cbadde86b60dbfdbc4f4cf2fe5b60466b91084188926659ff3d7165a4ac32",
+  "runs": 2,
+  "firstSeed": 18,
+  "horizon": 10000,
+  "survivedDay1000": 2,
+  "survivedHorizon": 0,
+  "survivorsWithRecentBirths": 0,
+  "longestObservedDay": 6205
+}

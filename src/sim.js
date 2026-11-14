@@ -1,4 +1,4 @@
-import {practices,availablePractices,materialSites,campSites,explorationSites,worldTrees,valleySeason,fellTree,wearCampPaths,maintainHouseholds,initPractice,initSettlement,beginSettlementDay,planLessons,practiceWork,completeMagicLessons,completeCerealLessons,finishOrdinaryWork,takeDeposit,settlementEvent,makePracticeProduct} from './practices.js';
+import {practices,availablePractices,materialSites,campSites,explorationSites,worldTrees,valleySeason,fellTree,wearCampPaths,maintainHouseholds,initPractice,initSettlement,beginSettlementDay,planLessons,practiceWork,completeMagicLessons,completeCerealLessons,finishOrdinaryWork,takeDeposit,settlementEvent,makePracticeProduct,canExperiment} from './practices.js';
 import {hutBuildingSite,buildingSiteTree,canFellBuildingTree,clearBuildingTree} from './practices.js';
 import {communityOf,familyFoodReady,mainFoodRequired,foodLedger,recordFoodBalance,familyFoodStable,winterStorageTarget} from './provisions.js';
 import {neighborWork,crossVillageParents,recentVillagePartner,rememberFamilyVisit} from './neighbors.js';
@@ -16,8 +16,9 @@ import {boneHarvestBonus,wheatRules,cerealRecipes,cerealDependencies,cerealFoodW
 import { normalizeWords, resolveCommand, matchCommand } from './commands.js';
 import {rememberResources} from './resources.js';
 import {kaunasWeather,beginClimateDay,climateCropGrowth,unsafeRiverWeather} from './climate.js';
-import {riverFallOutcome} from './river.js';
-import {makeSupervisedFood} from './practices.js';
+import {riverFallOutcome,bridgeBuilt,bridgeStudyReady,bridgeUpgradeRules} from './river.js';
+import {granaryRules,granaryFinished,granaryStudyReady,storageCapacity,chooseStorageSite,storageRackSite} from './storage.js';
+import {makeSupervisedFood,completeHusbandryLessons} from './practices.js';
 import {shouldSowWheat} from './farming.js';
 import {initGenealogy,rememberPerson,recordLifeDay} from './genealogy.js';
 import {paintingReady,paintingSite} from './paintings.js';
@@ -26,6 +27,8 @@ import {inspireVillager,naturalInspiration} from './inspiration.js';
 import {developmentEnabled,fieldRules,fieldSite,fieldPlanningReady,fieldTarget,regularWorkSafe,recordOccupations} from './development.js';
 import {pantryCapacity,seasonalPantryTarget} from './provisions.js';
 import {riverHabitat} from './ecology.js';
+import {SCENARIO} from './scenario.js';
+import {husbandryDependencies,husbandryWork,beginHusbandryDay,finishHusbandryDay,transferLivestockOwnership,cattleFieldWork,husbandryEnabled,livestockBuildingRules,husbandryRecipes,husbandryIds,canLeaveLivestock} from './husbandry.js';
 
 const clamp = (n, max) => Math.max(0, Math.min(max, n));
 const averageHappiness = s => s.villagers.length
@@ -213,7 +216,7 @@ export function fuelTarget(s, n = s.villagers.length) {
   const c = s.config;
   if(developmentEnabled(s,'planning')){
     const camps=s.tribeCount||1,building=s.hutProject||s.farming.expansion||s.villagers.some(v=>v.practice.known.drying)&&
-      Object.values(s.local.campStores).some(r=>!r.built||r.rackWork);
+      Object.values(s.local.campStores).some(r=>!r.built||r.rackWork||r.granary&&(!granaryFinished(r)||r.granary.binWork));
     return Math.max(c.work.woodTarget+(camps-1)*c.fire.dailyFuel,c.settlement.fuelReserve+camps*c.fire.dailyFuel*3+(building?4:0));
   }
   return isV02(s) && s.farming.known && !s.shed.built && !s.shed.pending && n >= c.shed.population
@@ -688,8 +691,13 @@ const textileCrafts=[
 // Cross-craft prerequisites supplement the individual learning rules in practices.js.
 // These express material dependencies in this village, not universal historical dates.
 export function readyToInvent(s,name){
+  if(!husbandryDependencies(s,name))return false;
   if(name==='cultivated field')return s.villagers.some(v=>fieldPlanningReady(s,v)&&v.practice.known.fieldplanning&&v.practice.gear['plot markers']);
   if(name==='drying rack')return s.villagers.some(v=>v.practice?.known.drying&&v.practice.known['crude tools']&&(v.practice.skills.wood||0)>=2);
+  if(name==='granary plan'||name==='raised granary')return s.villagers.some(v=>granaryStudyReady(s,v)&&practices.granaries.requires.every(id=>v.practice.known[id]));
+  if(name==='bridge lashings'||name==='bridge handrails')return s.villagers.some(v=>bridgeStudyReady(s,v)&&practices.bridgecraft.requires.every(id=>v.practice.known[id]));
+  if(name==='braced footbridge')return bridgeBuilt(s)&&(s.local?.bridgeUpgrade?.railWork||0)>=bridgeUpgradeRules.railWork&&
+    (s.toolkit?.includes('mallet & chisel')||s.villagers.some(v=>v.practice?.gear['hafted tool']));
   if(name==='plot markers')return s.farming.known&&s.toolkit?.includes('digging stick')&&(s.local?.harvests||0)>=2;
   if(name==='rock painting')return (s.local?.reaches||0)>0&&s.toolkit?.includes('hammer stone')&&s.villagers.some(v=>paintingReady(s,v));
   if(cerealRecipes.some(r=>r[7]===name))return cerealDependencies(s,name);
@@ -732,9 +740,9 @@ function passingWildlife(s){
   if(!s.local||s.lastUsed.godzilla>=s.day-1)return null;
   let roll=(Math.imul(s.day,2654435761)^Math.imul(s.seed+1,1597334677))>>>0;
   const random=()=>((roll=Math.imul(1664525,roll)+1013904223>>>0)/4294967296);
-  if(random()>.52)return null;
-  const species=random()<.45?'deer':'hare';
-  return {species,count:1+Math.floor(random()*3),east:random()<.5,
+  if(random()>=SCENARIO.wildlife.passingChance)return null;
+  const species=random()<SCENARIO.wildlife.deerShare?'deer':'hare';
+  return {species,count:1+Math.floor(random()*SCENARIO.wildlife.maxPassingGroup),east:random()<.5,
     y:(random()<.65?120:440)+random()*90,start:.015+random()*.035,
     width:3000,origin:-1000,duration:.32+random()*.06,
     stops:[.20,.42,.60,.80].map(n=>({position:n+random()*.055,pause:(species==='deer'?.045:.025)+random()*.025})),attempts:[]};
@@ -803,13 +811,32 @@ export function inventionProgress(s){
 export function encyclopediaCatalog(s){
   const progress=inventionProgress(s),recipes=availablePractices(s);
   const names=[...new Set([...progress.catalog,...recipes.map(r=>r.product),'healer hut','herb drying rack','healer marker',
-    ...(s.config.learning?.development?.fields?['cultivated field']:[]),...(s.config.learning?.development?.planning?['drying rack']:[])])];
+    ...(s.config.learning?.development?.fields?['cultivated field']:[]),...(s.config.learning?.development?.planning?['drying rack','raised granary']:[]),'bridge handrails','braced footbridge',...(husbandryEnabled(s)?['sheep flock','pig herd','cattle herd']:[])])];
   return names.map(name=>{
     const recipe=recipes.find(r=>r.name===name||r.product===name);
     const tool=[...stoneTools,...heatTools].find(t=>t.name===name);
     const built=!!s.local.collection?.[name];
     const needs=recipe?recipe.requires.map(id=>practices[id]?.name||id):[];
     if(recipe)needs.push('experience with '+recipe.skill+' ('+recipe.property+')');
+    const livestockNotes={
+      'herding practice':'observing distant herders or experienced local keepers, gathering experience and a completed winter',
+      'animal enclosure':'personal enclosure knowledge and cordage; the listed materials and construction work, plus local tree clearing',
+      'stored hay':'cutting tools, haymaking knowledge, finite meadow grass and suitable drying weather; wet bundles can spoil',
+      'livestock shelter':'an existing enclosure, personal shelter construction and herding experience; the listed construction materials and work',
+      'fresh milk':'a healthy, fed mother after giving birth, personal milking knowledge and a vessel; nursing young take priority',
+      'milk curds':'milking knowledge, a vessel, four fresh milk, a lit hearth, one wood and a separate processing workday',
+      'clean fleece':'adult sheep, fleece-working knowledge, cutting tools and the spring or summer season; one modest annual fleece',
+      'wool yarn':'two clean fleece, wool-spinning knowledge and a real drop spindle',
+      'wool cloth':'two wool yarn, wool-weaving knowledge and a real loom',
+      'wool wrap':'two wool cloth, one bone, one fibre and sewing knowledge; a completed wrap provides warmth',
+      'compost heap':'four actual manure, composting knowledge and one season to mature; work finished compost into a field',
+      'wooden cattle yoke':'adult male cattle, experienced keepers, hafted tools, cordage and timber-working tools; four paid training days',
+      'sheep flock':'a completed enclosure, winter hay, husbandry knowledge and a paid journey; the listed exchange materials buy a pair',
+      'pig herd':'experienced husbandry, a roofed enclosure, woodland forage, surplus grain beyond human and seed reserves and a paid exchange',
+      'cattle herd':'experienced husbandry, cereal farming, a roofed enclosure, substantial hay, enough space and a paid exchange'
+    };
+    const livestockNote=livestockNotes[recipe?.product||name];
+    if(livestockNote)needs.push(livestockNote);
     if(name==='saddle quern')needs.push('a harvested cereal crop and hammer stone');
     if(name==='wholemeal flour')needs.push('a local saddle quern and grain beyond the seed reserve');
     if(name==='hearth flatbread')needs.push('flour, a lit local hearth and spare fuel');
@@ -819,8 +846,12 @@ export function encyclopediaCatalog(s){
     if(name.startsWith('healer')||name==='herb drying rack')needs.push('woodland healer, shelter and cordage knowledge; earlier hut stages');
     if(!recipe&&!needs.length)needs.push(name.includes('hut')||name.includes('wall')?'a household and prepared building site':'ordinary work experience and earlier crafts');
     const cost=recipe?recipe.cost:tool?{wood:tool.wood}:textileCrafts.includes(name)?{fibre:2,...(name==='loom'?{wood:2}:{})}:huntingWeapons.includes(name)?{wood:2}:wallTypes.includes(name)||hutTypes.includes(name)||['chimney','ondol'].includes(name)?{wood:2}:null;
-    return {name,product:recipe?.product||name,built,known:progress.known.includes(name),cost,needs,
-      available:readyToInvent(s,recipe?.product||name),work:recipe?recipe.work:null,
+    const livestockBuilding=recipe?.id==='penbuilding'?livestockBuildingRules.enclosure:recipe?.id==='stockshelter'?livestockBuildingRules.shelter:null;
+    const husbandryCosts={'milk curds':{milk:4,wood:1},'wool yarn':{wool:2},'wool cloth':{woolYarn:2},'wool wrap':{woolCloth:2,bone:1,fibre:1},'wooden cattle yoke':{wood:4,fibre:4},'sheep flock':{food:2*SCENARIO.livestock.species.sheep.price,fibre:2},'pig herd':{food:2*SCENARIO.livestock.species.pig.price,fibre:2},'cattle herd':{food:2*SCENARIO.livestock.species.cattle.price,fibre:2}};
+    const constructionKnowledge={'raised granary':'granaries','bridge handrails':'bridgecraft','braced footbridge':'bridgecraft'}[name];
+    return {name,product:recipe?.product||name,built,known:progress.known.includes(name)||!!constructionKnowledge&&
+      (s.local.first[constructionKnowledge]!==undefined||s.villagers.some(v=>v.practice.known[constructionKnowledge])),cost:livestockBuilding?.cost||husbandryCosts[recipe?.product||name]||cost,needs,
+      available:readyToInvent(s,recipe?.product||name),work:livestockBuilding?.work||(recipe?recipe.work:null),
       experienced:recipe?s.villagers.some(v=>recipe.requires.every(id=>v.practice.known[id])&&v.practice.properties.includes(recipe.property)&&recipe.need(s,v)):null};
   });
 }
@@ -868,7 +899,7 @@ function weeklyWork(s,report){
     due[item]??=s.day+i%7;
     if(previous?s.day-previous.day<7:s.day<due[item])continue;
     const recipe=recipes.find(r=>r.name===item);
-    if(recipe?.magic||recipe?.id==='cavepainting')continue; // Rites and paintings require actual paid work.
+    if(recipe?.magic||recipe?.id==='cavepainting'||husbandryIds.includes(recipe?.id))continue; // These require actual paid work.
     const eligible=people.filter(v=>recipe?v.practice.known[recipe.id]:
       huntingWeapons.includes(item)?v.gear===item&&(v.huntWear||0)<6:fishingCrafts.includes(item)?
         item==='fish trap'?v.fishTrap||v.practice.gear[item]:v.practice.gear[item]:item==='hand axe'?(v.axeWear||0)<4:true);
@@ -1530,12 +1561,72 @@ export function prepareField(s,v,report){
   if(tree!==null){
     clearBuildingTree(s,v,project,site,report,'field');finishOrdinaryWork(s,v,'wood');v.activity='Clear field site';
   }else{
-    project.work++;finishOrdinaryWork(s,v,'plant');v.activity='Prepare a field';v.gained=0;
+    project.work+=1+cattleFieldWork(s,v);finishOrdinaryWork(s,v,'plant');v.activity='Prepare a field';v.gained=0;
     if(project.work>=fieldRules.work){
       s.farming.plots.push(null);(s.farming.sites??={})[index]=[...site];
       (s.farming.fieldHistory??=[]).push({index,site:[...site],day:s.day,builder:v.id,clearedTrees:[...project.clearedTrees]});
       delete s.farming.expansion;settlementEvent(s,v.name+' finished preparing a new field. It still needs seed and planting.');
     }
+  }
+  report.actions.push({id:v.id,action:v.activity,site,gained:v.gained||0});return true;
+}
+function infrastructureMaterials(s,v,cost,report){
+  for(const material of ['fibre','stone'])if((s.local.stock[material]||0)<(cost[material]||0)){
+    if(!v.practice.known.gathering||s.local.deposits[material]<1)return false;
+    s.local.stock[material]+=takeDeposit(s,material,2);
+    finishOrdinaryWork(s,v,material==='stone'?'invent':'Gather fibre');v.activity='Collect '+material;v.gained=0;
+    report.actions.push({id:v.id,action:v.activity,site:materialSites[material].site,gained:0});return true;
+  }
+  return null;
+}
+export function improveBridge(s,v,report){
+  if(!regularWorkSafe(s,v)||!bridgeBuilt(s)||unsafeRiverWeather(s)||s.local.season==='Winter'||
+    s.local.daughter?.members.includes(v.id)||report.bridgeWorked||s.food<s.villagers.length*2||
+    !v.practice.known.bridgecraft||!bridgeStudyReady(s,v)||!practices.bridgecraft.requires.every(id=>v.practice.known[id]))return false;
+  const project=s.local.bridgeUpgrade||{railWork:0,braceWork:0,spent:{},startedDay:s.day};
+  const rails=project.railWork<bridgeUpgradeRules.railWork,field=rails?'railWork':'braceWork';
+  if(!rails&&(project.braceWork>=bridgeUpgradeRules.braceWork||!readyToInvent(s,'braced footbridge')))return false;
+  const cost=rails?{wood:1,fibre:1}:{wood:2,stone:1};
+  const collected=infrastructureMaterials(s,v,cost,report);if(collected!==null){if(collected)report.bridgeWorked=true;return collected;}
+  if(s.wood<cost.wood+s.config.settlement.fuelReserve+(s.tribeCount||1)*s.config.fire.dailyFuel)return false;
+  s.local.bridgeUpgrade=project;s.wood-=cost.wood;
+  for(const material of ['fibre','stone'])if(cost[material])s.local.stock[material]-=cost[material];
+  for(const [key,n] of Object.entries(cost))project.spent[key]=(project.spent[key]||0)+n;
+  project[field]++;project.lastBuilder=v.id;report.bridgeWorked=true;
+  v.practice.used.bridgecraft=(v.practice.used.bridgecraft||0)+1;
+  if(project[field]===bridgeUpgradeRules[field])settlementEvent(s,v.name+' finished '+(rails?'handrails along the footbridge.':'bracing and strengthening the footbridge.'));
+  finishOrdinaryWork(s,v,'wood');v.activity=rails?'Build bridge handrails':'Build bridge bracing';v.gained=0;
+  const site=[430,640*(.51+.078*Math.sin(.43*7+.4)+.037*Math.sin(.43*13))-45];
+  report.actions.push({id:v.id,action:v.activity,site,gained:0});return true;
+}
+function buildGranary(s,v,store,target,report){
+  const p=v.practice,capacity=storageCapacity(store),existing=store.granary;
+  if(!p.known.granaries||!granaryStudyReady(s,v)||!practices.granaries.requires.every(id=>p.known[id])||
+    !existing&&(target<=capacity||store.saved+(store.rack||0)<capacity-8))return false;
+  if(existing&&granaryFinished(store)&&!existing.binWork&&(target<=capacity||store.saved+(store.rack||0)<capacity-8))return false;
+  const site=existing?.site||chooseStorageSite(s,campSites,v.tribe||0);if(!site)return false;
+  const project=existing||{site,work:0,bins:0,spent:{},startedDay:s.day,founderId:v.id,clearedTrees:[]};
+  const tree=buildingSiteTree(s,site,'granary');
+  if(tree!==null){
+    if(!canFellBuildingTree(s,v))return false;
+    store.granary=project;clearBuildingTree(s,v,project,site,report,'granary');finishOrdinaryWork(s,v,'wood');v.activity='Clear granary site';
+  }else{
+    const bins=granaryFinished(store),work=bins?(project.binWork||0):project.work;
+    const cost=bins?(work<2?{wood:2,fibre:1}:{wood:1}):work<2?{wood:2,fibre:1,stone:1}:work<4?{wood:2,fibre:1}:{wood:1};
+    const collected=infrastructureMaterials(s,v,cost,report);if(collected!==null)return collected;
+    if(s.wood<cost.wood+s.config.settlement.fuelReserve+(s.tribeCount||1)*s.config.fire.dailyFuel)return false;
+    store.granary=project;s.wood-=cost.wood;
+    for(const material of ['fibre','stone'])if(cost[material])s.local.stock[material]-=cost[material];
+    for(const [key,n] of Object.entries(cost))project.spent[key]=(project.spent[key]||0)+n;
+    if(bins){
+      project.binWork=work+1;
+      if(project.binWork>=granaryRules.binWork){project.bins++;delete project.binWork;settlementEvent(s,v.name+' fitted more covered bins inside the granary.');}
+    }else{
+      project.work++;
+      if(project.work===granaryRules.work){project.finishedDay=s.day;settlementEvent(s,v.name+' finished a raised communal granary. It holds 96 preserved provisions.');}
+    }
+    p.used.granaries=(p.used.granaries||0)+1;project.lastBuilder=v.id;
+    finishOrdinaryWork(s,v,'wood');v.activity=bins?'Build granary bins':'Build a raised granary';v.gained=0;
   }
   report.actions.push({id:v.id,action:v.activity,site,gained:v.gained||0});return true;
 }
@@ -1545,14 +1636,23 @@ export function preservationWork(s,v,report){
   const residents=s.villagers.filter(p=>(p.tribe||0)===(v.tribe||0)&&!s.local.daughter?.members.includes(p.id));
   if(!residents.some(p=>p.practice?.known.drying))return false;
   const store=s.local.campStores[v.tribe||0]??={saved:0,rack:0};
-  const target=winterStorageTarget(s,residents,foodCapacity(s)),capacity=24*(store.racks||1)+12*(store.tradeJars||0);
-  if(store.saved+(store.rack||0)>=target||s.food<s.villagers.length*1.5+2)return false;
+  const target=winterStorageTarget(s,residents,foodCapacity(s)),capacity=storageCapacity(store);
+  if(s.food<s.villagers.length*1.5+2)return false;
+  if(!store.rackWork&&buildGranary(s,v,store,target,report))return true;
+  if(store.saved+(store.rack||0)>=target)return false;
   let action;
   const needRack=!store.built||store.saved+(store.rack||0)>=capacity;
   if(needRack){
+    if(granaryFinished(store)||store.granary&&!store.rackWork)return false;
     if(!v.practice.known['crude tools']||(v.practice.skills.wood||0)<2||s.local.stock.fibre<(store.rackWork?0:1))return false;
     const wood=store.rackWork?1:2;
     if(s.wood<wood+s.config.settlement.fuelReserve+(s.tribeCount||1)*s.config.fire.dailyFuel)return false;
+    const index=store.built?(store.racks||1):0;
+    if(!store.rackWork){
+      const trees=worldTrees(s).filter((_,id)=>s.local.stumps?.[id]===undefined);
+      const site=chooseStorageSite(s,campSites,v.tribe||0,[],trees);if(!site)return false;
+      (store.rackSites??=[])[index]=site;
+    }
     s.wood-=wood;if(!store.rackWork)s.local.stock.fibre--;
     store.rackWork=(store.rackWork||0)+1;action='Build a drying rack';
     if(store.rackWork>=2){store.racks=store.built?(store.racks||1)+1:1;store.built=true;delete store.rackWork;}
@@ -1565,7 +1665,9 @@ export function preservationWork(s,v,report){
     (report.preservation??=[]).push({id:v.id,camp:v.tribe||0,food:batch});
   }
   finishOrdinaryWork(s,v,'wood');v.activity=action;v.gained=0;
-  report.actions.push({id:v.id,action,site:campSites[v.tribe||0],gained:0});return true;
+  const rackIndex=action==='Build a drying rack'?(store.rackWork?(store.built?(store.racks||1):0):Math.max(0,(store.racks||1)-1)):0;
+  const site=storageRackSite(s,campSites,v.tribe||0,rackIndex);
+  report.actions.push({id:v.id,action,site,gained:0});return true;
 }
 function seasonalStores(s,report){
   if(developmentEnabled(s,'planning'))return;
@@ -1632,6 +1734,7 @@ function tendDaughter(s,order,report){
         others.filter(healthy).length<4||s.food<others.length*3+family.length*6||
         !(s.local.wildPatches?.[patch]>=8))continue;
       const ids=family.map(v=>v.id);
+      if(family.some(v=>!canLeaveLivestock(s,v,ids)))continue;
       if(others.some(v=>v.age<s.config.life.adult&&v.carers?.some(id=>ids.includes(id))))continue;
       post=s.local.daughter={site:[explorationSites[patch][0],explorationSites[patch][1]-17],patch,origin:guide.tribe||0,
         members:ids,household:guide.household,food:family.length*5,returnFood:family.length,
@@ -1690,6 +1793,11 @@ function work(s, order, report) {
   for(const id of settlers)carers.add(id);
   const adults=c.settlement?order.filter(v=>v.age>=c.life.adult&&!v.illnessDays&&!carers.has(v.id)):[];
   const stoneCrew = planStandingStones(s, c.learning?adults.filter(v=>assessNeeds(s,v).level>=3):adults, report);
+  if(c.learning)for(const v of [...adults].sort((a,b)=>Number(b.practice.occupation?.role==='herder')-Number(a.practice.occupation?.role==='herder'))){
+    if(stoneCrew.has(v.id)||assessNeeds(s,v).level===0&&assessNeeds(s,v).need!=='food'||!v.practice.known.herding)continue;
+    if(husbandryWork(s,v,101,report,{finish:finishOrdinaryWork,recipes:practices,canExperiment,siteTree:buildingSiteTree,clear:clearBuildingTree,foodCapacity},
+      {careOnly:true,develop:false,urgent:assessNeeds(s,v).need==='food'&&s.food<n}))stoneCrew.add(v.id);
+  }
   campVisits(s,adults,stoneCrew,report);
   report.wildlife=passingWildlife(s);
   planWildlifeHunts(s,report.wildlife,adults,report,stoneCrew);
@@ -1805,14 +1913,19 @@ function work(s, order, report) {
     }
     const die = c.traits ? dice[order.indexOf(v)] : 101;
     let action = chooseAction(s, v, weather, n, die, true);
+    if(c.learning&&motive.level>0&&!['warm','hut','harvest','plant'].includes(action)&&!(action==='wood'&&(preparingCold||s.wood<c.settlement.fuelReserve+(s.tribeCount||1)*c.fire.dailyFuel))&&
+      husbandryWork(s,v,die,report,{finish:finishOrdinaryWork,recipes:practices,canExperiment,siteTree:buildingSiteTree,clear:clearBuildingTree,foodCapacity},
+        {urgent:motive.need==='food'&&s.food<n,develop:motive.level>=2&&!preparingCold}))return;
     const regular=regularWorkSafe(s,v)&&motive?.level>0&&motive.need!=='fuel'&&!v.practice.lessonToday&&!['warm','rest','hut','harvest'].includes(action);
-    if(regular&&developmentEnabled(s,'planning')&&!preservingCamps.has(v.tribe||0)&&s.food>=n*1.5&&
+    const infrastructureReady=regular||action==='rest'&&regularWorkSafe(s,v)&&motive.level>=2&&!v.practice.lessonToday;
+    if(infrastructureReady&&action!=='plant'&&improveBridge(s,v,report))return;
+    if(infrastructureReady&&developmentEnabled(s,'planning')&&!preservingCamps.has(v.tribe||0)&&s.food>=n*1.5&&
       !s.local.daughter?.members.includes(v.id)&&s.local.season!=='Winter'&&!unsafeRiverWeather(s)&&s.fireLit){
       const store=s.local.campStores[v.tribe||0],residents=s.villagers.filter(p=>(p.tribe||0)===(v.tribe||0));
-      const capacity=24*(store?.racks||1)+12*(store?.tradeJars||0),needRack=!store?.built||(store.saved+(store.rack||0)>=capacity);
+      const capacity=storageCapacity(store),needRack=!store?.built||!!store?.granary&&!granaryFinished(store)||(store.saved+(store.rack||0)>=capacity);
       const trained=residents.some(p=>p.practice.known.drying);
-      const canHelp=needRack?(v.practice.skills.wood||0)>=2&&s.local.stock.fibre>0:v.practice.known.drying;
-      if(trained&&canHelp&&(store?.saved||0)+(store?.rack||0)<winterStorageTarget(s,residents,foodCapacity(s))){
+      const canHelp=v.practice.known.granaries|| (needRack?(v.practice.skills.wood||0)>=2&&(s.local.stock.fibre>0||store?.rackWork):v.practice.known.drying);
+      if(trained&&canHelp&&((store?.saved||0)+(store?.rack||0)<winterStorageTarget(s,residents,foodCapacity(s))||store?.granary&&!granaryFinished(store))){
         preservationCrew.push(v);preservingCamps.add(v.tribe||0);return;
       }
     }
@@ -1956,10 +2069,11 @@ export function mealPlan(order, threshold, fullness, food, generousOk) {
 function meals(s, order, report) {
   const c = s.config, N = c.needs, P = c.personality, grabby = v => hasTrait(s, v, 'Grabby');
   if(c.learning){
-    for(const v of order.filter(v=>v.campJourney))if(v.fullness<=N.eatAtOrBelow&&v.travelMeals>=N.mealCost){
+    const livestockTravel=new Set(report.actions.filter(a=>['Travel to distant herders','Observe distant livestock keepers','Return from distant herders','Lead livestock home'].includes(a.action)).map(a=>a.id));
+    for(const v of order.filter(v=>v.campJourney||livestockTravel.has(v.id)))if(v.fullness<=N.eatAtOrBelow&&v.travelMeals>=N.mealCost){
       v.travelMeals-=N.mealCost;changeNeed(v,'fullness',N.mealFullness,c);report.meals.push(v.id);
     }
-    order=order.filter(v=>!v.campJourney);
+    order=order.filter(v=>!v.campJourney&&!livestockTravel.has(v.id));
   }
   const post=s.local?.daughter;
   if(post?.members.length){
@@ -1977,6 +2091,13 @@ function meals(s, order, report) {
   const mealOrder = [...order.filter(grabby), ...order.filter(v => !grabby(v)&&!v.outdoors),
     ...order.filter(v=>!grabby(v)&&v.outdoors)].map(v => v.id);
   const threshold = Object.fromEntries(order.map(v => [v.id, grabby(v) ? P.grabbyEatAtOrBelow : N.eatAtOrBelow]));
+  if(c.learning){
+    // Curds are finished food, unlike raw milk/flour. Serving them at the
+    // communal meal transfers existing portions and never books new output.
+    const needed=mealOrder.filter(id=>fullness[id]<=threshold[id]).length;
+    const curds=Math.min(s.local.stock.curds||0,Math.max(0,needed-s.food),Math.max(0,foodCapacity(s)-s.food));
+    if(curds>0){s.local.stock.curds-=curds;s.food+=curds;}
+  }
   const foodBefore = s.food;
   const localFed=[];
   if(c.learning){
@@ -2112,7 +2233,7 @@ function resolveLivesAndDiscovery(s, report) {
       child.carers=[mother.id,father.id];child.tribe=mother.tribe||0;child.household=mother.household;
       for(const parent of [mother,father])parent.childrenBorn=
         (parent.childrenBorn??s.villagers.filter(v=>v.parents?.includes(parent.id)).length)+1;
-      mother.recoveryUntil=s.day+7;
+      mother.recoveryUntil=s.day+(c.birth.recoveryDays??7);
     }
     if(easternBirth){
       child.household=daughter.household;daughter.members.push(id);
@@ -2258,22 +2379,25 @@ export function stepDay(previous) {
     const localFire=v.herbalist?.home?false:visiting==='east'?s.local.daughter?.wood>0:
       visiting!==undefined?campFireLit(s,visiting):eastern?s.local.daughter.wood>0:campFireLit(s,v.tribe);
     const heated=localFire&&household?(household.ondol?6:household.chimney?2:0):0;
+    const woolWarmth=v.practice?.gear['wool wrap']?3:0;
     const shelterBonus=(c.settlement&&s.settlementWork>=c.settlement.shelterWork?c.settlement.shelterBonus:0)+heated;
     const bedding=v.outdoors && v.beddingUntil>=s.day ? c.needs.shelterWarmth : 0;
-    changeNeed(v, 'warmth', -c.needs.warmthLoss - weatherLoss + bedding + (s.textiles?.includes('loom')?2:0) + (shelteredIds.has(v.id)?shelterBonus:0)
+    changeNeed(v, 'warmth', -c.needs.warmthLoss - weatherLoss + woolWarmth + bedding + (s.textiles?.includes('loom')?2:0) + (shelteredIds.has(v.id)?shelterBonus:0)
       + (shelteredIds.has(v.id) ? c.needs.shelterWarmth : 0) + (localFire ? c.needs.fireWarmth : 0), c);
   }
   if(c.hunting){
     s.gameAnimals??=c.hunting.herdSize;
     if(s.lastUsed.godzilla!==s.day&&s.day%c.hunting.returnEvery===0)s.gameAnimals=Math.min(c.hunting.herdSize,s.gameAnimals+1);
   }
-  if(c.learning){beginSettlementDay(s);planLessons(s,order);}
+  if(c.learning){beginSettlementDay(s);beginHusbandryDay(s,report);planLessons(s,order);}
   work(s, order, report);
+  if(c.learning)finishHusbandryDay(s,report);
   if(s.local)recordOccupations(s,report);
   if(s.local){naturalInspiration(s,report);for(const q of report.inspiration||[])settlementEvent(s,q.name+' wonders: '+q.question);}
   if(s.local){
     completeMagicLessons(s,report);
     completeCerealLessons(s,report);
+    completeHusbandryLessons(s,report);
     seasonalStores(s,report);
     wearCampPaths(s,report);
     weeklyWork(s,report);
@@ -2287,6 +2411,7 @@ export function stepDay(previous) {
   if(c.learning)recordFoodBalance(s,report);
   // 5. Age, deaths, birth, then natural fire discovery.
   resolveLivesAndDiscovery(s, report);
+  if(c.learning)transferLivestockOwnership(s);
   recordLifeDay(s,order,report);
   if(s.local){
     const history=s.local.populationHistory??=[];

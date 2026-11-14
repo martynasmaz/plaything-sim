@@ -1,0 +1,70 @@
+Seed 1: 0 alive at day 686, peak 30, visits 3, cross-village births 0 (1/10)
+Seed 0: 0 alive at day 2587, peak 30, visits 5, cross-village births 0 (2/10)
+Seed 2: 24 alive at day 3000, peak 33, visits 0, cross-village births 0 (3/10)
+Seed 5: 0 alive at day 2711, peak 33, visits 5, cross-village births 0 (4/10)
+Seed 9: 0 alive at day 318, peak 8, visits 3, cross-village births 0 (5/10)
+Seed 3: 19 alive at day 3000, peak 33, visits 4, cross-village births 0 (6/10)
+Seed 7: 0 alive at day 1471, peak 32, visits 2, cross-village births 0 (7/10)
+Seed 4: 16 alive at day 3000, peak 33, visits 2, cross-village births 0 (8/10)
+Seed 6: 26 alive at day 3000, peak 34, visits 2, cross-village births 0 (9/10)
+Seed 8: 19 alive at day 3000, peak 32, visits 7, cross-village births 0 (10/10)
+{
+  "createdAt": "2026-11-14T12:11:13.960Z",
+  "sourceSha256": "70ac0cebbb4620691c7f4e37e99552c6bdafb8e51b139d8b12bfc072d2ad4930",
+  "sourceFiles": [
+    "config",
+    "provisions",
+    "needs",
+    "fishing",
+    "settlement-layout",
+    "healer-home",
+    "magic",
+    "farming",
+    "village-events",
+    "ecology",
+    "practices",
+    "neighbors",
+    "sim"
+  ],
+  "baselineSourceSha256": "1aa980f253e9e3aeea5940c17944c66c148590854fadf0417a28fc852900dbbb",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "horizon": 3000,
+  "method": "Ten identical starting seeds and horizon, current local HOMESTEAD_RULES, no commands, gifts, immigration or magic unlock. Current stepDay is called directly; no observer-instrumented source. Changes tested together: accessible-food accounting, anticipatory physical housing, and paid neighboring-community visits/household formation. This combined comparison does not isolate each change causally.",
+  "baseline": {
+    "survived": 4,
+    "survivedDay1000": 8,
+    "finalPopulation": 70,
+    "births": 974,
+    "deaths": 964,
+    "hungerDeaths": 0,
+    "coldDeaths": 0,
+    "oldAgeDeaths": 951,
+    "meanPeak": 21.7
+  },
+  "current": {
+    "survived": 5,
+    "survivedDay1000": 8,
+    "finalPopulation": 104,
+    "births": 2209,
+    "deaths": 2165,
+    "hungerDeaths": 1223,
+    "coldDeaths": 6,
+    "oldAgeDeaths": 874,
+    "meanPeak": 29.8
+  },
+  "meetings": 33,
+  "householdMoves": 2,
+  "crossVillageBirths": 0,
+  "techniquesLearnedOnVisits": 1
+}

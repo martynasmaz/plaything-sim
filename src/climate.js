@@ -1,3 +1,4 @@
+import {SCENARIO} from './scenario.js';
 // LHMT Kaunas 1991–2020 normals. Values describe representative real days;
 // an 80-day game year compresses the calendar, not the rain rate in mm/hour.
 export const kaunasNormals={
@@ -24,14 +25,15 @@ const rainLambdas=lightMeans.map(mean=>{
 });
 export function kaunasWeather(s,day,roll){
   const month=climateMonth(s,day),n=kaunasNormals;
-  const wet=n.wet[month]/n.days[month],heavy=n.heavy[month]/n.days[month];
+  const wet=Math.min(1,n.wet[month]/n.days[month]*SCENARIO.weather.wetDayMultiplier),heavy=Math.min(wet,n.heavy[month]/n.days[month]*SCENARIO.weather.heavyDayMultiplier);
   const u=Math.min(1-1e-12,climateNoise(s.seed,day,0x4a91));
   let mm=0;
   if(roll<heavy)mm=10-Math.log(1-u)*rainTail;
   else if(roll<wet){const lambda=rainLambdas[month];mm=.1-Math.log(1-u*(1-Math.exp(-lambda*9.9)))/lambda;}
   // Temperature variance and day-to-day sequencing are illustrative. Monthly
   // means are measured; this is not a historical weather reconstruction.
-  const temperature=n.temperature[month]+(climateNoise(s.seed,day,0x77ab)-.5)*12;
+  mm*=SCENARIO.weather.rainAmountMultiplier;
+  const temperature=n.temperature[month]+(climateNoise(s.seed,day,0x77ab)-.5)*12+SCENARIO.weather.temperatureOffsetC;
   const dryRun=mm>0?0:(s.local?.climate?.dryRun||0)+1;
   const type=mm>0?'rain':temperature<0?'cold':dryRun>=4&&temperature>=10?'drought':'normal';
   return {day,month,type,mm,temperature,snow:mm>0&&temperature<1,

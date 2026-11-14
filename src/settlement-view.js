@@ -6,6 +6,63 @@ function healerStroke(g,x,y,ex,ey,color,width=1.5){
 function healerOval(g,x,y,rx,ry,color){
   g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fillStyle=color;g.fill();
 }
+// Raised floor, enclosed woven walls and a wide thatched roof distinguish
+// food storage from a dwelling. Each stage corresponds to paid NPC work.
+export function drawGranary(g,x,y,project,food=0,finished=false){
+  if(!project?.work)return;
+  g.save();g.translate(x,y);g.lineCap='round';
+  healerOval(g,0,5,39,9,'#26362240');
+  for(const dx of [-26,26]){
+    healerStroke(g,dx,1,dx,-18,'#725435',4);
+    if(project.work>=2){healerOval(g,dx,-12,7,2,'#9c9c83');healerStroke(g,dx,-16,dx,-39,'#82613e',3);}
+  }
+  if(project.work>=3){g.fillStyle='#9d7a4d';g.fillRect(-30,-19,60,6);healerStroke(g,-30,-19,30,-19,'#d0ad72',2);}
+  if(project.work>=4){
+    g.fillStyle='#aa8756';g.fillRect(-27,-39,54,20);
+    for(let yy=-36;yy<-20;yy+=4)healerStroke(g,-26,yy,26,yy,'#715937',1.2);
+    for(let xx=-24;xx<=24;xx+=8)healerStroke(g,xx,-38,xx,-21,'#c5a16a',1.1);
+  }
+  if(project.work>=5){
+    healerStroke(g,-35,-38,0,-61,'#775735',3);healerStroke(g,0,-61,35,-38,'#775735',3);
+    if(project.work>=6){
+      g.beginPath();g.moveTo(-36,-37);g.lineTo(0,-62);g.lineTo(37,-37);g.lineTo(28,-33);g.lineTo(-29,-33);g.closePath();g.fillStyle='#ad955d';g.fill();
+      for(let xx=-28;xx<=28;xx+=5)healerStroke(g,xx*.45,-51-Math.abs(xx)*.1,xx,-35,'#d0b578',1.5);
+      healerStroke(g,-36,-37,0,-62,'#5c4930',2);healerStroke(g,0,-62,37,-37,'#5c4930',2);
+    }
+  }
+  if(project.work>=7){g.fillStyle='#493b29';g.fillRect(-9,-35,18,16);}
+  if(finished){
+    g.fillStyle='#8b6b40';g.fillRect(-8,-34,16,14);
+    for(let xx=-6;xx<9;xx+=4)healerStroke(g,xx,-33,xx,-21,'#be9d64',1);
+    healerStroke(g,-2,-27,5,-27,'#4e402b',2);
+    for(let i=0;i<3;i++){healerStroke(g,-12,-14+i*5,8,-14+i*5,'#c2a16b',2);}
+    // A sealed inspection bin shows stock without spilling it around the hut.
+    healerOval(g,22,-21,5,2,'#5b482e');
+    if(food>0)healerOval(g,22,-22,4,1.5,'#d0b475');
+    for(let i=0;i<Math.min(3,project.bins||0);i++)healerStroke(g,-23+i*5,-26,-23+i*5,-22,'#d8bd80',2);
+  }
+  g.restore();
+}
+export function drawBridgeImprovements(g,x,top,bottom,project){
+  if(!project)return;
+  const length=bottom-top;
+  g.save();g.lineCap='round';
+  const railEnd=top+length*Math.min(1,(project.railWork||0)/4);
+  for(const dx of [-13,13]){
+    for(let y=top;y<railEnd;y+=14)healerStroke(g,x+dx,y,x+dx,y-13,'#6b5239',2.6);
+    if(railEnd>top)healerStroke(g,x+dx,top-12,x+dx,railEnd-12,'#c1a270',2.2);
+  }
+  const sections=Math.min(6,project.braceWork||0);
+  for(let i=0;i<sections;i++){
+    const side=i%2?1:-1,y=top+length*(Math.floor(i/2)+.5)/3;
+    // Piles and triangular supports sit outside the walking surface.
+    healerStroke(g,x+side*19,y+9,x+side*19,y-5,'#594735',4);
+    healerStroke(g,x+side*13,y-4,x+side*19,y+7,'#997348',3);
+    healerStroke(g,x+side*13,y+7,x+side*19,y+7,'#705035',3);
+    healerOval(g,x+side*19,y-5,3,2,'#beb697');
+  }
+  g.restore();
+}
 // One local, uniformly scaled shape for every viewport. The rounded base is a
 // circular footprint in the same oblique view used for the rest of the village.
 export function drawHouseholdHut(g,x,y,hut={},scale=1.75,lit=false){

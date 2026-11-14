@@ -1,5 +1,6 @@
 import {pantryCapacity,seasonalPantryTarget,grainReserveTarget} from './provisions.js';
 import {developmentEnabled} from './development.js';
+import {SCENARIO} from './scenario.js';
 // Coarse ground bone is a delayed soil amendment, independent of magic.
 export const boneSoilRules={bonesPerBatch:4,mealPerBatch:2,harvests:3,yieldBonus:2};
 export function boneFertilizerReady(s,v){
@@ -23,13 +24,17 @@ export function applyBoneFertilizer(s,v,report){
 }
 export function boneHarvestBonus(s,index){
   const soil=s.farming.boneSoil?.[index];
-  if(!s.config.learning||!soil||soil.readyDay>s.day||soil.remaining<=0)return 0;
-  soil.remaining--;return boneSoilRules.yieldBonus;
+  if(!s.config.learning)return 0;
+  let bonus=0;
+  if(soil&&soil.readyDay<=s.day&&soil.remaining>0){soil.remaining--;bonus+=boneSoilRules.yieldBonus;}
+  const manure=s.farming.manureSoil?.[index];
+  if(manure&&manure.readyDay<=s.day&&manure.remaining>0){manure.remaining--;bonus+=SCENARIO.livestock.compostYieldBonus;}
+  return bonus;
 }
 
 // A later cereal crop supplements the existing kitchen gardens. Days are game
 // pacing, not historical dates; successful observation and crafts still matter.
-export const wheatRules={earliestDay:360,observedSeasons:6,ripeAt:24,harvest:24,batch:4,bread:8};
+export const wheatRules=SCENARIO.progression.wheat;
 export const cerealIds=['wheatgrowing','quernmaking','milling','breadmaking'];
 export function initCereals(s){
   if(!s.local)return;
@@ -77,7 +82,7 @@ export function gatherWildWheat(s,v,report){
   const index=Math.floor(Math.max(0,s.day-1+(s.local.seasonOffset||0))/s.config.learning.seasonLength);
   if(!s.farming.seedSeasons.includes(index))s.farming.seedSeasons.push(index);
   // Mixed gathering trips bring a small, finite sample of wild grain home.
-  if(s.day<240||(s.local.seedFinds||0)%8!==0||s.local.stock.wheat>=16||s.local.deposits.wheat<1)return;
+  if(s.day<wheatRules.seedFindFromDay||(s.local.seedFinds||0)%wheatRules.seedFindEvery!==0||s.local.stock.wheat>=16||s.local.deposits.wheat<1)return;
   s.local.deposits.wheat--;s.local.stock.wheat++;
   if(report)(report.wildWheat??=[]).push(v.id);
 }

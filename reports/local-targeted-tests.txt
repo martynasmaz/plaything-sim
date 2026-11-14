@@ -1,0 +1,18 @@
+✔ Kaunas monthly wet/heavy frequencies and rainfall amounts follow the published normals (27.6905ms)
+✔ soil buffers a dry day, prolonged drying stops growth, and saturation or frost limits crops (0.7392ms)
+✔ river exits vary and tributary crossings finish on land without being pulled back into the channel (0.8377ms)
+✔ river death chance is approximately one per thousand and a fatal fall persists without consuming weather dice (3.7591ms)
+✔ undiscovered current resources stay hidden and depleted discovered resources remain visible (1.4567ms)
+✔ family links survive death, multiple generations and save/load; arrivals remain distinct roots (3.6414ms)
+✔ legacy records recover dated ancestors but never substitute a younger namesake as a parent (1.3025ms)
+✔ milling needs a quern but not building knowledge; supervised work consumes grain and produces actual flour (1.0752ms)
+✔ collection requires actual making; discovered paintings provide clues without granting recipe knowledge (0.577ms)
+✔ inspiration chooses an experienced question, grants no technology, respects needs, and never stacks (51.759ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 207.6379

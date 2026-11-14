@@ -2,8 +2,7 @@
 // as the game. No simulation state or saved world is changed by this preview.
 import {readFileSync,writeFileSync} from 'node:fs';
 const view=readFileSync(new URL('../src/fishing-view.js',import.meta.url),'utf8').replace(/^export /gm,'');
-const clearing=readFileSync(new URL('../src/clearing.js',import.meta.url),'utf8');
-const worker=clearing.slice(clearing.indexOf('function paintWorker('),clearing.indexOf('function bankY('));
+const worker=readFileSync(new URL('../src/villager-appearance.js',import.meta.url),'utf8').replace(/^export /gm,'');
 const html=`<!doctype html><html lang="en"><meta charset="utf-8"><title>River fishing equipment preview</title>
 <style>body{margin:20px;background:#e8ddc2;color:#382d24;font-family:Georgia,serif}h1{font-size:25px}p{max-width:1000px}canvas{max-width:100%;border:1px solid #a28c63}button{font:inherit;padding:6px 14px}</style>
 <h1>River fishing — local visual check</h1><p>Stone Age materials: wooden spears, wicker traps, bone hooks, fixed-line poles, and plant-fibre nets with bark floats and stone sinkers. The equipment and people use the game's actual drawing functions.</p>

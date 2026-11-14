@@ -1,6 +1,7 @@
 import {createNotebook} from './notebook.js';
 import { createSaveSlot, createFreshStart, serialize, deserialize } from './save.js';
 import { CONFIG, HOMESTEAD_RULES } from './config.js';
+import {scenarioStartSeed} from './scenario.js';
 import { createState, stepDay, cancelCommand, setSpeed, advanceTime,
   recordRiverFall,bringSettlersHome, restart, availableCommands, validateCommand, tomorrowWeather, currentWeather, castText, foodCapacity, populationCap, shelterPlaces } from './sim.js';
 import { makeVillageScene } from './village-view.js';
@@ -56,7 +57,7 @@ const storage=(()=>{try{return window.localStorage;}catch{return null;}})();
 // A fresh save for the single permanent settlement.
 const slot=createSaveSlot(storage,CONFIG.save.key+'.homestead');
 const explicitSeed=seedParam!==null&&/^\d+$/.test(seedParam);
-let state=(!explicitSeed&&slot.load(HOMESTEAD_RULES))||createState(HOMESTEAD_RULES,explicitSeed?Number(seedParam)>>>0:randomSeed()),selectedId=1;
+let state=(!explicitSeed&&slot.load(HOMESTEAD_RULES))||createState(HOMESTEAD_RULES,scenarioStartSeed(randomSeed,explicitSeed?Number(seedParam):null)),selectedId=1;
 state=withUiSpeed(state);
 const recentDays=new Map();
 const undoKey=CONFIG.save.key+'.beforeSkip';
@@ -438,7 +439,7 @@ $('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.cancel
 for(const b of document.querySelectorAll('[data-speed]'))b.onclick=()=>{state=setSpeed(state,Number(b.dataset.speed));render();};
 $('#next-day').onclick=()=>{state=stepDay(state);rememberDay();slot.save(state);showCommandResult();render();};
 // A new run with a new seed; it replaces the save at once.
-function reset(){freshStart.cancel();state=withUiSpeed(restart(state,randomSeed()));recentDays.clear();rememberDay();slot.save(state);selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
+function reset(){freshStart.cancel();state=withUiSpeed(restart(state,scenarioStartSeed(randomSeed)));recentDays.clear();rememberDay();slot.save(state);selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
 $('#undo-skip').onclick=undoSkip;$('#rewind-ended').onclick=()=>{if(!skipping)void backDays('back 1');};
 $('#restart').onclick=reset;$('#restart-ended').onclick=reset;
 function showCommandResult(result=state.lastDay?.command){

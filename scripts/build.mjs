@@ -34,9 +34,11 @@ export async function inlineAssets(manifest,root=projectRoot){
 
 export async function build({root=projectRoot,output=path.join(root,'dist/index.html')}={}){
   const read=name=>readFile(path.join(root,name),'utf8');
+  await import(pathToFileURL(path.join(root,'src/scenario.js')).href+`?validate=${Date.now()}`);
   const {THEME,spriteManifest}=await import(pathToFileURL(path.join(root,'src/theme.js')).href+`?build=${Date.now()}`);
   const art=await inlineAssets(spriteManifest(THEME),root);
-  const files=['src/commands.js','src/theme.js','src/config.js','src/development.js','src/provisions.js','src/needs.js','src/fishing.js','src/healer-home.js','src/magic.js','src/farming.js','src/village-events.js','src/ecology.js','src/resources.js','src/climate.js','src/river.js','src/genealogy.js','src/paintings.js','src/collection.js','src/inspiration.js','src/practices.js','src/neighbors.js','src/sim.js','src/save.js','src/village-view.js','src/fishing-view.js','src/farming-view.js','src/magic-view.js','src/weather-view.js','src/village-speech.js','src/phone-ui.js','src/settlement-layout.js','src/settlement-view.js','src/paintings-view.js','src/clearing.js','src/encyclopedia.js','src/notebook.js','src/main.js'];
+  const files=['src/commands.js','src/theme.js','src/scenario.js','src/config.js','src/development.js','src/provisions.js','src/needs.js','src/fishing.js','src/healer-home.js','src/magic.js','src/farming.js','src/village-events.js','src/ecology.js','src/resources.js','src/climate.js','src/river.js','src/villager-appearance.js','src/villager-portrait.js','src/family-tree-layout.js','src/family-tree-view.js','src/genealogy.js','src/paintings.js','src/collection.js','src/inspiration.js','src/husbandry.js','src/practices.js','src/neighbors.js','src/sim.js','src/save.js','src/village-view.js','src/fishing-view.js','src/farming-view.js','src/magic-view.js','src/weather-view.js','src/village-speech.js','src/phone-ui.js','src/settlement-layout.js','src/settlement-view.js','src/paintings-view.js','src/husbandry-view.js','src/clearing.js','src/encyclopedia.js','src/husbandry-notebook.js','src/notebook.js','src/main.js'];
+  files.splice(files.indexOf('src/practices.js'),0,'src/storage.js');
   let code='';
   for(const file of files){
     const source=(await read(file)).replace(/^import[\s\S]*?;\r?\n/gm,'').replace(/^export /gm,'');

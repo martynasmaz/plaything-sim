@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Family tree — local preview</title>
+<style>body{margin:0;padding:24px;background:#344537;color:#f3ecd6;font:16px/1.5 Georgia,serif}main{max-width:1120px;margin:auto;background:#efe5cd;color:#3d3b2c;padding:20px;border-radius:16px;box-shadow:0 14px 60px #17251b55}h1{font-size:26px;margin:0 0 4px}.intro{margin:0 0 16px;color:#776d54}.family-atlas-viewport{height:650px}@media(max-width:600px){body{padding:8px}main{padding:12px}h1{font-size:22px}}</style>
+<main><h1>The village family album</h1><p class="intro">Local display fixture · real portrait renderer and family-tree component · no saved village is changed.</p><div id="tree"></div></main>
+<script type="module">
+import {createFamilyTreeView} from '../src/family-tree-view.js';
+import {familyTreeFixture} from '../tests/fixtures/family-tree.js';
+const state=familyTreeFixture(),view=createFamilyTreeView(document.getElementById('tree'),()=>state);view.open(7);
+</script></html>

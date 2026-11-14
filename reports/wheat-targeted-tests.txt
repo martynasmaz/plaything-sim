@@ -1,0 +1,38 @@
+✔ bone fertilizer is a practical discovery requiring farming, crushing experience, a hammer and bones (4.2721ms)
+✔ grinding consumes four real bones for two units and takes a separate workday from application (2.1754ms)
+✔ soil amendment matures after a season, adds only two provisions to three harvests, and cannot stack (0.7452ms)
+✔ fertilizer is not applied in winter or when hungry, and stock is not drained without fields needing it (0.7428ms)
+✔ real harvesting receives the bounded soil bonus through normal field work (12.8067ms)
+✔ old saves retain their fields and discoveries; processed bone and soil progress survive reload (4.0284ms)
+✔ finished local provisions support family readiness without spending or duplicating food (4.1693ms)
+✔ a camp cannot pay for another occupied camp from its inaccessible preserved stock (0.5863ms)
+✔ the eastern village uses its own supplies and is not blocked by the main pantry (0.5875ms)
+✔ shared provisions first support camps with fewer private stores, without claiming inaccessible food (0.8611ms)
+✔ a well-stocked camp does not take the shared meals needed by a camp without stores (13.168ms)
+✔ actual births use stored meals while retaining the three-day check and maternal recovery (50.5143ms)
+✔ early housing plans create physical work before a split village hits its birth cap (8.4348ms)
+✔ hungry, cold villagers do not get locked onto early construction (1.4698ms)
+✔ an old food stockpile does not permit births while current production runs below consumption (0.587ms)
+✔ moving meals into a camp store or a travel packet is not food production (0.5935ms)
+✔ winter storage planning requires experienced living preservers and learned winter yields (0.5395ms)
+✔ observing a winter records food income once and keeps experience through a save (2.2623ms)
+✔ cross-village families require two paid meetings and residence changes at the visited community (1.4963ms)
+✔ children of a couple introduced through visits retain both parents and their communities (5.236ms)
+✔ parents can remain in different villages after actual visits, with one family opportunity per fresh meeting (2.2624ms)
+✔ neighbor communication does not permit siblings to form a reproductive household (0.8583ms)
+✔ a neighbor can teach a practised technique through repeated meetings, with recipe prerequisites (2.0071ms)
+✔ urgent needs, floods and sole childcare duties take priority over optional trips (1.3091ms)
+✔ a saved journey resumes deterministically; a missing host does not conjure a meeting (1.1959ms)
+✔ counted spawn commands add the full population even with every bed occupied (27.6254ms)
+✔ basket experiments require experience, knowledge, usable materials, and spare energy (3.0292ms)
+✔ teaching takes repeated joint workdays and actual contact (2.6483ms)
+✔ deposits deplete exactly and seeded days replay (295.055ms)
+✔ meteor overlap ignites a shelter and nearby responders can preserve its beds (1.6882ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 507.1893

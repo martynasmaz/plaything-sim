@@ -1,0 +1,3 @@
+{"seed":50,"baseline":45,"population":40,"contact":85,"animals":0,"maxAnimals":{"sheep":2,"pig":0,"cattle":0}}
+{"seed":51,"baseline":23,"population":24,"contact":85,"animals":2,"maxAnimals":{"sheep":2,"pig":0,"cattle":0}}
+{"seed":52,"baseline":37,"population":37,"contact":85,"animals":2,"maxAnimals":{"sheep":2,"pig":0,"cattle":0}}

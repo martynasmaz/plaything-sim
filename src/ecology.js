@@ -37,7 +37,7 @@ export function woodlandSpecies(tree,id=0){
 // Only the house footprint and a little working space, in map coordinates.
 // Trees beyond this patch remain, even if their canopy overhangs the roof.
 export function inBuildingPatch(tree,site,kind='hut'){
-  const [rx,ry]=kind==='field'?[12,9]:kind==='healer'?[34,30]:[26,24];
+  const [rx,ry]=kind==='pen'?[39,28]:kind==='granary'?[38,32]:kind==='field'?[12,9]:kind==='healer'?[34,30]:[26,24];
   return Math.hypot((tree[0]-site[0])/rx,(tree[1]-site[1])/ry)<1;
 }
 export function buildingPatches(s,camps){
@@ -52,6 +52,11 @@ export function buildingPatches(s,camps){
   if(home&&(home.work>0||home.clearingWork>0))patches.push({site:home.home,kind:'healer'});
   for(const site of Object.values(s.farming.sites||{}))patches.push({site,kind:'field'});
   if(s.farming.expansion)patches.push({site:s.farming.expansion.site,kind:'field'});
+  for(const pen of s.local?.husbandry?.pens||[])if(pen.work||pen.clearingWork)patches.push({site:pen.site,kind:'pen'});
+  for(const store of Object.values(s.local?.campStores||{})){
+    for(const site of store.rackSites||[])patches.push({site,kind:'field'});
+    if(store.granary&&(store.granary.work||store.granary.clearingWork))patches.push({site:store.granary.site,kind:'granary'});
+  }
   return patches;
 }
 export function treeKeptClear(s,tree,camps){

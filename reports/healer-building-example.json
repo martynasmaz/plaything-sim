@@ -1,0 +1,1360 @@
+[
+  {
+    "day": 1,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Choose a quiet herb site",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 0,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {}
+    }
+  },
+  {
+    "day": 2,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Clear herb site",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 6
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 0,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {},
+      "clearingWork": 1,
+      "clearedTrees": [
+        65
+      ]
+    }
+  },
+  {
+    "day": 3,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Clear herb site",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 6
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 0,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {},
+      "clearingWork": 2,
+      "clearedTrees": [
+        65,
+        94
+      ]
+    }
+  },
+  {
+    "day": 4,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Clear herb site",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 6
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 0,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {},
+      "clearingWork": 3,
+      "clearedTrees": [
+        65,
+        94,
+        88
+      ]
+    }
+  },
+  {
+    "day": 5,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Clear herb site",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 2
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 0,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {},
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ]
+    }
+  },
+  {
+    "day": 6,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Build the herb hut",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 1,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0
+      }
+    }
+  },
+  {
+    "day": 7,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Build the herb hut",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 2,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 2
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0
+      }
+    }
+  },
+  {
+    "day": 8,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Build the herb hut",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 3,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 3,
+        "fibre": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0
+      }
+    }
+  },
+  {
+    "day": 9,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Build the herb hut",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 4,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 4,
+        "fibre": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0
+      }
+    }
+  },
+  {
+    "day": 10,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Build the herb hut",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 5,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 5,
+        "fibre": 2
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0
+      }
+    }
+  },
+  {
+    "day": 11,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Build the herb hut",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 12,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Move into the herb hut",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 2
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 13,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Care for Gabrielė",
+        "site": null,
+        "patient": 2,
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 1
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 14,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Care for Gabrielė",
+        "site": null,
+        "patient": 2,
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 15,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Gather healing leaves",
+        "site": [
+          272,
+          568
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 1,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 16,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Crush leaves for a remedy",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 1
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 17,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Care for Gabrielė",
+        "site": null,
+        "patient": 2,
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 18,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Gather healing leaves",
+        "site": [
+          272,
+          568
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 1,
+        "doses": 0
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 19,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Crush leaves for a remedy",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 1
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 20,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Gather healing leaves",
+        "site": [
+          272,
+          568
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 1,
+        "doses": 1
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 21,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Crush leaves for a remedy",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 0,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 2
+      },
+      "spent": {
+        "wood": 6,
+        "fibre": 2,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 22,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Build an herb drying rack",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 1,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 2
+      },
+      "spent": {
+        "wood": 7,
+        "fibre": 3,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 23,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Build an herb drying rack",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 2,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 2
+      },
+      "spent": {
+        "wood": 8,
+        "fibre": 4,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 24,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Gather healing leaves",
+        "site": [
+          272,
+          568
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 2,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 1,
+        "doses": 2
+      },
+      "spent": {
+        "wood": 8,
+        "fibre": 4,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 25,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Crush leaves for a remedy",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 2,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 3
+      },
+      "spent": {
+        "wood": 8,
+        "fibre": 4,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 26,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Gather healing leaves",
+        "site": [
+          272,
+          568
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 2,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 1,
+        "doses": 3
+      },
+      "spent": {
+        "wood": 8,
+        "fibre": 4,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 27,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Crush leaves for a remedy",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 2,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 4
+      },
+      "spent": {
+        "wood": 8,
+        "fibre": 4,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 28,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Rest",
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 2,
+      "markerWork": 0,
+      "stock": {
+        "leaves": 0,
+        "doses": 4
+      },
+      "spent": {
+        "wood": 8,
+        "fibre": 4,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 29,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Fit a leaf sign and herb thatch",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 2,
+      "markerWork": 1,
+      "stock": {
+        "leaves": 0,
+        "doses": 4
+      },
+      "spent": {
+        "wood": 9,
+        "fibre": 5,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  },
+  {
+    "day": 30,
+    "actions": [
+      {
+        "id": 1,
+        "action": "Fit a leaf sign and herb thatch",
+        "site": [
+          376,
+          97
+        ],
+        "gained": 0
+      }
+    ],
+    "project": {
+      "home": [
+        376,
+        97
+      ],
+      "ownerId": 1,
+      "founderId": 1,
+      "founderName": "Lukas",
+      "plannedDay": 1,
+      "work": 6,
+      "rackWork": 2,
+      "markerWork": 2,
+      "stock": {
+        "leaves": 0,
+        "doses": 4
+      },
+      "spent": {
+        "wood": 10,
+        "fibre": 6,
+        "stone": 1
+      },
+      "clearingWork": 4,
+      "clearedTrees": [
+        65,
+        94,
+        88,
+        108
+      ],
+      "materials": {
+        "wood": 0,
+        "fibre": 0,
+        "stone": 0
+      }
+    }
+  }
+]

@@ -1,0 +1,33 @@
+✔ new worlds contain no village animals or free structures; off-map stock is finite (5.5328ms)
+✔ discovery requires personal observations, prerequisites, real materials and a winter (1.773ms)
+✔ generic crafting never manufactures livestock buildings or dairy from knowledge alone (1.9664ms)
+✔ enclosure construction pays once, takes four real workdays and only collects on completion (4.5559ms)
+✔ actual construction clears only its small footprint and preserves unfinished projects after death/load (32.6277ms)
+✔ hunger, cold, illness and exhaustion interrupt work without destroying a paid project (2.0291ms)
+✔ hay consumes finite meadow grass and needs three dry days; wet bundles can fail (1.2335ms)
+✔ winter feeding spends hay and pigs cannot eat hay or the human food and seed reserves (1.8556ms)
+✔ sheep still graze when care is missed, but prolonged lack of water damages health (1.0332ms)
+✔ breeding needs adults of both sexes, safe condition, care and capacity; births retain both parents (1.0298ms)
+✔ milk requires a fed lactating mother, collection work and vessels; it cannot be collected twice (1.1643ms)
+✔ curds consume fresh milk and fuel in a separate workday and enter the finished-food ledger once (0.6837ms)
+✔ slaughter consumes one living animal once, grants finite products and keeps its history (0.7635ms)
+✔ livestock and buildings survive a caretaker death; succession does not confer skill (1.3097ms)
+✔ wool processing requires actual spindle, loom and paid inputs before clothing exists (2.0481ms)
+✔ manure matures before application and improves only two actual harvests (1.324ms)
+✔ lessons require the actual teacher workday and never bypass personal prerequisites (1.11ms)
+✔ cattle traction needs trained, healthy, fed cattle and never creates a field or seeds (0.872ms)
+✔ save/load preserves animals, ancestry, pregnancies, projects and the next deterministic day (24.8015ms)
+✔ a paid three-day exchange transfers real animals, retains a regional breeding pair and cannot duplicate them (1.5808ms)
+✔ failed trade cannot create animals, spend the quoted price or remove pregnancies (0.5963ms)
+✔ unweaned offspring need their mother; abundant hay cannot replace nursing automatically (0.7014ms)
+✔ a successor learns on two real paired care days with rope materials; normal work is limited per camp (0.7304ms)
+✔ the last available keeper is not booked for lessons when animals need tending (0.6235ms)
+✔ finished curds feed villagers through the normal meal system and are counted once (2.5745ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 281.3949

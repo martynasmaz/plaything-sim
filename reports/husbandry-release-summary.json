@@ -1,0 +1,15 @@
+{
+  "meanBaseline": 27.3,
+  "meanHusbandry": 30.1,
+  "meanDifference": 2.8,
+  "pairedBootstrap95": [
+    -6.4,
+    13.8
+  ],
+  "baselineAlive": 8,
+  "husbandryAlive": 10,
+  "adopted": 7,
+  "bred": 4,
+  "herdsAlive": 2,
+  "settingsHash": "9384c5a90b3e91d457b66d36f441bdc2094ec61bcc74ac5725a084e13d6940f8"
+}

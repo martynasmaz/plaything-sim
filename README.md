@@ -87,6 +87,20 @@ over a season and improves a limited number of harvests. There is no instant
 crop growth or unlimited stacking. Nearby villagers also share brief emoji
 speech bubbles instead of floating craft labels; precise details stay on hover.
 
+Experienced preservers can learn raised food storage and build a communal
+granary when their existing stores need more room. Its raised floor, woven
+walls and roof take eight construction days, 12 wood, four fibre and two stone,
+plus any site clearing. It adds 96 preserved-food places; further paid bin sets
+add 48 each. Existing racks, food and unfinished projects remain in saved worlds.
+
+Villagers can also learn bridge joinery after using cordage and gaining
+wood-working experience. A completed footbridge can receive handrails (four
+workdays, four wood and four fibre), then bracing (six more workdays, 12 wood,
+six stone and appropriate tools). Completed handrails reduce flood-crossing
+falls at the ford by 55%; completed bracing reduces them by 85%. Improvements
+retain their construction progress, and a damaged base bridge must be repaired
+before its protection applies.
+
 Observe now keeps dated birth records with parents alongside the death history;
 choose Births only, Deaths only, or Births and deaths in Village events. Available
 birth entries in older saves are preserved, and arrivals remain distinct from

@@ -1,3 +1,4 @@
+import {createFamilyTreeView} from './family-tree-view.js';
 export function rememberPerson(s,v,origin){
   if(!s.local)return;
   const people=(s.local.genealogy??={people:{},recordedFrom:s.day}).people;
@@ -7,6 +8,7 @@ export function rememberPerson(s,v,origin){
       origin:origin||(v.parents?.length?'born':v.arrivalDay!==undefined?'arrival':v.id<=s.config.start.ages.length?'founder':'unknown'),
       parents:[...(v.parents||[])],...(v.arrivalDay!==undefined?{arrivalDay:v.arrivalDay}:{})};
   }
+  record.appearance={age:v.age,gender:v.gender??null,tribe:v.tribe||0,furWraps:!!s.furWraps,woolWrap:!!v.practice?.gear['wool wrap']};
   if(v.parents?.length&&!record.parents.length)record.parents=[...v.parents];
   for(const [i,id] of (v.parents||[]).entries())people[id]??={id,name:v.parentNames?.[i]||'Unknown ancestor',parents:[],origin:'unknown',placeholder:true};
   return record;
@@ -52,29 +54,4 @@ export function familyOf(s,id){
   return {person,parents:(person?.parents||[]).map(id=>people[id]).filter(Boolean),
     children:Object.values(people).filter(p=>p.parents.includes(Number(id)))};
 }
-export function createFamilyTree(host,readState){
-  const details=document.createElement('details');details.innerHTML='<summary><strong>Family tree</strong></summary><label>Person <select data-family-person></select></label><p data-life></p><div data-family></div><small>Each parent link opens that person’s family. Unknown ancestry in older saves remains unknown.</small>';
-  host.append(details);
-  const select=details.querySelector('select'),life=details.querySelector('[data-life]'),tree=details.querySelector('[data-family]');
-  function draw(){
-    if(!details.open)return;
-    const s=readState(),people=Object.values(s.local?.genealogy?.people||{}),old=select.value;
-    select.replaceChildren(...people.map(p=>new Option(p.name+(p.deathDay!==undefined?' †':''),p.id)));
-    if(people.some(p=>String(p.id)===old))select.value=old;
-    const id=Number(select.value),{person,parents,children}=familyOf(s,id);
-    if(!person){life.textContent='No family records yet.';tree.replaceChildren();return;}
-    life.textContent=person.name+' · '+({founder:'founding villager',arrival:'arriving settler',born:'born in the valley',unknown:'earlier life unknown'})[person.origin]+
-      (person.arrivalDay!==undefined?' · arrived day '+person.arrivalDay:'')+
-      (person.placeholder?'': ' · born '+(person.birthDay<0?-person.birthDay+' days before the founding':'day '+person.birthDay))+
-      (person.deathDay!==undefined?' · died day '+person.deathDay+' ('+person.causes.join(', ')+')':'')+(person.ancestryIncomplete?' · some earlier parent links are missing':'');
-    tree.replaceChildren();
-    for(const [title,members] of [['Parents',parents],['Children',children]]){
-      const row=document.createElement('p');row.textContent=title+': ';
-      if(!members.length)row.append(title==='Parents'?(person.origin==='founder'||person.origin==='arrival'?'outside the recorded village':'unknown'):'none recorded');
-      for(const relative of members){const button=document.createElement('button');button.textContent=relative.name;button.style.margin='3px';button.onclick=()=>{select.value=String(relative.id);draw();};row.append(button);}
-      tree.append(row);
-    }
-  }
-  details.ontoggle=draw;select.onchange=draw;
-  return {draw};
-}
+export function createFamilyTree(host,readState){return createFamilyTreeView(host,readState);}

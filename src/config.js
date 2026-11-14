@@ -1,4 +1,5 @@
-// The one place to tune the simulation. All display choices live in theme.js.
+import {SCENARIO} from './scenario.js';
+// Reference rules. Tune the playable homestead in src/scenario.js.
 // Values below are copied from the v0.1 design (survival rebalance, matching
 // /workspace/sim/gourdling_survival.py), NOT adjusted to make tests pass.
 export const CONFIG = {
@@ -94,10 +95,10 @@ export const CONFIG = {
 
 // Live homestead tuning. The original v0.1/v0.2 rules above remain available
 // for replaying the reference simulations.
-export const HOMESTEAD_RULES = {
+const HOMESTEAD_BASE = {
   start:{food:38,wood:22},
   learning:{abundance:1,seasonLength:20,spoilage:.035,workCost:8,restGain:24,experimentChance:48,progress:1,lessonDays:2,
-    development:{fields:true,planning:true,roles:true,families:true}},
+    development:{fields:true,planning:true,roles:true,families:true},husbandry:true},
   power: null, // The playable homestead has unrestricted divine powers.
   settlement: { bedsPerHut: 3, shelterWork: 5, bridgeWork: 10, fuelReserve: 3, shelterBonus: 4 },
   birth: { consecutiveDays: 3, healthyParentsOnly: true },
@@ -107,6 +108,12 @@ export const HOMESTEAD_RULES = {
   dayMs: 240000
 };
 
+function mergeScenarioRules(base,patch){
+  const result=structuredClone(base);
+  for(const [key,value] of Object.entries(patch))result[key]=value&&typeof value==='object'&&!Array.isArray(value)?mergeScenarioRules(base[key]||{},value):structuredClone(value);
+  return result;
+}
+export const HOMESTEAD_RULES=mergeScenarioRules(HOMESTEAD_BASE,SCENARIO.simulation);
 // Allow small nested overrides in tests without accidentally losing other rules.
 export function makeConfig(overrides = {}) {
   function merge(base, patch) {
@@ -119,6 +126,7 @@ export function makeConfig(overrides = {}) {
   }
   const result=merge(CONFIG, overrides);
   // Explicit weather distributions remain useful for controlled experiments.
-  if(result.learning)result.learning.climate??=overrides.weather?.chances?false:'kaunas';
+  if(result.learning)result.learning.climate??=overrides.weather?.chances||SCENARIO.weather.model==='simple'?false:'kaunas';
+  if(result.learning&&SCENARIO.weather.model==='simple'&&!overrides.weather?.chances)result.weather.chances=structuredClone(SCENARIO.weather.simpleChances);
   return result;
 }

@@ -1,0 +1,330 @@
+{
+  "days": 1000,
+  "first": 50,
+  "count": 3,
+  "complete": 3,
+  "runs": [
+    {
+      "seed": 50,
+      "baseline": {
+        "day": 1000,
+        "population": 45,
+        "births": 163,
+        "deaths": 124,
+        "food": 10,
+        "maxAnimals": {
+          "sheep": 0,
+          "pig": 0,
+          "cattle": 0
+        },
+        "animals": 0,
+        "actions": {},
+        "firstDays": {},
+        "knowledge": {
+          "herding": 0,
+          "penbuilding": 0,
+          "haymaking": 0,
+          "stockshelter": 0,
+          "milking": 0,
+          "curdling": 0,
+          "fleeceworking": 0,
+          "woolspinning": 0,
+          "woolweaving": 0,
+          "woolclothing": 0,
+          "composting": 0,
+          "oxtraining": 0
+        },
+        "invalid": null
+      },
+      "husbandry": {
+        "day": 1000,
+        "population": 41,
+        "births": 155,
+        "deaths": 120,
+        "food": 37,
+        "contact": 510,
+        "pens": [],
+        "maxAnimals": {
+          "sheep": 0,
+          "pig": 0,
+          "cattle": 0
+        },
+        "animals": 0,
+        "stats": {
+          "births": 0,
+          "deaths": 0,
+          "slaughtered": 0,
+          "escaped": 0,
+          "traded": 0,
+          "milk": 0,
+          "curds": 0,
+          "wool": 0,
+          "cloth": 0,
+          "hay": 0,
+          "manured": 0,
+          "traction": 0
+        },
+        "actions": {
+          "Travel to distant herders": 3,
+          "Observe distant livestock keepers": 3,
+          "Return from distant herders": 3,
+          "Gather fibre for livestock work": 19
+        },
+        "firstDays": {
+          "Travel to distant herders": 506,
+          "Observe distant livestock keepers": 510,
+          "Return from distant herders": 511,
+          "Gather fibre for livestock work": 595
+        },
+        "knowledge": {
+          "herding": 0,
+          "penbuilding": 0,
+          "haymaking": 0,
+          "stockshelter": 0,
+          "milking": 0,
+          "curdling": 0,
+          "fleeceworking": 0,
+          "woolspinning": 0,
+          "woolweaving": 0,
+          "woolclothing": 0,
+          "composting": 0,
+          "oxtraining": 0
+        },
+        "regional": {
+          "sheep": 6,
+          "pig": 0,
+          "cattle": 4
+        },
+        "invalid": null
+      }
+    },
+    {
+      "seed": 51,
+      "baseline": {
+        "day": 1000,
+        "population": 23,
+        "births": 135,
+        "deaths": 118,
+        "food": 50,
+        "maxAnimals": {
+          "sheep": 0,
+          "pig": 0,
+          "cattle": 0
+        },
+        "animals": 0,
+        "actions": {},
+        "firstDays": {},
+        "knowledge": {
+          "herding": 0,
+          "penbuilding": 0,
+          "haymaking": 0,
+          "stockshelter": 0,
+          "milking": 0,
+          "curdling": 0,
+          "fleeceworking": 0,
+          "woolspinning": 0,
+          "woolweaving": 0,
+          "woolclothing": 0,
+          "composting": 0,
+          "oxtraining": 0
+        },
+        "invalid": null
+      },
+      "husbandry": {
+        "day": 1000,
+        "population": 43,
+        "births": 158,
+        "deaths": 121,
+        "food": 77,
+        "contact": 111,
+        "pens": [
+          {
+            "camp": 0,
+            "work": 4,
+            "shelter": 5,
+            "grass": 60,
+            "mast": 45,
+            "dung": 0
+          }
+        ],
+        "maxAnimals": {
+          "sheep": 0,
+          "pig": 0,
+          "cattle": 0
+        },
+        "animals": 0,
+        "stats": {
+          "births": 0,
+          "deaths": 0,
+          "slaughtered": 0,
+          "escaped": 0,
+          "traded": 0,
+          "milk": 0,
+          "curds": 0,
+          "wool": 0,
+          "cloth": 0,
+          "hay": 40,
+          "manured": 0,
+          "traction": 0
+        },
+        "actions": {
+          "Travel to distant herders": 12,
+          "Observe distant livestock keepers": 8,
+          "Return from distant herders": 7,
+          "Gather fibre for livestock work": 45,
+          "Study livestock enclosures": 4,
+          "Study winter haymaking": 4,
+          "Build livestock enclosure": 4,
+          "Build livestock shelter": 5,
+          "Cut and bundle winter hay": 5
+        },
+        "firstDays": {
+          "Travel to distant herders": 97,
+          "Observe distant livestock keepers": 111,
+          "Return from distant herders": 112,
+          "Gather fibre for livestock work": 128,
+          "Study livestock enclosures": 845,
+          "Study winter haymaking": 851,
+          "Build livestock enclosure": 895,
+          "Build livestock shelter": 899,
+          "Cut and bundle winter hay": 902
+        },
+        "knowledge": {
+          "herding": 2,
+          "penbuilding": 2,
+          "haymaking": 2,
+          "stockshelter": 1,
+          "milking": 0,
+          "curdling": 0,
+          "fleeceworking": 0,
+          "woolspinning": 0,
+          "woolweaving": 0,
+          "woolclothing": 0,
+          "composting": 0,
+          "oxtraining": 0
+        },
+        "regional": {
+          "sheep": 4,
+          "pig": 0,
+          "cattle": 4
+        },
+        "invalid": null
+      }
+    },
+    {
+      "seed": 52,
+      "baseline": {
+        "day": 1000,
+        "population": 37,
+        "births": 166,
+        "deaths": 135,
+        "food": 73,
+        "maxAnimals": {
+          "sheep": 0,
+          "pig": 0,
+          "cattle": 0
+        },
+        "animals": 0,
+        "actions": {},
+        "firstDays": {},
+        "knowledge": {
+          "herding": 0,
+          "penbuilding": 0,
+          "haymaking": 0,
+          "stockshelter": 0,
+          "milking": 0,
+          "curdling": 0,
+          "fleeceworking": 0,
+          "woolspinning": 0,
+          "woolweaving": 0,
+          "woolclothing": 0,
+          "composting": 0,
+          "oxtraining": 0
+        },
+        "invalid": null
+      },
+      "husbandry": {
+        "day": 1000,
+        "population": 25,
+        "births": 166,
+        "deaths": 147,
+        "food": 35,
+        "contact": 412,
+        "pens": [
+          {
+            "camp": 0,
+            "work": 4,
+            "shelter": 5,
+            "grass": 60,
+            "mast": 45,
+            "dung": 0
+          }
+        ],
+        "maxAnimals": {
+          "sheep": 0,
+          "pig": 0,
+          "cattle": 0
+        },
+        "animals": 0,
+        "stats": {
+          "births": 0,
+          "deaths": 0,
+          "slaughtered": 0,
+          "escaped": 0,
+          "traded": 0,
+          "milk": 0,
+          "curds": 0,
+          "wool": 0,
+          "cloth": 0,
+          "hay": 40,
+          "manured": 0,
+          "traction": 0
+        },
+        "actions": {
+          "Travel to distant herders": 12,
+          "Observe distant livestock keepers": 10,
+          "Return from distant herders": 10,
+          "Gather fibre for livestock work": 60,
+          "Study livestock enclosures": 6,
+          "Build livestock enclosure": 4,
+          "Study winter haymaking": 3,
+          "Cut and bundle winter hay": 5,
+          "Build livestock shelter": 5,
+          "Study livestock shelters": 1
+        },
+        "firstDays": {
+          "Travel to distant herders": 411,
+          "Observe distant livestock keepers": 412,
+          "Return from distant herders": 419,
+          "Gather fibre for livestock work": 422,
+          "Study livestock enclosures": 679,
+          "Build livestock enclosure": 700,
+          "Study winter haymaking": 736,
+          "Cut and bundle winter hay": 758,
+          "Build livestock shelter": 821,
+          "Study livestock shelters": 831
+        },
+        "knowledge": {
+          "herding": 2,
+          "penbuilding": 0,
+          "haymaking": 0,
+          "stockshelter": 0,
+          "milking": 0,
+          "curdling": 0,
+          "fleeceworking": 0,
+          "woolspinning": 0,
+          "woolweaving": 0,
+          "woolclothing": 0,
+          "composting": 0,
+          "oxtraining": 0
+        },
+        "regional": {
+          "sheep": 8,
+          "pig": 6,
+          "cattle": 4
+        },
+        "invalid": null
+      }
+    }
+  ]
+}

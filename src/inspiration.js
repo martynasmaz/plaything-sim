@@ -1,3 +1,4 @@
+import {SCENARIO} from './scenario.js';
 // Questions are prompts to investigate, not inventions or changes to traits.
 export const inspirationTopics=[
   {id:'counting',skill:'wood',question:'Could marks on a stick help us count and share our stores?',ready:(s,p)=>(p.skills.berries||0)>=3&&(p.skills.wood||0)>=2},
@@ -19,13 +20,13 @@ export function inspireVillager(s,{target,natural=false}={}){
     if(target&&v.name.toLowerCase()!==target.toLowerCase())continue;
     if(v.age<s.config.life.adult||v.illnessDays||v.health<40||v.fullness<40||v.warmth<40||v.practice.energy<32||
       v.practice.inspiration?.until>=s.day)continue;
-    for(const topic of inspirationTopics)if(topic.ready(s,v.practice)&&s.day-(v.practice.questionsSeen?.[topic.id]??-1000)>=20)
+    for(const topic of inspirationTopics)if(topic.ready(s,v.practice)&&s.day-(v.practice.questionsSeen?.[topic.id]??-1000)>=SCENARIO.inspiration.topicCooldownDays)
       choices.push({v,topic,score:inspirationScore(s,v,topic)});
   }
   choices.sort((a,b)=>b.score-a.score||a.v.id-b.v.id);
   const choice=choices[0];if(!choice)return null;
   const {v,topic}=choice,p=v.practice;
-  p.inspiration={topic:topic.id,skill:topic.skill,question:topic.question,day:s.day,until:s.day+5};
+  p.inspiration={topic:topic.id,skill:topic.skill,question:topic.question,day:s.day,until:s.day+SCENARIO.inspiration.durationDays};
   (p.questionsSeen??={})[topic.id]=s.day;
   const entry={day:s.day,id:v.id,name:v.name,topic:topic.id,question:topic.question,natural};
   (s.local.questions??=[]).push(entry);s.local.questions=s.local.questions.slice(-40);
@@ -38,10 +39,10 @@ export function naturalInspiration(s,report){
     if(!['Forage','Gather wood','Harvest','Harvest wheat','Build hut','Rest','Hunt','Fish'].includes(action))continue;
     const v=s.villagers.find(v=>v.id===id);if(!v||v.motivation?.level<3)continue;
     let h=Math.imul(s.seed^Math.imul(s.day+1,1597334677)^id,2246822519);h=(h^(h>>>16))>>>0;
-    if(h%400===0){const q=inspireVillager(s,{target:v.name,natural:true});if(q)(report.inspiration??=[]).push(q);}
+    if(((h%400)+(Math.floor(h/400)%1000000)/1000000)/400<SCENARIO.inspiration.naturalChance){const q=inspireVillager(s,{target:v.name,natural:true});if(q)(report.inspiration??=[]).push(q);}
   }
 }
 export function inspirationBonus(s,v,recipe){
   const i=v.practice.inspiration;
-  return i?.until>=s.day&&i.skill===recipe.skill?8:0;
+  return i?.until>=s.day&&i.skill===recipe.skill?SCENARIO.inspiration.experimentBonus:0;
 }

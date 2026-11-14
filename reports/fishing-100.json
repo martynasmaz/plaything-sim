@@ -1,0 +1,55 @@
+{
+  "sourceSha256": "689cbadde86b60dbfdbc4f4cf2fe5b60466b91084188926659ff3d7165a4ac32",
+  "runs": 100,
+  "horizon": 1000,
+  "definition": "Regular = at least 5 main fishing workdays within any 20-day window. Adoption percentage includes only villagers observed for at least 20 adult days. Weekly trap checks are counted separately as food.",
+  "villagesEverFished": 100,
+  "medianFirstFishingDay": 9,
+  "eligibleAdults": 5694,
+  "eligibleAdultsEverFished": 2388,
+  "regularFishers": 2070,
+  "regularAdoptionShare": 0.3635405690200211,
+  "regularFishersBornInVillage": 1805,
+  "fishFood": 243847,
+  "weeklyFishFood": 8341,
+  "gatheredFood": 1744010,
+  "fishingFoodShare": 0.14460238186707644,
+  "meanFishFoodPerVillageDay": 2.590662078175561,
+  "childrenObservedFishing": 4901,
+  "observedChildrenLaterRegularFishers": 1648,
+  "fishingActionDays": 67226,
+  "zeroCatchActions": 0,
+  "easternFoodProductionActions": 277,
+  "checkpoints": [
+    {
+      "day": 100,
+      "livingVillages": 100,
+      "meanPopulation": 9.55,
+      "meanTrapOwners": 2.33,
+      "meanRecentFishers": 2.14,
+      "meanRegularFishers": 0.82,
+      "villagesWithRegularFishers": 62,
+      "regularShareOfLivingAdults": 0.09414466130884042
+    },
+    {
+      "day": 300,
+      "livingVillages": 100,
+      "meanPopulation": 16.62,
+      "meanTrapOwners": 3.24,
+      "meanRecentFishers": 2.98,
+      "meanRegularFishers": 1.44,
+      "villagesWithRegularFishers": 85,
+      "regularShareOfLivingAdults": 0.09710047201618341
+    },
+    {
+      "day": 1000,
+      "livingVillages": 90,
+      "meanPopulation": 15.9,
+      "meanTrapOwners": 2.988888888888889,
+      "meanRecentFishers": 2.7666666666666666,
+      "meanRegularFishers": 1.288888888888889,
+      "villagesWithRegularFishers": 74,
+      "regularShareOfLivingAdults": 0.09126671911880409
+    }
+  ]
+}

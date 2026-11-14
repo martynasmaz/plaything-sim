@@ -1,0 +1,1 @@
+{"checks":[{"viewport":"phone","houseBaseAspect":4.25},{"viewport":"desktop","houseBaseAspect":4.25},{"viewport":"ultrawide","houseBaseAspect":4.25}],"verified":"moving local storm bands, dry gaps, uniform hut shapes, unchanged worlds and valid offline build"}

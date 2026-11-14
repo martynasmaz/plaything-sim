@@ -1,0 +1,71 @@
+Seed 2: 0 alive at day 1121, peak 31, visits 16, cross-village births 6 (1/50)
+Seed 0: 0 alive at day 1101, peak 28, visits 8, cross-village births 2 (2/50)
+Seed 6: 0 alive at day 1546, peak 23, visits 4, cross-village births 0 (3/50)
+Seed 3: 17 alive at day 3000, peak 27, visits 5, cross-village births 0 (4/50)
+Seed 7: 0 alive at day 351, peak 8, visits 3, cross-village births 0 (5/50)
+Seed 1: 23 alive at day 3000, peak 27, visits 7, cross-village births 0 (6/50)
+Seed 11: 0 alive at day 363, peak 9, visits 5, cross-village births 0 (7/50)
+Seed 4: 20 alive at day 3000, peak 28, visits 2, cross-village births 0 (8/50)
+Seed 10: 19 alive at day 3000, peak 26, visits 14, cross-village births 3 (9/50)
+Seed 14: 0 alive at day 260, peak 8, visits 1, cross-village births 0 (10/50)
+Seed 8: 0 alive at day 1251, peak 28, visits 7, cross-village births 0 (11/50)
+Seed 18: 0 alive at day 317, peak 8, visits 5, cross-village births 0 (12/50)
+Seed 12: 0 alive at day 467, peak 10, visits 4, cross-village births 0 (13/50)
+Seed 5: 0 alive at day 2479, peak 26, visits 4, cross-village births 0 (14/50)
+Seed 9: 0 alive at day 318, peak 8, visits 3, cross-village births 0 (15/50)
+Seed 13: 0 alive at day 476, peak 9, visits 2, cross-village births 0 (16/50)
+Seed 17: 0 alive at day 475, peak 8, visits 1, cross-village births 0 (17/50)
+Seed 15: 24 alive at day 3000, peak 28, visits 4, cross-village births 0 (18/50)
+Seed 16: 17 alive at day 3000, peak 28, visits 7, cross-village births 0 (19/50)
+Seed 20: 0 alive at day 314, peak 8, visits 0, cross-village births 0 (20/50)
+Seed 22: 15 alive at day 3000, peak 29, visits 9, cross-village births 1 (21/50)
+Seed 21: 21 alive at day 3000, peak 28, visits 7, cross-village births 3 (22/50)
+Seed 19: 18 alive at day 3000, peak 27, visits 3, cross-village births 2 (23/50)
+Seed 26: 0 alive at day 2710, peak 27, visits 10, cross-village births 3 (24/50)
+Seed 24: 21 alive at day 3000, peak 27, visits 4, cross-village births 0 (25/50)
+Seed 25: 0 alive at day 2397, peak 25, visits 4, cross-village births 1 (26/50)
+Seed 29: 0 alive at day 522, peak 9, visits 1, cross-village births 0 (27/50)
+Seed 33: 0 alive at day 354, peak 9, visits 1, cross-village births 0 (28/50)
+Seed 23: 23 alive at day 3000, peak 28, visits 5, cross-village births 1 (29/50)
+Seed 30: 18 alive at day 3000, peak 24, visits 4, cross-village births 0 (30/50)
+Seed 28: 21 alive at day 3000, peak 24, visits 1, cross-village births 0 (31/50)
+Seed 32: 0 alive at day 400, peak 10, visits 3, cross-village births 0 (32/50)
+Seed 37: 8 alive at day 3000, peak 24, visits 4, cross-village births 2 (33/50)
+Seed 27: 16 alive at day 3000, peak 24, visits 2, cross-village births 0 (34/50)
+Seed 31: 0 alive at day 521, peak 14, visits 1, cross-village births 0 (35/50)
+Seed 34: 19 alive at day 3000, peak 27, visits 11, cross-village births 2 (36/50)
+Seed 36: 0 alive at day 2514, peak 25, visits 10, cross-village births 3 (37/50)
+Seed 40: 0 alive at day 1391, peak 18, visits 3, cross-village births 0 (38/50)
+Seed 41: 20 alive at day 3000, peak 26, visits 6, cross-village births 0 (39/50)
+Seed 35: 21 alive at day 3000, peak 28, visits 5, cross-village births 0 (40/50)
+Seed 39: 0 alive at day 415, peak 9, visits 5, cross-village births 0 (41/50)
+Seed 38: 24 alive at day 3000, peak 24, visits 7, cross-village births 0 (42/50)
+Seed 44: 15 alive at day 3000, peak 27, visits 1, cross-village births 0 (43/50)
+Seed 45: 28 alive at day 3000, peak 30, visits 2, cross-village births 0 (44/50)
+Seed 43: 0 alive at day 2572, peak 27, visits 2, cross-village births 0 (45/50)
+Seed 47: 0 alive at day 338, peak 10, visits 2, cross-village births 0 (46/50)
+Seed 49: 0 alive at day 1609, peak 24, visits 3, cross-village births 0 (47/50)
+Seed 42: 18 alive at day 3000, peak 24, visits 14, cross-village births 2 (48/50)
+Seed 46: 0 alive at day 1250, peak 25, visits 3, cross-village births 0 (49/50)
+Seed 48: 16 alive at day 3000, peak 27, visits 4, cross-village births 0 (50/50)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Source changed during the comparison
++ actual - expected
+
++ '28edc9620d27033d739e4d26e972f79f66ffb2c16e89a5ba131c4f91b896dd42'
+- '56d88b633e63887c8fad065510210f97495601c7a2004c5cc4d1a0063454e75c'
+
+    at file:///C:/Users/mrmar/OneDrive/Documents/Game/scripts/population-followup.mjs:22:10
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '28edc9620d27033d739e4d26e972f79f66ffb2c16e89a5ba131c4f91b896dd42',
+  expected: '56d88b633e63887c8fad065510210f97495601c7a2004c5cc4d1a0063454e75c',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.22.1

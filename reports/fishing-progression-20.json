@@ -1,0 +1,77 @@
+{
+  "sourceSha256": "aa6323cb7c1d5d8f2d283114a7422185ffa3e8b39686bc76d1c8c89227e5c8a3",
+  "runs": 20,
+  "horizon": 1000,
+  "definition": "Regular = at least 5 main fishing workdays within any 20-day window. Adoption percentage includes only villagers observed for at least 20 adult days. Weekly trap checks are counted separately as food.",
+  "villagesEverFished": 20,
+  "medianFirstFishingDay": 37.5,
+  "eligibleAdults": 925,
+  "eligibleAdultsEverFished": 857,
+  "regularFishers": 553,
+  "regularAdoptionShare": 0.5978378378378378,
+  "regularFishersBornInVillage": 481,
+  "fishFood": 44095,
+  "weeklyFishFood": 1351,
+  "gatheredFood": 279747,
+  "fishingFoodShare": 0.16245393158818505,
+  "meanFishFoodPerVillageDay": 2.61183908045977,
+  "childrenObservedFishing": 776,
+  "observedChildrenLaterRegularFishers": 442,
+  "fishingActionDays": 17015,
+  "zeroCatchActions": 0,
+  "methods": {
+    "spear": {
+      "actions": 14789,
+      "villages": 20
+    },
+    "trap": {
+      "actions": 1683,
+      "villages": 17
+    },
+    "line": {
+      "actions": 215,
+      "villages": 11
+    },
+    "pole": {
+      "actions": 15,
+      "villages": 5
+    },
+    "net": {
+      "actions": 313,
+      "villages": 5
+    }
+  },
+  "easternFoodProductionActions": 34,
+  "checkpoints": [
+    {
+      "day": 100,
+      "livingVillages": 20,
+      "meanPopulation": 8.55,
+      "meanTrapOwners": 0.75,
+      "meanRecentFishers": 3.2,
+      "meanRegularFishers": 1.8,
+      "villagesWithRegularFishers": 17,
+      "regularShareOfLivingAdults": 0.23076923076923078
+    },
+    {
+      "day": 300,
+      "livingVillages": 20,
+      "meanPopulation": 11.45,
+      "meanTrapOwners": 2.05,
+      "meanRecentFishers": 5.55,
+      "meanRegularFishers": 0.8,
+      "villagesWithRegularFishers": 10,
+      "regularShareOfLivingAdults": 0.07881773399014778
+    },
+    {
+      "day": 1000,
+      "livingVillages": 15,
+      "meanPopulation": 16.466666666666665,
+      "meanTrapOwners": 1.2666666666666666,
+      "meanRecentFishers": 9.466666666666667,
+      "meanRegularFishers": 1.2666666666666666,
+      "villagesWithRegularFishers": 14,
+      "regularShareOfLivingAdults": 0.08333333333333333
+    }
+  ]
+}
