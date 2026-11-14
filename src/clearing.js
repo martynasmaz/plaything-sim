@@ -6,7 +6,7 @@ import {fishingCrafts,fishingMethod,fishingMethodNames,fishingPhase} from './fis
 import {drawRiverFishing,drawRiverFish,drawFishingMesh,drawWickerFishingTrap,drawCarriedFishingGear} from './fishing-view.js';
 import {assessNeeds} from './needs.js';
 import {shelterDrawingScale,compactWorkSpot,householdHutSite} from './settlement-layout.js';
-import {drawHealerHome} from './settlement-view.js';
+import {drawHealerHome,drawHouseholdHut} from './settlement-view.js';
 import {healerHomeView,healerMedicineStore,healerTrainingComplete} from './healer-home.js';
 import {magicEnabled,magicActions} from './magic.js';
 import {drawFolkRite} from './magic-view.js';
@@ -14,6 +14,7 @@ import {activityEmoji,villagerSpeech,drawEmojiSpeech} from './village-speech.js'
 import {phoneLayoutEnabled,createPhoneGesture} from './phone-ui.js';
 import {cropRipeAt} from './farming.js';
 import {drawWheat,drawSaddleQuern} from './farming-view.js';
+import {stormRainCells,stormRainStrength,drawStormRain} from './weather-view.js';
 
 // Offset each walker's sequence so the whole meadow gets visited without
 // drawing from the simulation's weather or personality dice.
@@ -349,23 +350,23 @@ function boulder(g,x,y,size){
   line(g,-10,-11,-1,-15,'#c3bea1',2);line(g,1,-14,6,-8,'#646956',1.5);g.restore();
 }
 function skyClock(g,day,hour,speed,darkness,twilight,phone=false,width=390){
-  const radius=phone?21:32,orbit=phone?13:22;
+  const radius=21,orbit=13;
   // Dawn is the left horizon, noon the top, dusk the right, and midnight the bottom.
   const angle=(hour-12)*Math.PI/12-Math.PI/2;
   const sunX=orbit*Math.cos(angle),sunY=orbit*Math.sin(angle);
   const phase=hour>=5&&hour<7?'Dawn':hour>=17&&hour<19?'Dusk':hour>=7&&hour<17?'Daylight':'Night';
-  const status=speed===0&&phone?'Paused':speed>1?phase+' · '+speed+'×':phase;
+  const status=speed===0?'Paused':speed>1?phase+' · '+speed+'×':phase;
   g.save();
   let panelWidth=0;
-  if(phone){
+  {
     g.font='bold 17px Georgia';const dayWidth=g.measureText('Day '+day).width;
     g.font='bold 13px Georgia';const statusWidth=g.measureText(status).width;
-    panelWidth=Math.min(Math.ceil(Math.max(dayWidth,statusWidth))+64,width-144);
+    panelWidth=Math.min(Math.ceil(Math.max(dayWidth,statusWidth))+64,width-(phone?144:16));
     g.save();g.shadowColor='#0c170c77';g.shadowBlur=4;g.shadowOffsetY=1;
     g.fillStyle='#253222e8';g.strokeStyle='#bfa574b8';g.lineWidth=1;
     g.beginPath();g.roundRect(8,8,panelWidth,50,7);g.fill();g.stroke();g.restore();
   }
-  g.translate(phone?32:49,phone?33:49);
+  g.translate(32,33);
   ellipse(g,0,1,radius+3,radius+3,'#382f27');
   ellipse(g,0,0,radius,radius,'#d8bc86');
   g.save();
@@ -391,13 +392,11 @@ function skyClock(g,day,hour,speed,darkness,twilight,phone=false,width=390){
   g.quadraticCurveTo(-3,0,6*Math.cos(Math.PI*.4),6*Math.sin(Math.PI*.4));
   g.closePath();g.fillStyle='#fff1cd';g.fill();g.strokeStyle='#625b51';g.lineWidth=1;g.stroke();
   g.restore();
-  g.textAlign='left';g.fillStyle=phone?'#fff3d6':'#f4e6c7';g.font=phone?'bold 17px Georgia':'15px Georgia';
-  const labelX=phone?30:43,textWidth=phone?panelWidth-64:undefined;
-  if(phone){g.strokeStyle='#13200f';g.lineWidth=2;g.strokeText('Day '+day,labelX,-2,textWidth);}
-  if(phone)g.fillText('Day '+day,labelX,-2,textWidth);else g.fillText('Day '+day,labelX,-3);
-  g.font=phone?'bold 13px Georgia':'12px Georgia';
-  if(phone)g.strokeText(status,labelX,16,textWidth);
-  if(phone)g.fillText(status,labelX,16,textWidth);else g.fillText(status,labelX,13);
+  g.textAlign='left';g.fillStyle='#fff3d6';g.font='bold 17px Georgia';
+  const labelX=30,textWidth=panelWidth-64;
+  g.strokeStyle='#13200f';g.lineWidth=2;g.strokeText('Day '+day,labelX,-2,textWidth);
+  g.fillText('Day '+day,labelX,-2,textWidth);
+  g.font='bold 13px Georgia';g.strokeText(status,labelX,16,textWidth);g.fillText(status,labelX,16,textWidth);
   g.restore();
 }
 function riverBands(width,height,baseWidth,flood,kaunas){
@@ -441,9 +440,13 @@ function landscape(canvas,width,height,flood,baseWidth,season,kaunas){
   ground.forEach((color,i)=>grass.addColorStop(i/2,color));
 
   g.fillStyle=grass;g.fillRect(-baseWidth,-height,width,3*height);
+  const groundScale=Math.min(baseWidth/1000,height/640);
   for(const [cx,cy,rx,ry] of [[.24,.26,.14,.09],[.73,.17,.1,.06]]){
-    ellipse(g,baseWidth*cx,height*cy,baseWidth*rx,height*ry,winter?'#aab5a9':ground[1]);
-    for(let i=0;i<16;i++){const a=.15+i*.17;boulder(g,baseWidth*(cx+rx*Math.cos(a)),height*(cy+ry*Math.sin(a)),.35+rand()*.45);}
+    // A round patch must use one physical radius, not independent percentages
+    // of screen width and height (which became a wide oval on ultrawide PCs).
+    const radius=Math.sqrt(rx*1000*ry*640)*groundScale,x=baseWidth*cx,y=height*cy;
+    ellipse(g,x,y,radius,radius,winter?'#aab5a9':ground[1]);
+    for(let i=0;i<16;i++){const a=.15+i*.17;boulder(g,x+radius*Math.cos(a),y+radius*Math.sin(a),.35+rand()*.45);}
   }
   for(let i=0;i<width*height/200;i++){
     const x=rand()*width-baseWidth,y=(rand()*3-1)*height,n=2+rand()*7;
@@ -728,7 +731,7 @@ export function createClearing(host,getState){
   const caught=new Set();
   let hutJobs={};
   function draw(dt){
-    const s=getState(),rect=host.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2);
+    const s=getState(),weather=currentWeather(s),rect=host.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2);
     const w=Math.max(1,Math.round(rect.width*ratio)),h=Math.max(1,Math.round(rect.height*ratio));
     const flood=s.lastUsed.flood===s.day;
     const season=valleySeason(s);
@@ -788,7 +791,9 @@ export function createClearing(host,getState){
     const worldWidth=fieldWidth*span;
     const seconds=clearingSeconds(dt,s.speed);
     clock+=seconds;gustLeft=Math.max(0,gustLeft-seconds);birthTime=Math.max(0,birthTime-seconds);
-    ctx.setTransform(w/fieldWidth*zoom,0,0,h/fieldHeight*zoom,-left*w*zoom,-top*h*zoom);
+    const stormCells=weather==='rain'&&season.name!=='Winter'?stormRainCells(s.seed,clock):null;
+    const worldScale=Math.min(w/fieldWidth,h/fieldHeight)*zoom;
+    ctx.setTransform(worldScale,0,0,worldScale,-left*fieldWidth*worldScale,-top*fieldHeight*worldScale);
     ctx.drawImage(paper,-fieldWidth,-fieldHeight,worldWidth,3*fieldHeight);
     if(oldPaper&&blend<1){ctx.globalAlpha=1-blend;ctx.drawImage(oldPaper,-fieldWidth,-fieldHeight,worldWidth,3*fieldHeight);ctx.globalAlpha=1;}
     else oldPaper=null;
@@ -798,7 +803,7 @@ export function createClearing(host,getState){
       ctx.translate(Math.sin(clock*39)*strength,Math.cos(clock*46)*strength);
     }
     for(let i=0;!season.frozen&&i<48*span;i++){
-      const offset=i*137+clock*(kaunas?-1:1)*(flood?61:32);
+      const offset=i*137+clock*(kaunas?-1:1)*(flood?61:stormCells?47:32);
       const x=((offset%worldWidth+worldWidth)%worldWidth)-fieldWidth;
       const lane=Math.sin(i*2.4)*.8;
       const level=px=>streamY(px,fieldWidth,fieldHeight)+lane*riverHalfWidth(px,fieldWidth,flood);
@@ -811,6 +816,15 @@ export function createClearing(host,getState){
         if(y>streamY(x,fieldWidth,fieldHeight)-riverHalfWidth(x,fieldWidth,flood)*1.6)continue;
         line(ctx,x,y,x+(nerisX(v+.004)-nerisX(v))*fieldWidth,y+.004*fieldHeight,'#c7e2d599',1.3);
       }
+    }
+    if(stormCells)for(let i=0;i<220;i++){
+      const u=-1+(i*.61803398875%1)*3,x=u*fieldWidth;
+      const y=streamY(x,fieldWidth,fieldHeight)+Math.sin(i*7)*riverHalfWidth(x,fieldWidth,flood)*.78;
+      const strength=stormRainStrength(stormCells,u,y/fieldHeight);
+      if(strength<.15)continue;
+      const phase=(clock*1.6+i*.37)%1,r=2+phase*8;
+      ctx.beginPath();ctx.ellipse(x,y,r,r*.36,0,0,Math.PI*2);
+      ctx.strokeStyle='rgba(202,226,224,'+((1-phase)*strength*.45)+')';ctx.lineWidth=.9;ctx.stroke();
     }
     const point=(x,y)=>[x*fieldWidth/1000,y*fieldHeight/640];
     const trailKey=[s.seed,s.day,canvas.width,canvas.height,span,flood].join('|');
@@ -1026,27 +1040,7 @@ export function createClearing(host,getState){
     for(const [slot,camp] of (s.huts||[]).entries()){
       const index=hutCounts.get(camp)||0;hutCounts.set(camp,index+1);
       const [x,y]=point(...hutSite(camp,index));
-      layers.push({y,draw:()=>{
-        const hut=s.hutDetails?.[slot]||{};
-        if(hut.ruined){line(ctx,x-14,y,x+11,y-4,'#42362e',4);return;}
-        ctx.save();ctx.translate(x,y);ctx.scale(shelterDrawingScale,shelterDrawingScale);ctx.translate(-x,-y);
-        ctx.fillStyle=hut.scorched?'#685444':hut.wall==='drystone wall'?'#797766':hut.wall==='mud wall'?'#a27a53':'#ad946d';
-        ctx.fillRect(x-17,y-14,34,14);
-        if(hut.wall==='drystone wall')for(let i=-2;i<=2;i++)line(ctx,x+i*6,y-10,x+i*6+4,y-10,'#504f42',1.5);
-        if(hut.wall==='wattle & daub wall')for(let i=-2;i<=2;i++)line(ctx,x+i*6,y-13,x+i*6+4,y-2,'#83674a',1.6);
-        if(hut.chimney){ctx.fillStyle='#705e4e';ctx.fillRect(x+9,y-35,6,23);}
-        ctx.beginPath();ctx.moveTo(x-22,y-12);
-        if(hut.shape==='dome hut')ctx.bezierCurveTo(x-22,y-38,x+22,y-38,x+22,y-12);
-        else if(hut.shape==='A-frame hut'){ctx.lineTo(x-21,y);ctx.lineTo(x,y-33);ctx.lineTo(x+21,y);}
-        else if(hut.shape==='gabled roof hut'){ctx.lineTo(x-12,y-29);ctx.lineTo(x+10,y-30);ctx.lineTo(x+23,y-12);}
-        else{ctx.lineTo(x+(hut.shape==='pyramidal hut'?6:0),y-31);ctx.lineTo(x+23,y-12);}
-        ctx.closePath();ctx.fillStyle='#a48758';ctx.fill();ctx.strokeStyle='#52432e';ctx.lineWidth=2;ctx.stroke();
-        if(hut.shape==='pyramidal hut')line(ctx,x+6,y-30,x-5,y-12,'#69583f',2);
-        if(hut.shape==='round hut')ellipse(ctx,x,y-12,22,3,'#a48758');
-        ctx.fillStyle='#4b3b2b';ctx.fillRect(x-4,y-11,8,11);
-        if(hut.ondol)ellipse(ctx,x+13,y-3,4,2,campFireLit(s,camp)?'#c97641':'#655247');
-        ctx.restore();
-      }});
+      layers.push({y,draw:()=>drawHouseholdHut(ctx,x,y,s.hutDetails?.[slot]||{},shelterDrawingScale,campFireLit(s,camp))});
     }
     if(s.shed.built)prop('painted_barn',827,463,112,102);
     const forest=worldTrees(s);
@@ -1389,8 +1383,7 @@ export function createClearing(host,getState){
       if(s.villagers.find(v=>v.id===id)?.gear==='sling')ellipse(ctx,x,y,3,2.5,'#c8c3ad');
       else line(ctx,x-8*Math.sign(monster.x-p.x),y-2,x,y,'#b79869',2);
     }
-    const weather=currentWeather(s);
-    if(weather==='rain'||gustLeft>0){
+    if(weather==='rain'&&!stormCells||gustLeft>0&&weather!=='rain'){
       const count=(weather==='rain'?160:28)*span;
       for(let i=0;i<count;i++){
         const period=worldWidth+20,x=((i*197-clock*65)%period+period)%period-fieldWidth,y=(i*241+clock*233)%(3*fieldHeight+20)-fieldHeight-10;
@@ -1432,8 +1425,12 @@ export function createClearing(host,getState){
       sky.addColorStop(0,refused?'#5c554f':'#dc914a');sky.addColorStop(1,'transparent');
       ctx.globalAlpha=.48*Math.sin(Math.PI*signalLeft);ctx.fillStyle=sky;ctx.fillRect(-fieldWidth,-fieldHeight,worldWidth,3*fieldHeight);ctx.globalAlpha=1;
     }
+    if(stormCells){
+      ctx.save();ctx.setTransform(ratio,0,0,ratio,0,0);
+      drawStormRain(ctx,{width:rect.width,height:rect.height,left,top,zoom,clock,seed:s.seed,cells:stormCells});ctx.restore();
+    }
     const phoneClock=phoneLayoutEnabled();
-    ctx.save();ctx.setTransform(phoneClock?ratio:3*w/fieldWidth,0,0,phoneClock?ratio:3*h/fieldHeight,0,0);
+    ctx.save();ctx.setTransform(ratio,0,0,ratio,0,0);
     skyClock(ctx,s.day,hour,s.speed,darkness,twilight,phoneClock,rect.width);
     ctx.restore();
     const picked=people.get(selected);

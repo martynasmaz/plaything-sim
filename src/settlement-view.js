@@ -6,6 +6,31 @@ function healerStroke(g,x,y,ex,ey,color,width=1.5){
 function healerOval(g,x,y,rx,ry,color){
   g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fillStyle=color;g.fill();
 }
+// One local, uniformly scaled shape for every viewport. The rounded base is a
+// circular footprint in the same oblique view used for the rest of the village.
+export function drawHouseholdHut(g,x,y,hut={},scale=1.75,lit=false){
+  g.save();g.translate(x,y);g.scale(scale,scale);
+  if(hut.ruined){healerStroke(g,-14,0,11,-4,'#42362e',4);g.restore();return;}
+  const round=['round hut','dome hut'].includes(hut.shape);
+  const wall=hut.scorched?'#685444':hut.wall==='drystone wall'?'#797766':hut.wall==='mud wall'?'#a27a53':'#ad946d';
+  healerOval(g,0,3,24,5,'#25332233');
+  g.fillStyle=wall;g.fillRect(-17,-14,34,14);
+  if(round)healerOval(g,0,-1,17,4,wall);
+  if(hut.wall==='drystone wall')for(let i=-2;i<=2;i++)healerStroke(g,i*6,-10,i*6+4,-10,'#504f42',1.5);
+  if(hut.wall==='wattle & daub wall')for(let i=-2;i<=2;i++)healerStroke(g,i*6,-13,i*6+4,-2,'#83674a',1.6);
+  if(hut.chimney){g.fillStyle='#705e4e';g.fillRect(9,-35,6,23);}
+  g.beginPath();g.moveTo(-22,-12);
+  if(hut.shape==='dome hut')g.bezierCurveTo(-22,-38,22,-38,22,-12);
+  else if(hut.shape==='A-frame hut'){g.lineTo(-21,0);g.lineTo(0,-33);g.lineTo(21,0);}
+  else if(hut.shape==='gabled roof hut'){g.lineTo(-12,-29);g.lineTo(10,-30);g.lineTo(23,-12);}
+  else{g.lineTo(hut.shape==='pyramidal hut'?6:0,-31);g.lineTo(23,-12);}
+  if(round)g.quadraticCurveTo(0,-4,-22,-12);
+  g.closePath();g.fillStyle='#a48758';g.fill();g.strokeStyle='#52432e';g.lineWidth=2;g.stroke();
+  if(hut.shape==='pyramidal hut')healerStroke(g,6,-30,-5,-12,'#69583f',2);
+  g.fillStyle='#4b3b2b';g.fillRect(-4,-11,8,round?14:11);
+  if(hut.ondol)healerOval(g,13,-3,4,2,lit?'#c97641':'#655247');
+  g.restore();
+}
 export function drawHealerHome(g,x,y,remedies=0,occupied=true,project){
   if(!project||project.work<=0)return;
   g.save();g.translate(x,y);
