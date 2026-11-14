@@ -15,6 +15,18 @@ function fixture(width=390,height=844,coarse=true,options={}){
     storage:{getItem:k=>settings.get(k)??null,setItem:(k,v)=>settings.set(k,v)},...options});
   return {...dom,phone,calls,settings,advanceDay(){state=stepDay(state);},get state(){return state;},get centered(){return centered;},get notebook(){return notebook;}};
 }
+test('recognized Speak phrases repeat while unrecognized phrases keep the previous repeat action',()=>{
+  const f=fixture(),repeat=f.doc.body.querySelector('.phone-repeat');
+  const say=text=>{f.phone.open('speak');f.doc.body.querySelector('input').value=text;f.doc.body.querySelector('form').onsubmit({preventDefault(){}});};
+  say('bless');assert.equal(repeat.textContent,'↻ Say bless');assert.equal(repeat.hidden,false);
+  say('wibble wobble');assert.equal(repeat.textContent,'↻ Say bless');assert.equal(f.calls.at(-1),'wibble wobble');
+});
+test('one-time teaching shortcuts disappear after learning and return when rewinding to before discovery',()=>{
+  const f=fixture();f.phone.open('powers');assert.ok(f.findButton('Teach fire'));f.findButton('Teach fire').click();f.findButton('Cast').click();
+  assert.equal(f.state.fireKnown,true);assert.equal(f.doc.body.querySelector('.phone-repeat').hidden,true);
+  f.phone.open('powers');assert.equal(f.findButton('Teach fire'),undefined);assert.ok(f.findButton('Teach farming'));
+  f.state.fireKnown=false;f.phone.close();f.phone.open('powers');assert.ok(f.findButton('Teach fire'));
+});
 test('phone controls activate for small touch screens in both orientations; narrow desktop windows keep desktop controls',()=>{
   for(const [w,h,touch,expected] of [[390,844,true,true],[932,430,true,true],[1440,900,true,false],[390,844,false,false],[1440,900,false,false]]){
     const f=fixture(w,h,touch);assert.equal(f.phone.active,expected);assert.equal(f.doc.documentElement.classList.contains('phone-ui'),expected);
@@ -101,7 +113,7 @@ test('repeat keeps real power checks and only changes after another successful c
   f.phone.open('powers');f.findButton('Heal').click();f.findButton('Cast').click();f.phone.close();
   assert.equal(repeat.textContent,'↻ Cast Food');
   f.phone.open('powers');f.findButton('Teach fire').click();f.findButton('Cast').click();
-  assert.equal(repeat.textContent,'↻ Cast Teach fire');assert.equal(repeat.disabled,true);
+  assert.equal(repeat.hidden,true,'completed one-time teaching leaves no repeat shortcut');
   f.phone.open('powers');f.findButton('Rain').click();f.findButton('Cast').click();
   assert.equal(repeat.textContent,'↻ Cast Rain');assert.equal(repeat.disabled,true,'already-active weather still applies');
 });

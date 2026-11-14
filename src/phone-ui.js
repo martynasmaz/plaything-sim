@@ -1,4 +1,10 @@
+import {resolveCommand,matchCommand} from './commands.js';
 // Presentation only. Both interfaces submit to the same command handler.
+export function completedOneTime(s,words){
+  const command=resolveCommand(words)||matchCommand(words);
+  return command==='teach fire'&&s.fireKnown||command==='teach farming'&&s.farming.known||
+    words.trim().toLowerCase()==='magic'&&!!s.local?.magic?.enabled;
+}
 export const phoneLayoutQuery='(pointer: coarse) and (max-width: 900px), (pointer: coarse) and (max-width: 1100px) and (max-height: 550px)';
 export function phoneLayoutEnabled(browser=globalThis.window){return !!browser?.matchMedia?.(phoneLayoutQuery).matches;}
 export function phoneTimeCheck(s,words,{busy=false,hasUndo=false}={}){
@@ -18,6 +24,7 @@ export const phonePowers=[
   {group:'Nature',name:'Rain',command:'rain',description:'Bring rain to the valley.'},
   {group:'Knowledge',name:'Teach fire',command:'teach fire',description:'Teach fire making when the camp has enough wood.'},
   {group:'Knowledge',name:'Teach farming',command:'teach farming',description:'Teach the village to sow crops.'},
+  {group:'Knowledge',name:'Inspire',command:'inspire',description:'Give a ready villager a question that fits their experience. It encourages experiments and grants no discovery.'},
   {group:'People',name:'Call settlers',command:'spawn people 5',description:'Bring five adult settlers to the village.'},
   {group:'People',name:'Recall settlers',command:'recall settlers',description:'Bring the eastern household home with its supplies.'},
   ...[
@@ -81,13 +88,13 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
   let pauseMenus=true;
   try{pauseMenus=storage?.getItem('plaything.phone.pauseMenus')!=='false';}catch{}
   const persistPause=()=>{try{storage?.setItem('plaything.phone.pauseMenus',String(pauseMenus));}catch{}};
-  function castPower(power){
+  function castPower(power,validate=true){
     if(casting)return;
-    const check=checkCommand(power.command);
+    const check=validate?checkCommand(power.command,{speech:!!power.speech}):{ok:true};
     if(!check.ok){if(reason)reason.textContent=check.message;refresh();return;}
     close();
     casting=true;refresh();
-    const finish=ok=>{if(ok)lastPower=power;casting=false;refresh();};
+    const finish=ok=>{if(ok){if(!power.speech||power.command.trim().toLowerCase()!=='magic')lastPower=power;if(power.speech)draft='';}casting=false;refresh();};
     let result;
     try{result=runCommand(power.command);}catch(error){finish(false);throw error;}
     if(result&&typeof result.then==='function')result.then(finish,()=>finish(false));
@@ -123,7 +130,7 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
       }else{
         body.append(make('p','Choose a power to read its effect before casting.'));
         for(const group of [...new Set(phonePowers.map(p=>p.group))]){
-          const items=phonePowers.filter(p=>p.group===group&&(p.command!=='plague'||readState().config.enablePlague));
+          const items=phonePowers.filter(p=>p.group===group&&!completedOneTime(readState(),p.command)&&(p.command!=='plague'||readState().config.enablePlague));
           if(!items.length)continue;
           const grid=make('div',null,'phone-power-grid');body.append(make('h3',group),grid);
           for(const power of items)grid.append(button(power.name,()=>{chosen=power;confirming=false;draw();refresh();}));
@@ -148,19 +155,20 @@ export function createPhoneControls({readState,runCommand,checkCommand,changeSpe
       input.autocomplete='off';input.spellcheck=false;input.setAttribute('autocapitalize','off');input.setAttribute('enterkeyhint','send');
       input.oninput=()=>{draft=input.value;};send.type='submit';form.append(label,input,send);
       form.onsubmit=event=>{event.preventDefault();const words=input.value.trim();if(!words)return;
-        draft=words;input.blur();close();if(runCommand(words))draft='';};body.append(form);
+        draft=words;input.blur();castPower({name:words,command:words,speech:true},false);};body.append(form);
     }
   }
   function refresh(){
     if(!active)return;
     const s=readState();if(s.speed)resumeSpeed=s.speed;
+    if(lastPower&&completedOneTime(s,lastPower.command))lastPower=null;
     pause.textContent=s.speed?'Pause':'Play';pause.disabled=s.ended;pause.setAttribute('aria-label',s.speed?'Pause time':'Resume time');
     pause.setAttribute('aria-pressed',String(!s.speed));time.textContent='Time';time.setAttribute('aria-label','Time controls, '+(s.speed?s.speed+' times speed':'paused'));
     repeat.hidden=!lastPower||!!view||notebookOpen()||otherMenuOpen();
     root.style.setProperty('--phone-repeat-space',repeat.hidden?'0px':'56px');
     if(lastPower){
-      const check=checkCommand(lastPower.command);
-      repeat.textContent=(lastPower.time?'↻ ':'↻ Cast ')+lastPower.name;repeat.disabled=casting||!check.ok;
+      const check=checkCommand(lastPower.command,{speech:!!lastPower.speech});
+      repeat.textContent=(lastPower.speech?'↻ Say ':lastPower.time?'↻ ':'↻ Cast ')+lastPower.name;repeat.disabled=casting||!check.ok;
       repeat.setAttribute('aria-busy',String(casting));
       repeat.title=check.ok?'Repeat '+lastPower.name:check.message;
       repeat.setAttribute('aria-label','Repeat '+lastPower.name+(check.ok?'':': '+check.message));

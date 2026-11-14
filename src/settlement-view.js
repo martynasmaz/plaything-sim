@@ -19,16 +19,16 @@ export function drawHouseholdHut(g,x,y,hut={},scale=1.75,lit=false){
   if(hut.wall==='drystone wall')for(let i=-2;i<=2;i++)healerStroke(g,i*6,-10,i*6+4,-10,'#504f42',1.5);
   if(hut.wall==='wattle & daub wall')for(let i=-2;i<=2;i++)healerStroke(g,i*6,-13,i*6+4,-2,'#83674a',1.6);
   if(hut.chimney){g.fillStyle='#705e4e';g.fillRect(9,-35,6,23);}
-  g.beginPath();g.moveTo(-22,-12);
+  g.beginPath();g.moveTo(hut.shape==='A-frame hut'?-21:-22,hut.shape==='A-frame hut'?0:-12);
   if(hut.shape==='dome hut')g.bezierCurveTo(-22,-38,22,-38,22,-12);
-  else if(hut.shape==='A-frame hut'){g.lineTo(-21,0);g.lineTo(0,-33);g.lineTo(21,0);}
+  else if(hut.shape==='A-frame hut'){g.lineTo(0,-33);g.lineTo(21,0);}
   else if(hut.shape==='gabled roof hut'){g.lineTo(-12,-29);g.lineTo(10,-30);g.lineTo(23,-12);}
   else{g.lineTo(hut.shape==='pyramidal hut'?6:0,-31);g.lineTo(23,-12);}
   if(round)g.quadraticCurveTo(0,-4,-22,-12);
   g.closePath();g.fillStyle='#a48758';g.fill();g.strokeStyle='#52432e';g.lineWidth=2;g.stroke();
   if(hut.shape==='pyramidal hut')healerStroke(g,6,-30,-5,-12,'#69583f',2);
   g.fillStyle='#4b3b2b';g.fillRect(-4,-11,8,round?14:11);
-  if(hut.ondol)healerOval(g,13,-3,4,2,lit?'#c97641':'#655247');
+  if(hut.ondol){healerStroke(g,10,0,15,0,'#655247',3);if(lit)healerStroke(g,11,0,14,0,'#b97943',1);}
   g.restore();
 }
 export function drawHealerHome(g,x,y,remedies=0,occupied=true,project){

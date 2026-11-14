@@ -15,6 +15,11 @@ import {phoneLayoutEnabled,createPhoneGesture} from './phone-ui.js';
 import {cropRipeAt} from './farming.js';
 import {drawWheat,drawSaddleQuern} from './farming-view.js';
 import {stormRainCells,stormRainStrength,drawStormRain} from './weather-view.js';
+import {rainConditions} from './climate.js';
+import {riverLandingFraction} from './river.js';
+import {drawRockRecord} from './paintings-view.js';
+import {paintingSite} from './paintings.js';
+import {fieldSite} from './development.js';
 
 // Offset each walker's sequence so the whole meadow gets visited without
 // drawing from the simulation's weather or personality dice.
@@ -44,7 +49,7 @@ function hutSite(camp,index){
 }
 const huntingGround=[385,165],berryPatch=[272,568];
 const foodCache=[310,168];
-const haulActivities=new Set(['Gather wood','Clear hut site','Clear herb site','Forage','Harvest','Hunt','Fish','Gather reeds']);
+const haulActivities=new Set(['Gather wood','Clear hut site','Clear herb site','Clear field site','Forage','Harvest','Hunt','Fish','Gather reeds']);
 export function finishedDailyActivity(job,walker,fraction=0,encounter=null){
   if(walker.job!==job)return false;
   if(job.startsWith('Track '))return encounter!==null&&fraction>=encounter&&!!walker.huntReturned&&!walker.carry;
@@ -223,13 +228,19 @@ function aroundHearth(p,x,y,hearth){
   const angle=start+turn*.45;
   return [cx+(radius+5)*Math.cos(angle),cy+(radius+5)*Math.sin(angle)];
 }
-export function walkRiver(p,goal,distance,width,height,flood,v,child,bridge,hearth,frozen,worldWidth,kaunas){
+export function walkRiver(p,goal,distance,width,height,flood,v,child,bridge,hearth,frozen,worldWidth,kaunas,onFall){
   const ford=width*fordFraction;
   const center=streamY(p.x,width,height);
   const side=Math.sign(p.y-center)||1;
-  if(frozen){p.swept=0;p.crossing=0;}
+  if(distance<=0)return false;
+  if(frozen){p.swept=0;p.crossing=0;p.tributaryCrossing=0;}
   if(p.swept){
     const drift=distance*(flood?4:3);
+    if(p.channel==='neris'){
+      p.y=Math.min(p.landing,p.y+drift*.65);p.x=nerisX(p.y/height)*width;
+      if(p.y>=p.landing){p.x+=p.swept*width*(flood?.022:.018);p.swept=0;p.goal=null;p.wait=4;}
+      return true;
+    }
     p.x=kaunas?Math.max(-width+19,p.x-drift):Math.min(worldWidth-19,p.x+drift);
     p.y=streamY(p.x,width,height)+6*Math.sin(p.x*.06);
     if(kaunas?p.x<=p.landing:p.x>=p.landing){
@@ -240,21 +251,36 @@ export function walkRiver(p,goal,distance,width,height,flood,v,child,bridge,hear
   const goalSide=Math.sign(goal[1]-streamY(goal[0],width,height))||1;
   if(!frozen&&!p.crossing&&side!==goalSide&&Math.abs(p.x-ford)<2)p.crossing=goalSide;
   const inWater=Math.abs(p.y-center)<riverHalfWidth(p.x,width,flood);
-  if(!frozen&&inWater&&(Math.abs(p.x-ford)>12||flood||(!bridge&&(child||v.illToday||v.illnessDays>0||v.warmth<40)))){
-    p.swept=p.crossing||side;p.crossing=0;
-    const drift=width*(flood?.40:.23);
-    p.landing=kaunas?Math.max(-width+20,p.x-drift):Math.min(worldWidth-20,p.x+drift);return false;
+  const inTributary=kaunas&&p.y<center-riverHalfWidth(p.x,width,flood)&&Math.abs(p.x/width-nerisX(p.y/height))<(flood?.0155:.0115);
+  const vulnerable=child||v.illToday||v.illnessDays>0||v.warmth<40;
+  const unsafeMain=inWater&&(Math.abs(p.x-ford)>12||flood||!bridge&&vulnerable);
+  const unsafeNeris=inTributary&&(Math.abs(p.y/height-nerisFord)>.018||flood||vulnerable);
+  if(!frozen&&(unsafeMain||unsafeNeris)){
+    p.falls=(p.falls||0)+1;
+    const event=onFall?.(v.id);p.fatal=!!event?.fatal;
+    p.swept=unsafeNeris?(Math.sign(p.x/width-nerisX(p.y/height))||1):(p.crossing||side);
+    p.channel=unsafeNeris?'neris':'main';p.crossing=0;p.tributaryCrossing=0;
+    const random=riverLandingFraction(p.seed||0,v.id||0,event?.count||p.falls);
+    if(unsafeNeris){
+      const mouth=height*.43;
+      p.landing=p.y+Math.max(5,mouth-p.y)*(.2+.65*random);
+    }else{
+      const available=kaunas?p.x+width-20:worldWidth-20-p.x;
+      const drift=Math.min(width*(flood?.5:.35),Math.max(0,available))*(.3+.7*random);
+      p.landing=p.x+(kaunas?-1:1)*drift;
+    }
+    return false;
   }
   let x=goal[0],y=goal[1];
   if(p.crossing){x=ford;y=bankY(ford,p.crossing,width,height,flood);}
   else if(!frozen&&side!==goalSide){x=ford;y=bankY(ford,side,width,height,flood);}
   if(kaunas&&!frozen&&p.y<center&&y<streamY(x,width,height)){
     const bank=Math.sign(p.x/width-nerisX(p.y/height))||1;
-    if(bank!==(Math.sign(x/width-nerisX(y/height))||1)){
+    if(p.tributaryCrossing||bank!==(Math.sign(x/width-nerisX(y/height))||1)){
       const fordY=height*nerisFord;
       // Approach a shallow crossing on the near bank, then traverse it.
-      if(Math.abs(p.y-fordY)>2){x=(nerisX(nerisFord)+bank*.027)*width;y=fordY;}
-      else{x=(nerisX(nerisFord)-bank*.027)*width;y=fordY;}
+      if(!p.tributaryCrossing&&Math.abs(p.y-fordY)>2){x=(nerisX(nerisFord)+bank*.027)*width;y=fordY;}
+      else{p.tributaryCrossing||=-bank;x=(nerisX(nerisFord)+p.tributaryCrossing*.027)*width;y=fordY;}
     }
   }
   if(hearth){
@@ -264,11 +290,11 @@ export function walkRiver(p,goal,distance,width,height,flood,v,child,bridge,hear
   }
   const dx=x-p.x,dy=y-p.y,d=Math.hypot(dx,dy);
   if(d<1){
-    if(p.crossing)p.crossing=0;
+    if(p.tributaryCrossing)p.tributaryCrossing=0;
+    else if(p.crossing)p.crossing=0;
     else if(side===goalSide){p.goal=null;p.leg++;p.wait=1.4+v.id%4;}
     return false;
   }
-  const inTributary=kaunas&&p.y<center&&Math.abs(p.x/width-nerisX(p.y/height))<(flood?.0155:.0115);
   const wading=!frozen&&(inWater&&!bridge||inTributary);
   const step=Math.min(d,distance*(wading?0.55:1));
   p.x+=dx/d*step;p.y+=dy/d*step;
@@ -608,7 +634,7 @@ function paintFootpaths(layer,s,width,height,span,flood,season){
 }
 
 // Painted props and walkers share the same depth order, using their feet.
-export function createClearing(host,getState){
+export function createClearing(host,getState,{onRiverFall}={}){
   const canvas=document.createElement('canvas');host.append(canvas);
   const ctx=canvas.getContext('2d'),paper=document.createElement('canvas');
   const images=new Map(),people=new Map();
@@ -739,7 +765,7 @@ export function createClearing(host,getState){
     const prior=blend<1?valleySeason(s,s.day-season.age-1):season;
     const foliage=(id)=>((Math.imul(id+1,2654435761)>>>0)/4294967296)<blend?season:prior;
     const seasonKey=[season.name,season.strength,season.frozen].join();
-    const keyForPlan=[s.seed,s.day,s.castCount,s.fireRevision,s.queuedCommand,s.ended].join('|');
+    const keyForPlan=[s.seed,s.day,s.castCount,s.fireRevision,s.riverRevision,s.queuedCommand,s.ended].join('|');
     if(planKey!==keyForPlan){
       // stepDay is pure. Preview the same priority decisions that will settle
       // at dawn, including changes caused by a newly queued god command.
@@ -791,7 +817,8 @@ export function createClearing(host,getState){
     const worldWidth=fieldWidth*span;
     const seconds=clearingSeconds(dt,s.speed);
     clock+=seconds;gustLeft=Math.max(0,gustLeft-seconds);birthTime=Math.max(0,birthTime-seconds);
-    const stormCells=weather==='rain'&&season.name!=='Winter'?stormRainCells(s.seed,clock):null;
+    const conditions=rainConditions(s,weather);
+    const stormCells=weather==='rain'&&!conditions.snow?stormRainCells(s.seed,clock):null;
     const worldScale=Math.min(w/fieldWidth,h/fieldHeight)*zoom;
     ctx.setTransform(worldScale,0,0,worldScale,-left*fieldWidth*worldScale,-top*fieldHeight*worldScale);
     ctx.drawImage(paper,-fieldWidth,-fieldHeight,worldWidth,3*fieldHeight);
@@ -843,6 +870,7 @@ export function createClearing(host,getState){
     drawMeteors(ctx,s,fieldWidth,fieldHeight,true);
     const layers=[];
     for(const [camp,store] of Object.entries(s.local?.campStores||{})){
+      if(store.rackWork){const [cx,cy]=point(...camps[camp]),i=store.built?(store.racks||1):0,x=cx+48+i%2*38,y=cy+22+i*12;layers.push({y,draw:()=>{line(ctx,x-14,y,x-14,y-24,'#694b34',3);line(ctx,x+14,y,x+14,y-24,'#694b34',3);}});}
       if(!store.built)continue;
       const [cx,cy]=point(...camps[camp]),x=cx+48,y=cy+22;
       for(let index=0;index<(store.racks||1);index++){
@@ -934,6 +962,7 @@ export function createClearing(host,getState){
     }
     const bankX=fieldWidth*.34,bankTop=bankY(bankX,-1,fieldWidth,fieldHeight,false)-4;
     const bankFood=Math.min(s.food,s.bankFood||0);
+    if((s.local?.reaches||0)>0){const [rockX,rockY]=point(...paintingSite);layers.push({y:rockY,draw:()=>drawRockRecord(ctx,rockX,rockY,s.local.paintings?.[0])});}
     if(bankFood)layers.push({y:bankTop,draw:()=>drawFoodCache(ctx,bankX,bankTop,bankFood,8)});
     const drift=sinceCast(s,'flood');
     if(flood&&s.floodCatchLost&&drift<12){
@@ -1086,12 +1115,13 @@ export function createClearing(host,getState){
       if(growth)prop('corn',650,522,6+growth,6+growth*3);
     }
     if(s.farming.known)s.farming.plots.forEach((growth,i)=>{
-      const x=650+i*19,y=522+i%2*6;ellipse(ctx,...point(x,y),10,3,'#5b422c');
+      const [x,y]=fieldSite(s,i);ellipse(ctx,...point(x,y),10,3,'#5b422c');
       if(growth!==null){
         if(s.farming.crops?.[i]==='wheat')drawWheat(ctx,...point(x,y),growth,cropRipeAt(s,i),clock);
         else prop('corn',x,y,12+growth,13+growth*4);
       }
     });
+    if(s.farming.expansion){const [x,y]=point(...s.farming.expansion.site);line(ctx,x-10,y,x+10,y,'#977548',2);line(ctx,x-10,y-4,x-10,y+3,'#b79966',2);line(ctx,x+10,y-4,x+10,y+3,'#b79966',2);}
     for(const quern of s.farming.querns||[]){
       const home=campSites[quern.camp],x=home[0]-25,y=home[1]+25;
       layers.push({y:point(x,y)[1],draw:()=>drawSaddleQuern(ctx,...point(x,y),
@@ -1108,7 +1138,7 @@ export function createClearing(host,getState){
         const [x,y]=s.day===0||v.age===0?[home[0]+Math.sin(v.id*2.4)*45,home[1]+Math.cos(v.id*2.4)*22]:roamingPoint(v.id,0,s.seed,fieldWidth,fieldHeight);
         const side=Math.sign(y-streamY(x,fieldWidth,fieldHeight))||1;
         const edge=bankY(x,side,fieldWidth,fieldHeight,flood);
-        p={x,y:(y-edge)*side<0?edge:y,leg:1,wait:v.id%3*.25,travel:0,goal:null,landing:0};people.set(v.id,p);
+        p={seed:s.seed,x,y:(y-edge)*side<0?edge:y,leg:1,wait:v.id%3*.25,travel:0,goal:null,landing:0};people.set(v.id,p);
       }
       const child=v.age<s.config.life.adult;
       const eastern=daughter?.members.includes(v.id);
@@ -1139,7 +1169,7 @@ export function createClearing(host,getState){
       const job=rescue?'Fight fire':defending?'Defend':alarm?'Flee':ritual&&!urgent?'Observance':
         evening&&!quietEvening&&mainFinished&&!urgent?'Camp circle':retiring||evening&&quietEvening&&mainFinished&&!urgent?'Sleep':demonstration?.action||mainJob;
       const using=demonstration?.action===job?demonstration:null;
-      const clearingSite=job==='Clear hut site'||job==='Clear herb site';
+      const clearingSite=job==='Clear hut site'||job==='Clear herb site'||job==='Clear field site';
       const targetTree=job==='Gather wood'||clearingSite?woodTargets[v.id]:undefined;
       const pursuit=job.startsWith('Track ')?wildlife?.attempts.find(a=>a.id===v.id):null;
       if(job!==p.job||(!alarm&&s.day!==p.workDay)){p.job=job;p.workDay=s.day;p.goal=null;p.leg=0;p.wait=0;p.carry=false;p.huntReturned=false;p.standingSpot=null;}
@@ -1246,8 +1276,8 @@ export function createClearing(host,getState){
       const stride=((child?20:25)+(v.id%5)*1.8)*(slower ? .68 : 1)*(s.textiles?.includes('sandals')?1.12:1);
       let walking=false;
       const previousLeg=p.leg;
-      if(p.wait>0)p.wait-=seconds;
-      else if(seconds>0&&p.goal)walking=walkRiver(p,p.goal,stride*seconds*(alarm||rescue?2.3:1),fieldWidth,fieldHeight,flood,v,child,bridge,hearth,season.frozen,worldWidth,kaunas);
+      if(p.wait>0&&!p.swept)p.wait-=seconds;
+      else if(seconds>0&&(p.goal||p.swept))walking=walkRiver(p,p.goal||[p.x,p.y],stride*seconds*(alarm||rescue?2.3:1),fieldWidth,fieldHeight,flood,v,child,bridge,hearth,season.frozen,worldWidth,kaunas,onRiverFall);
       if(pursuit&&fraction>=pursuit.encounter){
         const destination=away?point(...fieldCamp.site):point(...(pursuit.success?foodCache:home));
         if(Math.hypot(p.x-destination[0],p.y-destination[1])<8)p.huntReturned=true;
@@ -1276,8 +1306,8 @@ export function createClearing(host,getState){
       if(job==='Build hut'&&atWork)p.caption='building sleeping places';
       if(job==='Gather reeds')p.caption=p.leg===0?'gathering reeds for a fish trap':p.leg===1?'taking reeds to camp':'back at camp';
       if(job==='Weave trap')p.caption='weaving a fish trap';
-      if(targetTree!==undefined)p.caption=chopping?(clearingSite?'clearing a tree from the house site':'chopping a tree'):
-        p.leg===0?(clearingSite?'taking an axe to the house site':'taking an axe to the grove'):p.leg===1?'hauling logs home':'delivered the timber';
+      if(targetTree!==undefined)p.caption=chopping?(job==='Clear field site'?'clearing a tree from the field':clearingSite?'clearing a tree from the house site':'chopping a tree'):
+        p.leg===0?(job==='Clear field site'?'taking an axe to the new field':clearingSite?'taking an axe to the house site':'taking an axe to the grove'):p.leg===1?'hauling logs home':'delivered the timber';
       if(job==='Fish')p.caption=fishPhase==='approach'?'heading to the fishing bank':fishPhase==='work'?
         fishingMethodNames[fishMethod]:fishPhase==='carry'?'carrying the catch to the cache':'delivered the catch';
       if(job.startsWith('Watch '))p.caption='learning by watching '+job.slice(6);
@@ -1297,6 +1327,16 @@ export function createClearing(host,getState){
         s.speed>0&&nearby&&atWork&&!sleeping&&!urgent&&!unwell&&!alarm&&!rescue&&!p.swept&&bubbles.length<2);
       if(emoji)bubbles.push({x:p.x,y:p.y-(child?28:45)-12,emoji});
       layers.push({y:p.y,draw:()=>{
+        if(p.fatal)return;
+        if(p.swept){
+          // Head and stroking arms break the surface; no standing/walking legs.
+          const stroke=Math.sin(clock*5+v.id)*6;
+          ellipse(ctx,p.x,p.y,12,3,'#b9d2cf77');
+          line(ctx,p.x-5,p.y-2,p.x-12,p.y-4+stroke*.3,'#bc9856',2);
+          line(ctx,p.x+4,p.y-2,p.x+13,p.y-4-stroke*.3,'#bc9856',2);
+          ellipse(ctx,p.x,p.y-5,4.5,5,'#d1a651');ellipse(ctx,p.x-1,p.y-8,4,2,'#56402e');
+          return;
+        }
         if(sleeping&&hutSlot>=0&&!v.outdoors)return; // Occupants are inside, not stacked at the doorway.
         const height=child?28:45,width=height*2/3;
         const onBridge=bridge&&Math.abs(p.x-fieldWidth*fordFraction)<12;
@@ -1358,7 +1398,11 @@ export function createClearing(host,getState){
           }else if(job==='Gather reeds'){
             for(let j=0;j<3;j++)line(ctx,p.x+3+j*2,p.y-12,p.x+12+j*2,p.y-25,'#b1a468',1.5);
           }
-          else{ellipse(ctx,p.x+8,p.y-14,6,4,'#ad8651');ellipse(ctx,p.x+8,p.y-17,3,2,'#b36442');}
+          else if(pursuit?.success&&wildlife.species==='deer'){
+            ellipse(ctx,p.x+4,p.y-21,13,5,'#9c7954');
+            line(ctx,p.x-7,p.y-20,p.x-12,p.y-10,'#735638',2);line(ctx,p.x+8,p.y-20,p.x+13,p.y-11,'#735638',2);
+            ellipse(ctx,p.x+16,p.y-22,5,3,'#aa8560');line(ctx,p.x+17,p.y-24,p.x+20,p.y-29,'#ccb78c',1.2);
+          }else{ellipse(ctx,p.x+8,p.y-14,6,4,'#ad8651');ellipse(ctx,p.x+8,p.y-17,3,2,'#b36442');}
         }
         if(atWork&&!p.swept&&job.startsWith('Build ')&&p.wait>0){
           const lift=Math.sin(clock*9+v.id)*4;
@@ -1387,7 +1431,7 @@ export function createClearing(host,getState){
       const count=(weather==='rain'?160:28)*span;
       for(let i=0;i<count;i++){
         const period=worldWidth+20,x=((i*197-clock*65)%period+period)%period-fieldWidth,y=(i*241+clock*233)%(3*fieldHeight+20)-fieldHeight-10;
-        if(season.name==='Winter'){ellipse(ctx,x,y,2+season.strength,2,'#f3f2e8');continue;}
+        if(conditions.snow){ellipse(ctx,x,y,2+season.strength,2,'#f3f2e8');continue;}
         line(ctx,x,y,x-3,y+9,weather==='rain'?'#342a254d':'#e2dab370',1.25);
       }
     }else if(weather==='cold'||weather==='drought'){
@@ -1427,7 +1471,7 @@ export function createClearing(host,getState){
     }
     if(stormCells){
       ctx.save();ctx.setTransform(ratio,0,0,ratio,0,0);
-      drawStormRain(ctx,{width:rect.width,height:rect.height,left,top,zoom,clock,seed:s.seed,cells:stormCells});ctx.restore();
+      drawStormRain(ctx,{width:rect.width,height:rect.height,left,top,zoom,clock,seed:s.seed,cells:stormCells,intensity:conditions.intensity});ctx.restore();
     }
     const phoneClock=phoneLayoutEnabled();
     ctx.save();ctx.setTransform(ratio,0,0,ratio,0,0);

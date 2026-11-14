@@ -19,8 +19,10 @@ export function stormRainStrength(cells,x,y){
   }
   return Math.min(1,rain);
 }
-export function drawStormRain(g,{width,height,left,top,zoom,clock,seed,cells}){
+export function drawStormRain(g,{width,height,left,top,zoom,clock,seed,cells,intensity='heavy'}){
   g.save();
+  const force={drizzle:.25,steady:.6,heavy:1,downpour:1.4}[intensity]||1;
+  g.globalAlpha*=Math.min(1,.5+force*.5);
   g.fillStyle='rgba(45,62,78,.035)';g.fillRect(0,0,width,height);
   // Broad, transparent shadows suggest passing clouds without hiding buildings.
   for(const cell of cells){
@@ -31,7 +33,7 @@ export function drawStormRain(g,{width,height,left,top,zoom,clock,seed,cells}){
     cloud.addColorStop(0,'rgba(23,37,52,.27)');cloud.addColorStop(.6,'rgba(35,49,61,.14)');cloud.addColorStop(1,'rgba(35,49,61,0)');
     g.fillStyle=cloud;g.fillRect(-1,-1,2,2);g.restore();
   }
-  const count=Math.min(1400,Math.max(260,Math.round(width*height/480)));
+  const count=Math.min(1800,Math.max(80,Math.round(width*height/480*force)));
   const wind=.45+.15*Math.sin(clock*.7);
   // Three batched layers keep downpours visible at every camera zoom without
   // making phone cost proportional to the full offscreen world.
@@ -43,7 +45,7 @@ export function drawStormRain(g,{width,height,left,top,zoom,clock,seed,cells}){
       const y=stormWrap(m*(height+90)+clock*(450+layer*170),height+90)-45;
       const strength=stormRainStrength(cells,left+x/(width*zoom),top+y/(height*zoom));
       if(strength<stormNoise(seed+131,i)||strength<.08)continue;
-      const length=(12+layer*7+n*7)*Math.min(1,.45+zoom*.3);
+      const length=(12+layer*7+n*7)*Math.min(1,.45+zoom*.3)*Math.sqrt(force);
       g.moveTo(x,y);g.lineTo(x-length*wind,y+length);
     }g.stroke();
   }

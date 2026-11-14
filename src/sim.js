@@ -14,6 +14,18 @@ import { THEME, t, commandLabel } from './theme.js';
 import {magicEnabled,awakenMagic,magicRecipes,magicDependencies,finishDivinations,coldOmen} from './magic.js';
 import {boneHarvestBonus,wheatRules,cerealRecipes,cerealDependencies,cerealFoodWork,cerealStudyReady,gatherWildWheat,grainCapacity,cropRipeAt,ripePlot} from './farming.js';
 import { normalizeWords, resolveCommand, matchCommand } from './commands.js';
+import {rememberResources} from './resources.js';
+import {kaunasWeather,beginClimateDay,climateCropGrowth,unsafeRiverWeather} from './climate.js';
+import {riverFallOutcome} from './river.js';
+import {makeSupervisedFood} from './practices.js';
+import {shouldSowWheat} from './farming.js';
+import {initGenealogy,rememberPerson,recordLifeDay} from './genealogy.js';
+import {paintingReady,paintingSite} from './paintings.js';
+import {rememberCollection} from './collection.js';
+import {inspireVillager,naturalInspiration} from './inspiration.js';
+import {developmentEnabled,fieldRules,fieldSite,fieldPlanningReady,fieldTarget,regularWorkSafe,recordOccupations} from './development.js';
+import {pantryCapacity,seasonalPantryTarget} from './provisions.js';
+import {riverHabitat} from './ecology.js';
 
 const clamp = (n, max) => Math.max(0, Math.min(max, n));
 const averageHappiness = s => s.villagers.length
@@ -23,8 +35,7 @@ export const unrelated = (a,b) => !a.parents?.includes(b.id) && !b.parents?.incl
   !a.parents?.some(id=>b.parents?.includes(id));
 const changeNeed = (v, key, amount, c) => { v[key] = clamp(v[key] + amount, c.limits.need); };
 export function foodCapacity(s){
-  const baskets=(s.textiles||[]).filter(name=>name.endsWith('basket')).length;
-  return s.config.limits.stock+(s.local?.jars||0)*12+baskets*6+(s.pottery?.jars||0)*12+(s.fireTools?.includes('burn bowl')?8:0);
+  return pantryCapacity(s);
 }
 const changeStock = (s, key, amount) => { s[key] = clamp(s[key] + amount, key==='food'?foodCapacity(s):s.config.limits.stock); };
 function log(s, text, type = 'info') {
@@ -40,7 +51,7 @@ function rollNight(s) {
   // Exactly three draws every night, even when a command will override the
   // weather or nobody can fall ill, so commands never shift later dice.
   const c = s.config;
-  s.rng = lcg(s.rng); const weatherRoll = Math.floor(s.rng * 100 / TWO_32);
+  s.rng = lcg(s.rng); const weatherFraction=s.rng/TWO_32,weatherRoll = Math.floor(weatherFraction * 100);
   s.rng = lcg(s.rng); const illnessRoll = Math.floor(s.rng * 100 / TWO_32);
   s.rng = lcg(s.rng); const target = s.rng;
   let weather = 'cold', total = 0;
@@ -49,6 +60,7 @@ function rollNight(s) {
     if (weatherRoll < total) { weather = type; break; }
   }
   s.natural = { weather, illness: illnessRoll < c.illness.chance, target };
+  if(c.learning&&c.learning.climate!==false){s.natural.climate=kaunasWeather(s,s.day+1,weatherFraction);s.natural.weather=s.natural.climate.type;}
 }
 // Today's (or, between days, tomorrow's) weather: command weather wins.
 export function forecastWeather(s) {
@@ -166,7 +178,7 @@ function crowdedCamp(s,camp){
 }
 export function shouldPlanHut(s){
   return !!s.config.learning&&s.settlementWork>=s.config.settlement.shelterWork&&
-    populationCap(s)-s.villagers.length<=2;
+    populationCap(s)-s.villagers.length<=(developmentEnabled(s,'families')?Math.min(6,3+Math.ceil(s.villagers.filter(v=>v.age>=s.config.life.adult-8&&v.age<s.config.life.adult).length/2)):2);
 }
 export function sleepingHut(s,v){
   const camp=v.tribe||0;
@@ -199,6 +211,11 @@ export const populationCap = s => s.config.limits.population + (s.shed.built ? s
 // Fuel target: 20 while saving for the second shed, otherwise 6.
 export function fuelTarget(s, n = s.villagers.length) {
   const c = s.config;
+  if(developmentEnabled(s,'planning')){
+    const camps=s.tribeCount||1,building=s.hutProject||s.farming.expansion||s.villagers.some(v=>v.practice.known.drying)&&
+      Object.values(s.local.campStores).some(r=>!r.built||r.rackWork);
+    return Math.max(c.work.woodTarget+(camps-1)*c.fire.dailyFuel,c.settlement.fuelReserve+camps*c.fire.dailyFuel*3+(building?4:0));
+  }
   return isV02(s) && s.farming.known && !s.shed.built && !s.shed.pending && n >= c.shed.population
     ? c.shed.woodTarget : c.work.woodTarget + ((s.tribeCount||1)-1)*c.fire.dailyFuel;
 }
@@ -251,6 +268,8 @@ export function createState(overrides = {}, seed = 0) {
   initSettlement(s);
   if(s.local)s.local.terrain='kaunas';
   for(const person of s.villagers)assignIdentity(s,person);
+  initGenealogy(s);
+  if(s.local)rememberCollection(s,practices);
   for (let i = 0; i < c.rng.warmupSteps; i++) s.rng = lcg(s.rng);
   rollNight(s); // Day 1's weather is rolled and shown before play starts.
   if (c.traits) {
@@ -364,6 +383,13 @@ export function currentWeather(s) {
   return s.liveWeather?.day === s.day ? s.liveWeather.type : (s.lastDay?.weather ?? s.weather.type);
 }
 export function castText(s, text, hooks = {}) {
+  const inspiration=/^inspire(?:\s+(.+))?$/i.exec(text.trim());
+  if(inspiration){
+    const state=structuredClone(s),q=inspireVillager(state,{target:inspiration[1]});
+    if(!q)return {ok:false,matched:true,state:s,command:'inspire',message:'No villager is ready for a new question just now. Experience, rest and safe conditions come first.'};
+    state.castCount=(state.castCount||0)+1;settlementEvent(state,q.name+' wonders: '+q.question);
+    return {ok:true,matched:true,state,command:'inspire',effect:q.name+' wonders: '+q.question};
+  }
   if(normalizeWords(text)==='magic'){
     const refuse=message=>({ok:false,matched:true,command:'magic',state:s,message});
     if(!s.config.learning||!s.local)return refuse('Folk magic belongs to the live homestead.');
@@ -413,6 +439,23 @@ export function setSpeed(s, speed) {
   if (!s.config.speeds.includes(speed)) throw new RangeError(t('errors.speed'));
   return { ...s, speed: s.ended ? 0 : speed };
 }
+export function recordRiverFall(previous,id){
+  const person=previous.villagers.find(v=>v.id===id);
+  if(!person||previous.ended||!previous.config.learning)return {state:previous,fatal:false,count:0};
+  const s=structuredClone(previous),count=(s.local.riverFalls||0)+1;
+  s.local.riverFalls=count;
+  s.riverRevision=(s.riverRevision||0)+1;
+  const fatal=riverFallOutcome(s.seed,count);
+  if(fatal){
+    s.villagers=s.villagers.filter(v=>v.id!==id);s.stats.deaths++;
+    const entry={day:s.day,type:'death',id,name:person.name,text:person.name+' drowned in the river.'};
+    (s.local.deathHistory??=[]).push(entry);settlementEvent(s,entry.text);Object.assign(s.local.events.at(-1),entry);
+    log(s,entry.text,'death');
+    recordLifeDay(s,[person],{deaths:[{id,causes:['drowning']}]});
+    if(!s.villagers.length){s.ended=true;s.speed=0;s.fireLit=false;s.queuedCommand=null;}
+  }
+  return {state:s,fatal,count};
+}
 // Restart is a fresh day-0 run with a NEW seed (the page passes a random one).
 export function restart(s, seed = (s.seed + 1) >>> 0) {
   return createState(s.config, seed === s.seed ? (seed + 1) >>> 0 : seed);
@@ -438,10 +481,11 @@ function applyPower(s, report, command, instant = false, scene, settlers) {
     for(let i=0;i<number;i++){
       const id=s.nextId++,person=villager(id,t('labels.nameFallback',{id}),c.life.adult,c.newborn,c);
       assignIdentity(s,person);
-      if(c.learning)person.travelMeals=3;
+      if(c.learning){person.travelMeals=3;person.arrivalDay=s.day;person.lastCompanyDay=s.day;}
       if(s.config.learning)initPractice(s,person);
       if(c.traits)assignTraits(s,person);
       person.tribe=bestHome(s,person);s.villagers.push(person);
+      rememberPerson(s,person,'arrival');
     }
     s.stats.peak=Math.max(s.stats.peak,s.villagers.length);
     details=number===1?'One adult settler joined the village.':number+' adult settlers joined the village.';
@@ -569,6 +613,9 @@ function chooseAction(s, v, weather, n, die, useTraits) {
     if(motive.need==='fuel')return 'wood';
     if(motive.need==='belonging')return 'rest';
     if(motive.level>=2&&coldOmen(s,v)&&s.wood<fuelTarget(s)+2)return 'wood';
+    const farmer=developmentEnabled(s,'roles')&&v.practice.occupation?.role==='farmer'&&regularWorkSafe(s,v);
+    if(farmer&&ripePlot(s)>=0)return 'harvest';
+    if(farmer&&s.local.season!=='Winter'&&s.farming.plots.includes(null)&&s.food>n*1.25)return 'plant';
     if(motive.need==='provisions'&&(!s.farming.known||ripePlot(s)<0))return 'forage';
   }
   if(c.learning && s.farming.known && ripePlot(s)>=0 &&
@@ -596,7 +643,7 @@ function chooseAction(s, v, weather, n, die, useTraits) {
   if (v02 && c.learning && s.local.season!=='Winter' && s.farming.known &&
     v.age>=c.life.adult && !v.illnessDays && s.farming.plots.includes(null) &&
     s.food>=F.plantCost&&s.food-F.plantCost>=mainFoodRequired(s,v.tribe||0,1,0)) return 'plant';
-  const foodTarget = c.work.foodTargetPerPerson * n, woodTarget = fuelTarget(s, n), smart = has('Smart');
+  const foodTarget = developmentEnabled(s,'planning')?seasonalPantryTarget(s):c.work.foodTargetPerPerson * n, woodTarget = fuelTarget(s, n), smart = has('Smart');
   if (smart) {
     // Compare each stock's gap as a share of its target; provisions win a tie.
     const foodGap = s.food < foodTarget ? (foodTarget - s.food) / foodTarget : 0;
@@ -640,7 +687,11 @@ const textileCrafts=[
 ];
 // Cross-craft prerequisites supplement the individual learning rules in practices.js.
 // These express material dependencies in this village, not universal historical dates.
-function readyToInvent(s,name){
+export function readyToInvent(s,name){
+  if(name==='cultivated field')return s.villagers.some(v=>fieldPlanningReady(s,v)&&v.practice.known.fieldplanning&&v.practice.gear['plot markers']);
+  if(name==='drying rack')return s.villagers.some(v=>v.practice?.known.drying&&v.practice.known['crude tools']&&(v.practice.skills.wood||0)>=2);
+  if(name==='plot markers')return s.farming.known&&s.toolkit?.includes('digging stick')&&(s.local?.harvests||0)>=2;
+  if(name==='rock painting')return (s.local?.reaches||0)>0&&s.toolkit?.includes('hammer stone')&&s.villagers.some(v=>paintingReady(s,v));
   if(cerealRecipes.some(r=>r[7]===name))return cerealDependencies(s,name);
   if(name==='bone meal')return s.farming.known&&s.toolkit?.includes('hammer stone');
   if(magicRecipes.some(r=>r[7]===name))return magicDependencies(s,name);
@@ -706,7 +757,9 @@ function planWildlifeHunts(s,herd,adults,report,busy){
     const departure=stop?stop.position:position;
     const encounter=herd.start+migrationTime(herd,departure)+(stop?stop.pause*.77:0)+animal*.008;
     const sight=herd.start+migrationTime(herd,firstSight)+animal*.008;
-    const speed=430+(v.practice.energy*5)+(s.textiles?.includes('sandals')?110:0);
+    // Match the actual walker speed and the lengthened day. The old constant
+    // still assumed short days, making reachable deer count as escaped.
+    const speed=((25+(v.id%5)*1.8)*132)*(s.textiles?.includes('sandals')?1.12:1);
     const reach=v.gear==='bow'?42:30;
     const targetX=herd.origin+herd.width*(herd.east?departure:1-departure);
     const travel=Math.max(0,Math.hypot(targetX-cx,distance)-reach)/speed;
@@ -719,6 +772,9 @@ function planWildlifeHunts(s,herd,adults,report,busy){
     if(success){
       changeStock(s,'food',(herd.species==='deer'?8:3)+Number(!!s.toolkit?.includes('stone blades')));
       if(s.local)s.local.stock.bone=(s.local.stock.bone||0)+1;
+      v.huntsWon=(v.huntsWon||0)+1;v.practice.used.hunting=(v.practice.used.hunting||0)+1;
+      changeNeed(v,'happiness',2,s.config);
+      s.local.lastGame={day:s.day,hunter:v.id,species:herd.species};
     }
     v.gained=s.food-before;report.gatheredFood+=v.gained;
     finishOrdinaryWork(s,v,'hunt');
@@ -742,7 +798,31 @@ export function inventionProgress(s){
   ];
   const history=new Set(s.local.inventions||[]);
   const known=catalog.filter(([name,achieved])=>achieved||history.has(name)).map(([name])=>name);
-  return {known,total:catalog.length,missing:catalog.map(([name])=>name).filter(name=>!known.includes(name))};
+  return {known,total:catalog.length,missing:catalog.map(([name])=>name).filter(name=>!known.includes(name)),catalog:catalog.map(([name])=>name)};
+}
+export function encyclopediaCatalog(s){
+  const progress=inventionProgress(s),recipes=availablePractices(s);
+  const names=[...new Set([...progress.catalog,...recipes.map(r=>r.product),'healer hut','herb drying rack','healer marker',
+    ...(s.config.learning?.development?.fields?['cultivated field']:[]),...(s.config.learning?.development?.planning?['drying rack']:[])])];
+  return names.map(name=>{
+    const recipe=recipes.find(r=>r.name===name||r.product===name);
+    const tool=[...stoneTools,...heatTools].find(t=>t.name===name);
+    const built=!!s.local.collection?.[name];
+    const needs=recipe?recipe.requires.map(id=>practices[id]?.name||id):[];
+    if(recipe)needs.push('experience with '+recipe.skill+' ('+recipe.property+')');
+    if(name==='saddle quern')needs.push('a harvested cereal crop and hammer stone');
+    if(name==='wholemeal flour')needs.push('a local saddle quern and grain beyond the seed reserve');
+    if(name==='hearth flatbread')needs.push('flour, a lit local hearth and spare fuel');
+    if(name==='loom')needs.push('drop spindle and mallet & chisel');
+    if(name==='drop spindle')needs.push('cordage');
+    if(name==='ondol')needs.push('controlled fire, drystone walls and chimney');
+    if(name.startsWith('healer')||name==='herb drying rack')needs.push('woodland healer, shelter and cordage knowledge; earlier hut stages');
+    if(!recipe&&!needs.length)needs.push(name.includes('hut')||name.includes('wall')?'a household and prepared building site':'ordinary work experience and earlier crafts');
+    const cost=recipe?recipe.cost:tool?{wood:tool.wood}:textileCrafts.includes(name)?{fibre:2,...(name==='loom'?{wood:2}:{})}:huntingWeapons.includes(name)?{wood:2}:wallTypes.includes(name)||hutTypes.includes(name)||['chimney','ondol'].includes(name)?{wood:2}:null;
+    return {name,product:recipe?.product||name,built,known:progress.known.includes(name),cost,needs,
+      available:readyToInvent(s,recipe?.product||name),work:recipe?recipe.work:null,
+      experienced:recipe?s.villagers.some(v=>recipe.requires.every(id=>v.practice.known[id])&&v.practice.properties.includes(recipe.property)&&recipe.need(s,v)):null};
+  });
 }
 function nextHeatTool(s){return heatTools.find(tool=>!s.fireTools?.includes(tool.name));}
 
@@ -788,7 +868,7 @@ function weeklyWork(s,report){
     due[item]??=s.day+i%7;
     if(previous?s.day-previous.day<7:s.day<due[item])continue;
     const recipe=recipes.find(r=>r.name===item);
-    if(recipe?.magic)continue; // Rites have real costs; no free weekly casts or proficiency.
+    if(recipe?.magic||recipe?.id==='cavepainting')continue; // Rites and paintings require actual paid work.
     const eligible=people.filter(v=>recipe?v.practice.known[recipe.id]:
       huntingWeapons.includes(item)?v.gear===item&&(v.huntWear||0)<6:fishingCrafts.includes(item)?
         item==='fish trap'?v.fishTrap||v.practice.gear[item]:v.practice.gear[item]:item==='hand axe'?(v.axeWear||0)<4:true);
@@ -798,14 +878,14 @@ function weeklyWork(s,report){
     const worker=eligible[0];
     let [action,skill]=recipe?[techniqueChores[recipe.id],recipe.skill]:
       weeklyChores[item]||[wallTypes.includes(item)?'Repair a wall section':'Fit shelter poles',wallTypes.includes(item)?'stone':'wood'];
-    if(fishingCrafts.includes(item)&&(valleySeason(s).frozen||s.lastUsed.flood>=s.day-1))action='Maintain '+item;
+    if(fishingCrafts.includes(item)&&(valleySeason(s).frozen||s.lastUsed.flood>=s.day-1||unsafeRiverWeather(s)))action='Maintain '+item;
     let result='practiced '+skill+' work';
     if(['Crack nuts','Cut roots for supper','Dig edible roots','Carry berries','Check the fish trap','Practice spearing fish','Check the handline','Fish with a wooden pole','Check the fishing net'].includes(action)){
       const source=fishingCrafts.includes(item)?'fish':'berries';
       const qty=Math.min(1,Math.max(0,foodCapacity(s)-s.food),Math.floor(s.local.deposits[source]));
       if(qty){s.food+=takeDeposit(s,source,qty);report.gatheredFood+=qty;result='stored one provision';}
       else if(source==='fish')result='checked the trap';
-    }else if(recipe?.id==='drying'&&s.food>s.local.dried){
+    }else if(recipe?.id==='drying'&&s.food>s.local.dried&&!unsafeRiverWeather(s)){
       s.local.dried++;result='preserved one provision';
     }else if(item==='hand axe'&&s.wood<s.config.limits.stock&&s.local.deposits.wood>=1){
       s.wood+=takeDeposit(s,'wood',1);report.gatheredWood++;result='stacked one firewood';
@@ -952,6 +1032,7 @@ function doWork(s, v, action, report, fishingMethodOverride) {
     v.gained = s.wood - before; report.gatheredWood += v.gained;
   } else if (action === 'harvest') {
     const plot=ripePlot(s);
+    if(c.learning)(report.cropSites??={})[v.id]=fieldSite(s,plot);
     const wheat=s.farming.crops?.[plot]==='wheat';
     const remaining=s.farming.wheatRemaining?.[plot];
     const bonus=wheat&&remaining!==undefined?0:boneHarvestBonus(s,plot);s.farming.plots[plot]=null;
@@ -1023,14 +1104,15 @@ function doWork(s, v, action, report, fishingMethodOverride) {
     if(s.settlementWork===shelterWork+bridgeWork)log(s,'The village finished a footbridge across the ford.','discovery');
   } else if (action === 'plant') {
     const plot=s.farming.plots.indexOf(null);s.farming.plots[plot]=0;
-    if(c.learning&&v.practice.known.wheatgrowing&&s.local.stock.wheat>=1){
+    if(c.learning)(report.cropSites??={})[v.id]=fieldSite(s,plot);
+    if(c.learning&&shouldSowWheat(s,v)){
       s.local.stock.wheat--;s.farming.crops[plot]='wheat';v.activity='Sow wheat';
       v.practice.used.wheatgrowing=(v.practice.used.wheatgrowing||0)+1;
       s.local.first.wheatSown??=s.day;
     }else{if(s.farming.crops)delete s.farming.crops[plot];s.food-=c.farming.plantCost;}
     report.plantings += 1;
   }
-  report.actions.push({ id: v.id, action: v.activity, gained: v.gained });
+  report.actions.push({ id: v.id, action: v.activity, gained: v.gained,...(report.cropSites?.[v.id]?{site:report.cropSites[v.id]}:{}) });
 }
 
 function planStandingStones(s, adults, report) {
@@ -1419,7 +1501,7 @@ function householdCare(s,order,report){
     const store=s.local.campStores[patient.tribe||0];
     if(patient.fullness<=s.config.needs.eatAtOrBelow){
       if(s.food>=1){changeStock(s,'food',-1);meal=true;}
-      else if(store?.saved>0){store.saved--;meal=true;}
+      else if(store?.saved>=1){store.saved--;meal=true;}
     }
     if(meal)changeNeed(patient,'fullness',s.config.needs.mealFullness,s.config);
     changeNeed(patient,'warmth',6,s.config);
@@ -1430,7 +1512,63 @@ function householdCare(s,order,report){
   }
   return busy;
 }
+export function prepareField(s,v,report){
+  if(!developmentEnabled(s,'fields')||!regularWorkSafe(s,v)||!fieldPlanningReady(s,v)||!v.practice.known.fieldplanning||
+    !v.practice.gear['plot markers']||s.local.daughter?.members.includes(v.id)||s.local.season==='Winter'||
+    (s.local.climate?.waterlogged||0)>=2||s.food<mainFoodRequired(s,v.tribe||0,1.5,0)||
+    s.farming.plots.includes(null)||s.farming.plots.length>=fieldRules.maxPlots)return false;
+  const existing=s.farming.expansion,index=existing?.index??s.farming.plots.length,site=existing?.site||fieldSite(s,index);
+  if(!existing&&s.farming.plots.length>=fieldTarget(s))return false;
+  if(riverHabitat(...site).wet||site[0]>960||site[1]>628)return false;
+  const tree=buildingSiteTree(s,site,'field');
+  if(tree!==null&&!canFellBuildingTree(s,v))return false;
+  if(!existing){
+    if(s.wood<=s.config.settlement.fuelReserve+(s.tribeCount||1)*s.config.fire.dailyFuel)return false;
+    s.wood--;s.farming.expansion={index,site:[...site],work:0,camp:v.tribe||0,startedDay:s.day,clearedTrees:[]};
+  }
+  const project=s.farming.expansion;
+  if(tree!==null){
+    clearBuildingTree(s,v,project,site,report,'field');finishOrdinaryWork(s,v,'wood');v.activity='Clear field site';
+  }else{
+    project.work++;finishOrdinaryWork(s,v,'plant');v.activity='Prepare a field';v.gained=0;
+    if(project.work>=fieldRules.work){
+      s.farming.plots.push(null);(s.farming.sites??={})[index]=[...site];
+      (s.farming.fieldHistory??=[]).push({index,site:[...site],day:s.day,builder:v.id,clearedTrees:[...project.clearedTrees]});
+      delete s.farming.expansion;settlementEvent(s,v.name+' finished preparing a new field. It still needs seed and planting.');
+    }
+  }
+  report.actions.push({id:v.id,action:v.activity,site,gained:v.gained||0});return true;
+}
+export function preservationWork(s,v,report){
+  if(!developmentEnabled(s,'planning')||!regularWorkSafe(s,v)||
+    s.local.daughter?.members.includes(v.id)||s.local.season==='Winter'||unsafeRiverWeather(s)||!s.fireLit)return false;
+  const residents=s.villagers.filter(p=>(p.tribe||0)===(v.tribe||0)&&!s.local.daughter?.members.includes(p.id));
+  if(!residents.some(p=>p.practice?.known.drying))return false;
+  const store=s.local.campStores[v.tribe||0]??={saved:0,rack:0};
+  const target=winterStorageTarget(s,residents,foodCapacity(s)),capacity=24*(store.racks||1)+12*(store.tradeJars||0);
+  if(store.saved+(store.rack||0)>=target||s.food<s.villagers.length*1.5+2)return false;
+  let action;
+  const needRack=!store.built||store.saved+(store.rack||0)>=capacity;
+  if(needRack){
+    if(!v.practice.known['crude tools']||(v.practice.skills.wood||0)<2||s.local.stock.fibre<(store.rackWork?0:1))return false;
+    const wood=store.rackWork?1:2;
+    if(s.wood<wood+s.config.settlement.fuelReserve+(s.tribeCount||1)*s.config.fire.dailyFuel)return false;
+    s.wood-=wood;if(!store.rackWork)s.local.stock.fibre--;
+    store.rackWork=(store.rackWork||0)+1;action='Build a drying rack';
+    if(store.rackWork>=2){store.racks=store.built?(store.racks||1)+1:1;store.built=true;delete store.rackWork;}
+  }else{
+    if(!v.practice.known.drying||store.rack>0||s.wood<=s.config.settlement.fuelReserve+(s.tribeCount||1)*s.config.fire.dailyFuel)return false;
+    const batch=Math.floor(Math.min(8,capacity-store.saved,target-store.saved,Math.max(0,s.food-Math.max(s.local.dried+(s.bankFood||0),s.villagers.length*1.5))));
+    if(batch<1)return false;
+    s.food-=batch;s.wood--;store.rack=batch;store.batches=(store.batches||0)+1;action='Preserve winter provisions';
+    v.practice.used.drying=(v.practice.used.drying||0)+1;
+    (report.preservation??=[]).push({id:v.id,camp:v.tribe||0,food:batch});
+  }
+  finishOrdinaryWork(s,v,'wood');v.activity=action;v.gained=0;
+  report.actions.push({id:v.id,action,site:campSites[v.tribe||0],gained:0});return true;
+}
 function seasonalStores(s,report){
+  if(developmentEnabled(s,'planning'))return;
   for(let camp=0;camp<(s.tribeCount||1);camp++){
     const residents=s.villagers.filter(v=>(v.tribe||0)===camp&&!s.local.daughter?.members.includes(v.id));
     const store=s.local.campStores[camp]??={rack:0,saved:0};
@@ -1439,7 +1577,7 @@ function seasonalStores(s,report){
       (a.action==='Fish'||a.action==='Hunt'||a.action==='Forage'||a.action.startsWith('Track ')));
     const dryer=residents.find(v=>v.practice?.known.drying&&!v.illnessDays&&
       !report.outing?.members.includes(v.id)&&!v.activity.startsWith('Care for '));
-    if(!dryer||!haul.length||s.local.season==='Winter')continue;
+    if(!dryer||!haul.length||s.local.season==='Winter'||unsafeRiverWeather(s))continue;
     const spareFresh=Math.max(0,s.food-Math.max(s.local.dried+(s.bankFood||0),s.villagers.length*2));
     if(!spareFresh)continue;
     // A successful batch builds a local habit. Remembering hunger also gives
@@ -1619,17 +1757,18 @@ function work(s, order, report) {
   const pioneer=adults.filter(v=>!stoneCrew.has(v.id)&&v.fullness>=40&&v.warmth>=35)
     .sort((a,b)=>(b.practice?.curiosity||0)-(a.practice?.curiosity||0))[0];
   const unarmed=adults.filter(v=>!v.gear);
-  const weaponMaker=unarmed.find(v=>v.traits.includes('Brave'))??unarmed[0];
+  const weaponMaker=(developmentEnabled(s,'roles')?unarmed.find(v=>v.practice.occupation?.role==='toolmaker'):null)??unarmed.find(v=>v.traits.includes('Brave'))??unarmed[0];
   const tool=nextStoneTool(s);
   const heatTool=!tool?nextHeatTool(s):null;
   const maker=weaponMaker??(tool||heatTool?(adults.find(v=>v.traits.includes('Smart'))??adults[0]):null);
   const observers=[];
+  const preservationCrew=[],preservingCamps=new Set();
   const trapMakers=adults.filter(v=>!hasFishingGear(v));
   const trapMaker=adults.filter(v=>hasFishingGear(v)).length<Math.ceil(n/6)
     ? trapMakers.find(v=>v.reedBundle)??trapMakers.find(v=>v!==maker)??trapMakers[0] : null;
-  const riverSafe=(s.lastUsed.flood===undefined||s.lastUsed.flood<s.day-1)&&!valleySeason(s).frozen;
+  const riverSafe=(s.lastUsed.flood===undefined||s.lastUsed.flood<s.day-1)&&!valleySeason(s).frozen&&!unsafeRiverWeather(s);
   const artisans=adults.filter(v=>v!==trapMaker&&v!==maker);
-  const potter=artisans.find(v=>v.traits.includes('Smart'))??artisans[0];
+  const potter=(developmentEnabled(s,'roles')?artisans.find(v=>['potter','weaver'].includes(v.practice.occupation?.role)):null)??artisans.find(v=>v.traits.includes('Smart'))??artisans[0];
   const nextTextile=nextTextileCraft(s,potter?.tribe||0);
   // A set net is checked at the start of the workday, before individual
   // spear fishers exhaust the same shallow-water stock. One haul uses one
@@ -1642,7 +1781,8 @@ function work(s, order, report) {
       finishOrdinaryWork(s,netFisher,'fish');doWork(s,netFisher,'fish',report,'net');stoneCrew.add(netFisher.id);
     }
   }
-  order.forEach((v, i) => {
+  const actors=developmentEnabled(s,'roles')?[...order].sort((a,b)=>Number(!!b.practice.occupation&&['baker','miller'].includes(b.practice.occupation.role))-Number(!!a.practice.occupation&&['baker','miller'].includes(a.practice.occupation.role))):order;
+  actors.forEach((v, i) => {
     if (stoneCrew.has(v.id)||carers.has(v.id)) return;
     const motive=c.learning?assessNeeds(s,v):null;
     if(motive)v.motivation=motive;
@@ -1663,10 +1803,22 @@ function work(s, order, report) {
       (v.travelMeals>0 || s.food<1 && s.local.deposits.berries<1 && !s.local.wildPatches?.some(q=>q>=1))){
       finishOrdinaryWork(s,v,'warm');doWork(s,v,'warm',report);return;
     }
-    const die = c.traits ? dice[i] : 101;
+    const die = c.traits ? dice[order.indexOf(v)] : 101;
     let action = chooseAction(s, v, weather, n, die, true);
+    const regular=regularWorkSafe(s,v)&&motive?.level>0&&motive.need!=='fuel'&&!v.practice.lessonToday&&!['warm','rest','hut','harvest'].includes(action);
+    if(regular&&developmentEnabled(s,'planning')&&!preservingCamps.has(v.tribe||0)&&s.food>=n*1.5&&
+      !s.local.daughter?.members.includes(v.id)&&s.local.season!=='Winter'&&!unsafeRiverWeather(s)&&s.fireLit){
+      const store=s.local.campStores[v.tribe||0],residents=s.villagers.filter(p=>(p.tribe||0)===(v.tribe||0));
+      const capacity=24*(store?.racks||1)+12*(store?.tradeJars||0),needRack=!store?.built||(store.saved+(store.rack||0)>=capacity);
+      const trained=residents.some(p=>p.practice.known.drying);
+      const canHelp=needRack?(v.practice.skills.wood||0)>=2&&s.local.stock.fibre>0:v.practice.known.drying;
+      if(trained&&canHelp&&(store?.saved||0)+(store?.rack||0)<winterStorageTarget(s,residents,foodCapacity(s))){
+        preservationCrew.push(v);preservingCamps.add(v.tribe||0);return;
+      }
+    }
+    if(regular&&action!=='plant'&&prepareField(s,v,report))return;
     if(c.learning&&motive.level>0&&action!=='warm'&&action!=='rest'&&action!=='wood'&&action!=='hut'){
-      const foodWork=cerealFoodWork(s,v,makePracticeProduct,report);
+      const foodWork=cerealFoodWork(s,v,makePracticeProduct,report,makeSupervisedFood);
       if(foodWork){
         finishOrdinaryWork(s,v,foodWork==='Grind wheat into flour'?'harvest':'warm');
         v.activity=foodWork;v.gained=foodWork==='Bake hearth flatbread'?wheatRules.bread:0;
@@ -1717,13 +1869,14 @@ function work(s, order, report) {
         if(s.local.season!=='Winter'&&!s.farming.known&&!s.local.seedTrial&&s.local.seedFinds>=3)outing='seed trial';
         if(outing){finishOrdinaryWork(s,v,outing);doWork(s,v,outing,report);return;}
       }
-      if(v.age>=4&&v.age<c.life.adult&&!v.practice.lessonToday&&v.fullness>=45&&v.warmth>=45&&!v.illnessDays&&v.practice.energy>=32&&s.food>=n*2){observers.push(v);return;}
+      const adultObservation=v.age>=c.life.adult&&motive.level>=2&&action==='rest'&&(s.day+v.id)%7===0;
+      if((v.age>=4&&v.age<c.life.adult||adultObservation)&&!v.practice.lessonToday&&v.fullness>=45&&v.warmth>=45&&!v.illnessDays&&v.practice.energy>=32&&s.food>=n*2){observers.push(v);return;}
       if(action==='fish'&&s.local.deposits.fish<1)action='forage';
-      const essential=motive.level<2||action==='warm'||action==='harvest'||action==='plant'&&!v.practice.lessonToday&&!cerealStudyReady(s,v)||action==='hut'&&(s.hutProject||shouldPlanHut(s))||preparingCold&&action==='wood'||
+      const essential=motive.level<2||action==='warm'||action==='harvest'||action==='plant'&&!v.practice.lessonToday&&!cerealStudyReady(s,v)&&!(fieldPlanningReady(s,v)&&!v.practice.known.fieldplanning)||action==='hut'&&(s.hutProject||shouldPlanHut(s))||preparingCold&&action==='wood'||
         action==='wood'&&s.wood<(s.tribeCount||1)*c.fire.dailyFuel;
       const chosen=essential?null:practiceWork(s,v,die,report);
       if(chosen){
-        const ritual=report.magic?.find(r=>r.id===v.id),site=chosen==='Work ground bone into soil'?[680,539]:chosen==='Make saddle quern'?[campSites[v.tribe||0][0]-25,campSites[v.tribe||0][1]+25]:ritual?.spell==='hearthcharms'?campSites[v.tribe||0]:
+        const ritual=report.magic?.find(r=>r.id===v.id),site=['Read a rock painting','Make rock painting'].includes(chosen)?paintingSite:chosen==='Work ground bone into soil'?[680,539]:chosen==='Make saddle quern'?[campSites[v.tribe||0][0]-25,campSites[v.tribe||0][1]+25]:ritual?.spell==='hearthcharms'?campSites[v.tribe||0]:
           chosen==='Collect a grinding stone'?materialSites.quernStone.site:ritual?.spell==='storewards'?[310,168]:v.herbalist?.home;
         v.activity=chosen;v.gained=0;
         report.actions.push({id:v.id,action:chosen,gained:0,...(site?{site}:{}),...(ritual?.targetId!=null?{patient:ritual.targetId}:{})});return;
@@ -1744,14 +1897,19 @@ function work(s, order, report) {
     doWork(s, v, action, report);
     if (action === 'rest') resters.push(v);
   });
+  for(const v of preservationCrew)if(!preservationWork(s,v,report)){
+    finishOrdinaryWork(s,v,'rest');doWork(s,v,'rest',report);resters.push(v);
+  }
   for(const child of observers){
     const skillByJob={Fish:'fish',Forage:'berries','Gather wood':'wood','Experiment with stone':'stone','Craft hammer stone':'stone','Craft stone blades':'stone','Make cutting tool':'stone',
       'Make saddle quern':'stone','Shape a grinding stone':'stone','Grind wheat into flour':'stone','Bake hearth flatbread':'berries','Sow wheat':'berries','Harvest wheat':'berries'};
-    const mentors=adults.filter(v=>(child.tribe||0)===(v.tribe||0)&&skillByJob[v.activity]);
+    const mentors=adults.filter(v=>v!==child&&(child.tribe||0)===(v.tribe||0)&&skillByJob[v.activity]&&
+      (child.age<c.life.adult||(v.practice.skills[skillByJob[v.activity]]||0)>(child.practice.skills[skillByJob[v.activity]]||0)));
     const mentor=mentors.find(v=>v.activity==='Fish')||mentors[(s.day+child.id)%mentors.length];
     if(!mentor){finishOrdinaryWork(s,child,'rest');doWork(s,child,'rest',report);resters.push(child);continue;}
     const skill=skillByJob[mentor.activity];
     const p=child.practice;p.site=mentor.practice.site;p.currentSkill=skill;
+    child.lastCompanyDay=mentor.lastCompanyDay=s.day;
     p.skills[skill]=Math.min(30,(p.skills[skill]||0)+1);p.energy-=2;
     if(skill==='stone'&&p.skills.stone>=3&&!p.properties.includes('fractures'))p.properties.push('fractures');
     if(p.skills[skill]===3)settlementEvent(s,child.name+' learned the basics of '+({fish:'checking fish traps',berries:'finding berries',wood:'selecting firewood',stone:'reading how stone flakes'})[skill]+' by watching '+mentor.name+'.');
@@ -1826,7 +1984,7 @@ function meals(s, order, report) {
     for(const id of mealOrder){
       const v=byId[id],store=s.local.campStores[v.tribe||0];
       if(shortfall<=0)break;
-      if(fullness[id]>threshold[id]||!store?.saved)continue;
+      if(fullness[id]>threshold[id]||(store?.saved||0)<N.mealCost)continue;
       store.saved--;changeNeed(v,'fullness',N.mealFullness,c);localFed.push(id);report.meals.push(id);shortfall--;
     }
   }
@@ -1841,7 +1999,7 @@ function meals(s, order, report) {
   }
   if(s.local)for(const id of mealOrder){
     const v=byId[id],store=s.local.campStores[v.tribe||0];
-    if(fed.includes(id)||!store?.saved||fullness[id]>threshold[id])continue;
+    if(fed.includes(id)||(store?.saved||0)<N.mealCost||fullness[id]>threshold[id])continue;
     store.saved--;changeNeed(v,'fullness',N.mealFullness,c);report.meals.push(id);
   }
   if (c.traits && order.some(grabby)) {
@@ -1987,7 +2145,7 @@ function resolveLivesAndDiscovery(s, report) {
   // v0.2 day end, after births and the Bonfire: farming discovery, the second
   // shed check, then crop growth (plots planted today grow today too).
   const F = c.farming, n = s.villagers.length;
-  const growth=s.local?.season==='Winter'?0:F.growth[report.weather];
+  const growth=s.local?.season==='Winter'?0:c.learning?climateCropGrowth(s,F.growth[report.weather]):F.growth[report.weather];
   if (!s.farming.known) {
     const trial=s.local?.seedTrial;
     if(trial&&s.day>trial.day)trial.growth=Math.max(0,trial.growth+growth);
@@ -2019,6 +2177,8 @@ export function stepDay(previous) {
     return s;
   }
   findHomesteadHealer(s);
+  initGenealogy(s);
+  if(s.local)rememberCollection(s,practices);
   resolveShelterFires(s,(s.day+1)*c.dayMs);
   s.day += 1;
   const report = { day: s.day, command: null, visitOrder: [], actions: [], beforeMeals: [], meals: [],
@@ -2037,6 +2197,7 @@ export function stepDay(previous) {
   // then last night's natural illness roll; then Bonfire fuel.
   report.weather = forecastWeather(s);
   report.naturalWeather = s.natural.weather;
+  if(c.learning)report.climate=beginClimateDay(s,report.weather);
   report.illness = null;
   if (s.natural.illness && s.villagers.length) {
     const targets = [...s.villagers].sort((a, b) => a.id - b.id);
@@ -2048,14 +2209,14 @@ export function stepDay(previous) {
     }
   }
   if(c.learning&&!s.fireKnown&&s.wood>=c.fire.minWood&&s.villagers.some(v=>v.practice?.known['fire tending']&&v.warmth<55)){s.fireKnown=true;s.stats.fireDay=s.day;}
-  const wetTinder=report.weather==='rain'&&!s.fireLit&&s.fireTools?.includes('fire stick')&&!s.fireTools.includes('bow drill');
+  const wetTinder=report.weather==='rain'&&(!report.climate||report.climate.mm>=2)&&!s.fireLit&&s.fireTools?.includes('fire stick')&&!s.fireTools.includes('bow drill');
   s.fireLit = s.fireKnown && s.wood >= c.fire.dailyFuel&&!wetTinder;
   if (s.fireLit) s.wood -= c.fire.dailyFuel;
   report.fireLit = s.fireLit;
   report.burnedWood = s.fireLit ? c.fire.dailyFuel : 0;
   for(let camp=1;camp<(s.tribeCount||1);camp++){
     s.campFires??={};
-    const wet=report.weather==='rain'&&!s.campFires[camp]&&s.fireTools?.includes('fire stick')&&!s.fireTools.includes('bow drill');
+    const wet=report.weather==='rain'&&(!report.climate||report.climate.mm>=2)&&!s.campFires[camp]&&s.fireTools?.includes('fire stick')&&!s.fireTools.includes('bow drill');
     const tended=s.villagers.some(v=>v.tribe===camp&&v.age>=c.life.adult);
     s.campFires[camp]=s.fireKnown&&tended&&!wet&&s.wood>=c.fire.dailyFuel;
     if(s.campFires[camp]){
@@ -2088,7 +2249,8 @@ export function stepDay(previous) {
     // Sum ALL of today's warmth changes, then clamp once (design section 3).
     // Hardy: a smaller cold-snap loss. Shivery: extra loss in rain and cold snaps.
     const P = c.personality, shivery = hasTrait(s, v, 'Shivery') ? P.shiveryExtraLoss : 0;
-    const weatherLoss = report.weather === 'rain' ? c.needs.rainWarmthLoss + shivery
+    const rainFactor=!report.climate?1:report.climate.intensity==='drizzle'?.35:report.climate.intensity==='steady'?.7:report.climate.intensity==='heavy'?1:1.3;
+    const weatherLoss = report.weather === 'rain' ? Math.round(c.needs.rainWarmthLoss*rainFactor) + shivery
       : report.weather === 'cold' ? (hasTrait(s, v, 'Hardy') ? P.hardyColdLoss : c.needs.coldWarmthLoss + shivery) : 0;
     const household=c.settlement?s.hutDetails?.[sleepingHut(s,v)]:null;
     const eastern=s.local?.daughter?.members.includes(v.id);
@@ -2107,6 +2269,8 @@ export function stepDay(previous) {
   }
   if(c.learning){beginSettlementDay(s);planLessons(s,order);}
   work(s, order, report);
+  if(s.local)recordOccupations(s,report);
+  if(s.local){naturalInspiration(s,report);for(const q of report.inspiration||[])settlementEvent(s,q.name+' wonders: '+q.question);}
   if(s.local){
     completeMagicLessons(s,report);
     completeCerealLessons(s,report);
@@ -2117,11 +2281,13 @@ export function stepDay(previous) {
   // 4. Work is all finished before any meals: meals (Grabby first), then
   // damage, recovery, safety and happiness in the rotated order.
   meals(s, order, report);
+  if(s.local)rememberCollection(s,practices);
   if(s.local)s.local.inventions=inventionProgress(s).known;
   for (const v of order) resolveNeeds(s, v, shelteredIds.has(v.id), report);
   if(c.learning)recordFoodBalance(s,report);
   // 5. Age, deaths, birth, then natural fire discovery.
   resolveLivesAndDiscovery(s, report);
+  recordLifeDay(s,order,report);
   if(s.local){
     const history=s.local.populationHistory??=[];
     let period=history.at(-1);
@@ -2200,6 +2366,7 @@ export function stepDay(previous) {
   }
   if(c.settlement)updateBelief(s,report);
   s.lastDay = report;
+  if(c.learning)rememberResources(s);
   // Wipeout stops immediately: no wonder, timers or dice after the last death.
   if (s.ended) return s;
   // 6. Power, effect timers, milestones, and a compact daily explanation.

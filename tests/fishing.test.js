@@ -80,7 +80,7 @@ test('flooded or frozen water prevents every fishing method, including weekly ch
   for(const frozen of [false,true]){
     const s=fresh();s.food=0;s.gameAnimals=0;
     for(const v of s.villagers)v.practice.gear['fishing net']=true;
-    if(frozen){let day=61;while(!valleySeason(s,day).frozen)day++;s.day=day-1;}
+    if(frozen){s.day=64;s.local.climate={day:64,frostRun:3};s.natural.climate={day:65,type:'normal',temperature:-5,mm:0,intensity:'dry'};}
     else s.lastUsed.flood=s.day;
     const next=stepDay(s);assert.equal(Object.keys(next.lastDay.fishing||{}).length,0);
     assert.ok(!(next.lastDay.weeklyWork||[]).some(w=>w.item==='fishing net'&&w.result==='stored one provision'));

@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {createState,stepDay,populationCap,unrelated} from '../src/sim.js';
 import {HOMESTEAD_RULES} from '../src/config.js';
-const files=['config','provisions','needs','fishing','settlement-layout','healer-home','magic','farming','village-events','ecology','practices','neighbors','sim'];
+const files=['config','development','provisions','needs','fishing','settlement-layout','healer-home','magic','farming','village-events','ecology','resources','climate','river','genealogy','paintings','collection','inspiration','practices','neighbors','sim'];
 function hashSources(){const h=createHash('sha256');for(const f of files)h.update(f+'\n').update(readFileSync(new URL('../src/'+f+'.js',import.meta.url)));return h.digest('hex');}
 if(isMainThread){
   const [name='population-followup-10-20261114',countText='10',firstText='0']=process.argv.slice(2);assert.match(name,/^[a-zA-Z0-9_-]+$/);

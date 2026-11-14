@@ -1,4 +1,7 @@
 import {initSettlement} from './practices.js';
+import {initGenealogy} from './genealogy.js';
+import {rememberCollection} from './collection.js';
+import {practices} from './practices.js';
 // Save and load (design section 10, "Save and load (v0.2)"): one slot in the
 // browser's local storage, written at every day end and whenever the queued
 // command changes, and the "begin anew" fresh start. No rules live here: a
@@ -71,6 +74,8 @@ export function deserialize(text, overrides = {}) {
     s.local.seasonOffset=Math.floor(elapsed*s.config.learning.seasonLength/10)-elapsed;
   }
   initSettlement(s);
+  initGenealogy(s);
+  if(s.local)rememberCollection(s,practices);
   s.speed = 0;
   return s;
 }

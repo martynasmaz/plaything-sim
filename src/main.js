@@ -2,11 +2,11 @@ import {createNotebook} from './notebook.js';
 import { createSaveSlot, createFreshStart, serialize, deserialize } from './save.js';
 import { CONFIG, HOMESTEAD_RULES } from './config.js';
 import { createState, stepDay, cancelCommand, setSpeed, advanceTime,
-  bringSettlersHome, restart, availableCommands, validateCommand, tomorrowWeather, currentWeather, castText, foodCapacity, populationCap, shelterPlaces } from './sim.js';
+  recordRiverFall,bringSettlersHome, restart, availableCommands, validateCommand, tomorrowWeather, currentWeather, castText, foodCapacity, populationCap, shelterPlaces } from './sim.js';
 import { makeVillageScene } from './village-view.js';
 import { createClearing } from './clearing.js';
 import { THEME, t, commandLabel, resolveUi, uiHiddenClasses } from './theme.js';
-import {createPhoneControls,phoneLayoutEnabled,phoneTimeCheck} from './phone-ui.js';
+import {createPhoneControls,phoneLayoutEnabled,phoneTimeCheck,completedOneTime} from './phone-ui.js';
 
 const $=selector=>document.querySelector(selector);
 let phoneControls=null;
@@ -126,7 +126,7 @@ function clearFaint(){
   if(input.classList.contains('faint-placeholder')){input.setAttribute('placeholder',placeholder);input.classList.remove('faint-placeholder','fading');}
 }
 function select(id){selectedId=id;render();}
-const clearing=immersive?createClearing($('#village'),()=>state):null;
+const clearing=immersive?createClearing($('#village'),()=>state,{onRiverFall:id=>{const fall=recordRiverFall(state,id);state=fall.state;slot.save(state);return fall;}}):null;
 const game=immersive?null:new Phaser.Game({type:Phaser.CANVAS,...THEME.layout.canvas,parent:'village',
   backgroundColor:THEME.palette.cream,banner:false,audio:{noAudio:true},
   scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:makeVillageScene(()=>state,select)});
@@ -277,7 +277,7 @@ const guideGroups={
     ['food 20','Give 20 food, up to the storage limit. Change the number, or type food alone for 10.'],
     ['harvest','Give the camp a fixed gift of provisions.'],['bless','Raise health and happiness throughout the village.'],
     ['heal','Cure everyone currently sick.'],['teach fire','Teach fire making if the village has enough wood.'],
-    ['teach farming','Teach the village to sow crops.'],['recall settlers','Bring the eastern settlement home with its supplies.']],
+    ['teach farming','Teach the village to sow crops.'],['inspire','Encourage a ready villager to investigate a question suggested by their experience.'],['recall settlers','Bring the eastern settlement home with its supplies.']],
   'Weather and disasters':[
     ['rain','Bring rain.'],['drought','Start a dry spell.'],['flood','Raise the river; catches stored on the low bank can wash away.'],
     ['plague','Make the villagers sick.'],['earthquake','Shake the camp, lose wood and lower morale.'],
@@ -305,7 +305,7 @@ const searchGuide=guide.querySelector('input'),guideResults=guide.querySelector(
 function drawGuide(){
   const query=searchGuide.value.trim().toLowerCase();guideResults.replaceChildren();
   for(const [group,rows] of Object.entries(guideGroups)){
-    const matches=rows.filter(([cmd,desc])=>(cmd!=='plague'||state.config.enablePlague)&&[group,cmd,desc].join(' ').toLowerCase().includes(query));
+    const matches=rows.filter(([cmd,desc])=>!completedOneTime(state,cmd)&&(cmd!=='plague'||state.config.enablePlague)&&[group,cmd,desc].join(' ').toLowerCase().includes(query));
     if(!matches.length)continue;
     const title=document.createElement('h3');title.textContent=group;guideResults.append(title);
     for(const [cmd,desc] of matches){
@@ -318,10 +318,17 @@ function drawGuide(){
 }
 function openGuide(){if(phoneControls?.active){phoneControls.open('powers');return;}searchGuide.value='';drawGuide();if(!guide.open)guide.showModal();searchGuide.focus();}
 $('#open-guide').onclick=openGuide;searchGuide.oninput=drawGuide;guide.querySelector('button').onclick=()=>guide.close();
+let lastSubmittedMessage='';
+input.addEventListener('keydown',event=>{
+  if(event.key!=='ArrowUp'||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||phoneControls?.active||!lastSubmittedMessage)return;
+  event.preventDefault();clearFaint();input.value=lastSubmittedMessage;
+  input.setSelectionRange(input.value.length,input.value.length);
+});
 $('#command-form').addEventListener('submit',e=>{
   e.preventDefault();
   if(skipping)return;
   const raw=input.value.trim();
+  if(raw)lastSubmittedMessage=raw;
   if(/^(help|commands|god commands|\?)$/i.test(raw)){input.value='';openGuide();return;}
   if(/^undo skip$/i.test(raw)){undoSkip();return;}
   if(/^back(?:\s+(?!to normal\b)|$)/i.test(raw)){void backDays(raw);return;}
@@ -398,13 +405,16 @@ phoneControls=createPhoneControls({enabled:immersive,storage,readState:()=>state
     }
     input.value=words;$('#command-form').requestSubmit();return input.value==='';
   },
-  checkCommand:words=>{
+  checkCommand:(words,{speech=false}={})=>{
     const timeCheck=phoneTimeCheck(state,words,{busy:skipping,hasUndo:words==='undo skip'&&!!skipCheckpoint()});
     if(timeCheck)return timeCheck;
     if(skipping)return {ok:false,message:'Finishing the current time change.'};
     if(state.ended||!state.villagers.length)return {ok:false,message:'Rewind to a living village first.'};
+    if(words==='inspire')return {ok:true,message:''};
     if(words==='recall settlers')return {ok:!!state.local?.daughter?.members.length,message:'All settlers are already home.'};
-    return validateCommand(state,words==='spawn people 5'?'spawn people':words,state.day,true);
+    const check=validateCommand(state,words==='spawn people 5'?'spawn people':words,state.day,true);
+    if(speech&&!availableCommands(state).includes(check.command))return {ok:true,message:''};
+    return check;
   },
   changeSpeed:speed=>{state=setSpeed(state,speed);render();},
   openNotebook:()=>notebook.open(),closeNotebook:()=>notebook.close(),notebookOpen:()=>notebook.isOpen(),

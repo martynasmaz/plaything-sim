@@ -6,6 +6,12 @@ import {boneMealRecipe,boneFertilizerReady,applyBoneFertilizer,boneSoilRules,cer
 import {preserveBirthHistory} from './village-events.js';
 import {supplementaryWoodland,inBuildingPatch,treeKeptClear,buildingPatches} from './ecology.js';
 import {householdHutSite} from './settlement-layout.js';
+import {rememberResources} from './resources.js';
+import {unsafeRiverWeather} from './climate.js';
+import {paintingRecipe,paintingReady,paintMemory,discoverPainting,paintingSite} from './paintings.js';
+import {inspirationBonus} from './inspiration.js';
+import {developmentEnabled,fieldRecipe,fieldPlanningReady} from './development.js';
+import {advanceDryingRacks} from './provisions.js';
 /* Personal knowledge in the live homestead. A workday is one decision and one
    finished activity. Stocks and finished objects are physical, knowledge isn't. */
 export const materialSites={
@@ -175,7 +181,7 @@ const projects=[
   ['pottery','Fired pottery','clay','mouldable',['shaping'],{clay:2,wood:1},'storage jar',surplus],
   ['charcoal','Charcoal production','wood','rigid',[],{wood:2},'charcoal',surplus],
   ['kilns','Improved kilns','clay','mouldable',['pottery','charcoal'],{clay:2,charcoal:1},'efficient kiln',surplus],
-  ...cerealRecipes,boneMealRecipe,...magicRecipes
+  ...cerealRecipes,boneMealRecipe,fieldRecipe,paintingRecipe,...magicRecipes
 ];
 export const practices=Object.fromEntries(projects.map(([id,name,skill,property,requires,cost,product,need])=>[id,{
   id,name,skill,property,requires,cost,product,need,work:3,
@@ -184,7 +190,7 @@ export const practices=Object.fromEntries(projects.map(([id,name,skill,property,
 for(const [id] of magicRecipes){practices[id].magic=magicActions[id]?'ritual':'tool';practices[id].action=magicActions[id];}
 practices.bonemeal.action='Grind bones for fertilizer';
 practices.milling.action='Grind wheat into flour';practices.breadmaking.action='Bake hearth flatbread';
-export function availablePractices(s){return Object.values(practices).filter(r=>!r.magic||magicEnabled(s));}
+export function availablePractices(s){return Object.values(practices).filter(r=>(!r.magic||magicEnabled(s))&&(r.id!=='fieldplanning'||s.config.learning?.development?.fields||s.local.first.fieldplanning!==undefined));}
 const byActivity={};
 for(const recipe of Object.values(practices))(byActivity[recipe.skill]??=[]).push(recipe);
 byActivity.berries.push(practices.bonemeal); // Farmers can connect field observations with earlier crushing work.
@@ -215,6 +221,7 @@ export function initSettlement(s){
   s.local.stock.herbs??=0;
   s.local.stock.boneMeal??=0;
   initCereals(s);
+  rememberResources(s);
   s.local.deposits.wheat??=16;
   s.local.deposits.quernStone??=24;
   preserveBirthHistory(s.local);
@@ -246,12 +253,13 @@ export function valleySeason(s,day=s.day){
   const strength=((hash^(hash>>>16))>>>0)/4294967296;
   const name=['Spring','Summer','Autumn','Winter'][index%4];
   const age=offset%length;
-  const frozen=name==='Winter'&&strength>.64&&age>=Math.ceil(length*.25)&&age<length-2&&
+  const frozen=name==='Winter'&&(s.local?.climate?s.local.climate.frostRun>=3:strength>.64&&age>=Math.ceil(length*.25)&&age<length-2)&&
     !(s.lastUsed.flood>=day-1);
   return {name,strength,frozen,age,index};
 }
 export function beginSettlementDay(s){
   initSettlement(s);
+  advanceDryingRacks(s);
   const regrowth=s.local.regrowthSince??={};
   for(const [tree,day] of Object.entries(s.local.stumps||{})){
     if(treeKeptClear(s,worldTrees(s)[tree],campSites)){regrowth[tree]=s.day;continue;}
@@ -277,6 +285,7 @@ export function beginSettlementDay(s){
 export function takeDeposit(s,key,wanted){
   const amount=Math.max(0,Math.min(Math.floor(s.local.deposits[key]),wanted));
   s.local.deposits[key]-=amount;
+  if(amount>0)(s.local.discoveredResources??={food:true,wood:true})[key]=true;
   return amount;
 }
 function recordWork(v,skill,site){
@@ -305,9 +314,11 @@ export function planLessons(s,order){
   for(const student of available){
     const p=student.practice;
     if(booked.has(student.id)||assessNeeds(s,student).level<2||student.warmth<40||p.energy<35||student.fullness<36||s.food<s.villagers.length*2)continue;
-    const teachable=(id,t)=>!p.known[id]&&(!(medical(student)||medical(t))||practices[id]?.magic&&
+    const teachable=(id,t)=>!!practices[id]&&!p.known[id]&&
+      (id!=='fieldplanning'||practices[id].requires.every(key=>p.known[key])&&fieldPlanningReady(s,student)&&affordable(s,practices[id].cost))&&(!(medical(student)||medical(t))||practices[id]?.magic&&
       (student.healerApprentice?.mentorId===t.id||t.healerApprentice?.mentorId===student.id))&&
       (id!=='bonemeal'||boneFertilizerReady(s,student))&&
+      (id!=='cavepainting'||practices[id].requires.every(key=>p.known[key])&&p.properties.includes(practices[id].property)&&practices[id].need(s,student)&&affordable(s,practices[id].cost))&&
       (!cerealIds.includes(id)||practices[id].requires.every(key=>p.known[key])&&practices[id].need(s,student)&&affordable(s,practices[id].cost))&&
       (!practices[id]?.magic||magicEnabled(s)&&magicPrerequisites(s,student,id)&&
       practices[id].requires.every(key=>p.known[key])&&p.properties.includes(practices[id].property));
@@ -325,7 +336,8 @@ export function planLessons(s,order){
   }
 }
 function useTechnique(s,v,r,report){
-  const p=v.practice,stationary=['charcoal','drying','herbalism','bonemeal','milling','breadmaking'].includes(r.id)||r.magic==='ritual';
+  const p=v.practice,stationary=['charcoal','drying','herbalism','bonemeal','milling','breadmaking','cavepainting'].includes(r.id)||r.magic==='ritual';
+  if(r.id==='cavepainting'&&!r.requires.every(id=>p.known[id]))return false;
   if(cerealIds.includes(r.id)&&!r.requires.every(id=>p.known[id]))return false;
   if(r.id==='quernmaking'&&hasLocalQuern(s,v))return false;
   if(r.id==='wheatgrowing')return false; // Knowledge is used when sowing real seed, not as an object.
@@ -333,14 +345,15 @@ function useTechnique(s,v,r,report){
   if(r.id==='bonemeal'&&!r.requires.every(id=>p.known[id]))return false;
   if(p.gear[r.product]&&!stationary)return false;
   if(['baskets','hafting','housing'].includes(r.id)&&!p.gear.cord)return false;
-  if(r.id==='drying'&&s.food-s.local.dried<4)return false;
+  if(r.id==='drying'&&(s.food-s.local.dried<4||unsafeRiverWeather(s)))return false;
   if(r.id==='charcoal'&&s.local.stock.charcoal>=4)return false;
   if(r.id==='herbalism'&&(v.herbalist||(v.remedyDoses||0)>=2))return false;
   if(['fishtraps','fishspears','angling','fishingpoles','fishnets'].includes(r.id)&&!r.requires.every(id=>p.known[id]))return false;
   if(!r.need(s,v)||!affordable(s,r.cost)||(r.heat&&!s.fireLit))return false;
   const ritual=r.magic==='ritual'?planRitual(s,v,r.id):null;
   if(r.magic==='ritual'&&!ritual)return false;
-  spend(s,r.cost);if(r.magic!=='ritual'&&r.id!=='bonemeal'&&!['milling','breadmaking'].includes(r.id))p.gear[r.product]=true;
+  spend(s,r.cost);if(r.magic!=='ritual'&&r.id!=='bonemeal'&&!['milling','breadmaking','cavepainting'].includes(r.id))p.gear[r.product]=true;
+  if(r.id==='cavepainting')paintMemory(s,v);
   if(cerealIds.includes(r.id))finishCerealProduct(s,v,r.id,report);
   if(ritual)performRitual(s,v,ritual,report);
   if(r.id==='fishtraps'){v.fishTrap=true;delete v.reedBundle;}
@@ -353,12 +366,29 @@ function useTechnique(s,v,r,report){
   if(r.id==='herbalism')v.remedyDoses=(v.remedyDoses||0)+1;
   if(r.id==='pottery'){const jars=p.gear['efficient kiln']?2:1;s.local.jars+=jars;v.spareJars=(v.spareJars||0)+jars;}
   if(!p.used[r.id])settlementEvent(s,v.name+' first used '+r.name.toLowerCase()+'.');
-  p.used[r.id]=(p.used[r.id]||0)+1;p.known[r.id]+=1;
+  p.used[r.id]=(p.used[r.id]||0)+1;if(p.known[r.id])p.known[r.id]+=1;
+  (p.made??={})[r.id]=(p.made[r.id]||0)+1;
   return true;
 }
 export function makePracticeProduct(s,v,id,report){
   const r=practices[id];
   return !!r&&!!v.practice.known[id]&&useTechnique(s,v,r,report);
+}
+export function makeSupervisedFood(s,v,id,report){
+  const r=practices[id];
+  if(!['milling','breadmaking'].includes(id)||v.practice.known[id]||!r.requires.every(key=>v.practice.known[key]))return false;
+  const teacher=s.villagers.find(t=>t!==v&&(t.tribe||0)===(v.tribe||0)&&
+    t.practice.known[id]&&t.practice.used[id]&&t.practice.supervisedDay!==s.day&&
+    report.actions.some(a=>a.id===t.id&&a.action===r.action));
+  if(!teacher||!useTechnique(s,v,r,report))return false;
+  teacher.practice.supervisedDay=s.day;
+  const p=v.practice,key='practice-'+id;p.lessons[key]=(p.lessons[key]||0)+1;
+  if(p.lessons[key]>=s.config.learning.lessonDays){
+    p.known[id]=1;settlementEvent(s,v.name+' learned '+r.name+' by working beside '+teacher.name+'.');
+  }
+  v.lastCompanyDay=teacher.lastCompanyDay=s.day;
+  (report.apprenticeships??=[]).push({id:v.id,teacher:teacher.id,technique:id});
+  return true;
 }
 function experiment(s,v,die,onlyCereals=false){
   const p=v.practice,c=s.config.learning;
@@ -366,8 +396,8 @@ function experiment(s,v,die,onlyCereals=false){
   // prerequisites whether curiosity or a wish for competence motivates them.
   const candidates=[...(byActivity[p.lastSkill]||[])].sort((a,b)=>Number(cerealIds.includes(b.id))-Number(cerealIds.includes(a.id)));
   for(const r of candidates){
-    if(onlyCereals&&!cerealIds.includes(r.id))continue;
-    if(!canExperiment(s,v,r)||die>c.experimentChance+p.curiosity*20)continue;
+    if(onlyCereals&&!cerealIds.includes(r.id)&&r.id!=='fieldplanning')continue;
+    if(!canExperiment(s,v,r)||die>c.experimentChance+p.curiosity*20+inspirationBonus(s,v,r))continue;
     spend(s,r.cost);p.energy-=c.workCost;p.currentSkill=r.skill;
     p.progress[r.id]=(p.progress[r.id]||0)+c.progress*(.55+p.curiosity+(p.skills[r.skill]||0)/16);
     if(p.progress[r.id]>=r.work){
@@ -413,6 +443,18 @@ export function practiceWork(s,v,die,report){
     return 'Teach '+practices[lesson.id].name;
   }
   if(s.food<s.villagers.length*1.5||v.age<s.config.life.adult)return null;
+  if(p.known.fieldplanning&&fieldPlanningReady(s,v)&&!p.gear['plot markers']){
+    if(s.local.stock.fibre<1&&s.local.deposits.fibre>=1&&!unsafeRiverWeather(s)&&!valleySeason(s).frozen){
+      s.local.stock.fibre+=takeDeposit(s,'fibre',1);p.energy-=c.workCost;recordWork(v,'fibre','fibre');return 'Collect fibre';
+    }
+    if(useTechnique(s,v,practices.fieldplanning,report)){p.energy-=c.workCost;return 'Make plot markers';}
+  }
+  if(motive.level>=3&&(s.local.reaches||0)>0&&(s.day+v.id)%11===0){
+    const painting=discoverPainting(s,v,practices);
+    if(painting){p.energy-=c.workCost;p.site='rock face';
+      if(report)(report.paintingVisits??=[]).push({id:v.id,painting:painting.id,site:painting.site});
+      settlementEvent(s,v.name+' found a painting of '+painting.motif+'.');return 'Read a rock painting';}
+  }
   if(p.known.wheatgrowing&&s.farming.wheatHarvests&&!hasLocalQuern(s,v)&&s.toolkit?.includes('hammer stone')&&
     s.local.stock.quernStone<1&&s.local.deposits.quernStone>=1){
     s.local.stock.quernStone+=takeDeposit(s,'quernStone',1);p.energy-=c.workCost;
@@ -462,7 +504,7 @@ export function practiceWork(s,v,die,report){
       const r=practices[id];
       if(p.known[id]&&!p.gear[r.product]&&r.requires.every(key=>p.known[key])&&r.need(s,v)){
         const material=Object.keys(r.cost).find(key=>['fibre','stone'].includes(key)&&s.local.stock[key]<r.cost[key]&&s.local.deposits[key]>=1);
-        if(material&&!(material==='fibre'&&s.lastUsed.flood>=s.day-1)&&!(material==='fibre'&&valleySeason(s).frozen)){
+        if(material&&!(material==='fibre'&&(s.lastUsed.flood>=s.day-1||valleySeason(s).frozen||unsafeRiverWeather(s)))){
           s.local.stock[material]+=takeDeposit(s,material,3);p.energy-=c.workCost;
           recordWork(v,material,material);return 'Collect '+material;
         }
@@ -477,7 +519,7 @@ export function practiceWork(s,v,die,report){
   if(motive.level!==4){const attempt=experiment(s,v,die);if(attempt)return attempt;}
   if(die>48||s.food<s.villagers.length*2)return null;
   const materials=Object.keys(materialSites).filter(k=>!['berries','wood','fish','wheat','quernStone'].includes(k)&&Math.floor(s.local.deposits[k])>0&&
-    (!['fibre','clay'].includes(k)||s.lastUsed.flood!==s.day-1));
+    (!['fibre','clay'].includes(k)||s.lastUsed.flood<s.day-1&&!unsafeRiverWeather(s)||s.lastUsed.flood===undefined&&!unsafeRiverWeather(s)));
   materials.sort((a,b)=>Number(p.properties.includes(materialSites[a].property))-Number(p.properties.includes(materialSites[b].property))||
     s.local.stock[a]-s.local.stock[b]);
   const material=materials[0];

@@ -1,3 +1,5 @@
+import {pantryCapacity,seasonalPantryTarget,grainReserveTarget} from './provisions.js';
+import {developmentEnabled} from './development.js';
 // Coarse ground bone is a delayed soil amendment, independent of magic.
 export const boneSoilRules={bonesPerBatch:4,mealPerBatch:2,harvests:3,yieldBonus:2};
 export function boneFertilizerReady(s,v){
@@ -57,17 +59,17 @@ export function cerealReady(s,v,id){
     ((p.farmingDays||0)>=3||(p.skills.berries||0)>=8);
   if(id==='quernmaking')return cerealDependencies(s,'saddle quern')&&(p.skills.stone||0)>=2;
   if(id==='milling')return hasLocalQuern(s,v)&&s.local.stock.wheat>=wheatRules.batch+seedReserve(s)&&
-    s.local.stock.flour<Math.max(12,s.villagers.length*2);
+    s.local.stock.flour<(developmentEnabled(s,'planning')?Math.min(grainCapacity(s),grainReserveTarget(s)):Math.max(12,s.villagers.length*2));
   if(id==='breadmaking')return cerealDependencies(s,'hearth flatbread')&&s.fireLit&&
     (cerealCamp(s,v)===0||s.campFires?.[v.tribe||0])&&s.wood>s.config.settlement.fuelReserve&&
-    s.food<=s.config.limits.stock-wheatRules.bread&&s.local.stock.flour>=wheatRules.batch;
+    s.food<=(developmentEnabled(s,'planning')?pantryCapacity(s):s.config.limits.stock)-wheatRules.bread&&s.local.stock.flour>=wheatRules.batch;
   return false;
 }
 export function seedReserve(s){return Math.max(2,s.farming.plots.length);}
 export const cerealRecipes=[
   ['wheatgrowing','Wheat cultivation','berries','perishable',['gathering','crude tools'],{wheat:1},'wheat cultivation',(s,v)=>cerealReady(s,v,'wheatgrowing')],
   ['quernmaking','Saddle-quern making','stone','fractures',['wheatgrowing','crude tools'],{quernStone:1},'saddle quern',(s,v)=>cerealReady(s,v,'quernmaking')],
-  ['milling','Whole-grain milling','berries','perishable',['quernmaking'],{wheat:wheatRules.batch},'wholemeal flour',(s,v)=>cerealReady(s,v,'milling')],
+  ['milling','Whole-grain milling','berries','perishable',['gathering','crude tools'],{wheat:wheatRules.batch},'wholemeal flour',(s,v)=>cerealReady(s,v,'milling')],
   ['breadmaking','Hearth flatbread','berries','perishable',['milling','fire tending'],{flour:wheatRules.batch,wood:1},'hearth flatbread',(s,v)=>cerealReady(s,v,'breadmaking')]
 ];
 export function gatherWildWheat(s,v,report){
@@ -89,15 +91,23 @@ export function finishCerealProduct(s,v,id,report){
 }
 // Food work can proceed while reserves are low, but never at the expense of
 // urgent hunger, cold, illness or exhaustion. No multi-day task locks an actor.
-export function cerealFoodWork(s,v,make,report){
+export function cerealFoodWork(s,v,make,report,supervise=()=>false){
   if(cerealCamp(s,v)===null||v.age<s.config.life.adult||v.illnessDays||
     v.fullness<s.config.needs.emergencyFullness||v.warmth<s.config.needs.warmUpBelow||
     v.health<s.config.needs.unwellBelow||v.practice.energy<32)return null;
-  if(s.food>=Math.min(s.config.limits.stock-wheatRules.bread,s.villagers.length*4))return null;
+  if(s.food>=(developmentEnabled(s,'planning')?seasonalPantryTarget(s):Math.min(s.config.limits.stock-wheatRules.bread,s.villagers.length*4)))return null;
   for(const [id,action] of [['breadmaking','Bake hearth flatbread'],['milling','Grind wheat into flour']]){
-    if(v.practice.known[id]&&make(s,v,id,report))return action;
+    if(v.practice.known[id]&&make(s,v,id,report)||supervise(s,v,id,report))return action;
   }
   return null;
+}
+export function shouldSowWheat(s,v){
+  if(!v.practice.known.wheatgrowing||s.local.stock.wheat<1)return false;
+  const wheat=s.farming.plots.filter((x,i)=>x!==null&&s.farming.crops[i]==='wheat').length;
+  // Keep kitchen gardens while the slower grain/processing chain establishes.
+  const processors=s.villagers.some(p=>(p.tribe||0)===(v.tribe||0)&&p.practice?.known.milling);
+  return wheat<(processors?Math.max(1,Math.floor(s.farming.plots.length/2)):1)&&
+    (!s.farming.wheatHarvests||s.local.stock.wheat<(developmentEnabled(s,'planning')?Math.min(grainCapacity(s),grainReserveTarget(s)):grainReserveTarget(s)));
 }
 export function cerealStudyReady(s,v){
   return cerealIds.some(id=>!v.practice.known[id]&&cerealReady(s,v,id))||

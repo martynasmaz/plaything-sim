@@ -1,6 +1,8 @@
 import {communityOf,communityMembers,foodDaysFor,packLocalMeals,familyFoodReady} from './provisions.js';
 import {assessNeeds} from './needs.js';
 import {campSites,practices,canExperiment,finishOrdinaryWork,settlementEvent} from './practices.js';
+import {developmentEnabled} from './development.js';
+import {unsafeRiverWeather} from './climate.js';
 
 export const neighborRules={interval:12,partnerInterval:6,meetingsToJoin:2,familyContactDays:20,rations:3};
 export function communitySite(s,key){return key==='east'?s.local.daughter?.site:campSites[key];}
@@ -97,8 +99,24 @@ export function neighborWork(s,order,report,{unrelated,readyToInvent}){
     }
     return busy;
   }
-  if(s.day<(l.nextNeighborDay||0)||s.settlementWork<c.settlement.shelterWork||s.lastUsed.flood>=s.day-1||report.weather==='cold')return busy;
-  const available=order.filter(v=>safe(v)&&!v.practice.lessonToday&&!v.campJourney&&foodDaysFor(s,v)>=3&&
+  if(developmentEnabled(s,'families')&&s.settlementWork>=c.settlement.shelterWork&&report.weather!=='cold'&&!unsafeRiverWeather(s)){
+    const young=order.filter(v=>safe(v)&&!v.herbalist&&!v.practice.lessonToday&&!v.campJourney&&!(v.childrenBorn||0)&&
+      s.day-(v.lastCourtshipDay??-100)>=14&&foodDaysFor(s,v)>=2&&
+      !communityMembers(s,communityOf(s,v)).some(p=>p.household===v.household&&compatible(v,p)));
+    const first=young.find(v=>young.some(p=>p!==v&&compatible(v,p)&&communityOf(s,v)===communityOf(s,p)));
+    const peer=first&&young.find(p=>p!==first&&compatible(first,p)&&communityOf(s,first)===communityOf(s,p));
+    if(peer){
+      const former=[first.household,peer.household];
+      for(const household of former){const others=s.villagers.filter(p=>p!==first&&p!==peer&&p.household===household);if(others.length)for(const p of others)p.household=others[0].id;}
+      first.household=peer.household=first.id;
+      for(const [a,b] of [[first,peer],[peer,first]]){a.lastCourtshipDay=a.lastCompanyDay=s.day;a.happiness=Math.min(100,a.happiness+c.needs.restHappiness);perform(a,'Spend time with '+b.name,communitySite(s,communityOf(s,a)),true);}
+      (l.communication??={}).localHouseholds=(l.communication.localHouseholds||0)+1;
+      settlementEvent(s,first.name+' and '+peer.name+' began a household after spending time together. They still need food and sleeping places for children.');return busy;
+    }
+  }
+  const familyUrgency=developmentEnabled(s,'families')&&order.some(v=>safe(v)&&fertile(v)&&!localPartner(v));
+  if(s.day<(l.nextNeighborDay||0)&&!familyUrgency||s.settlementWork<c.settlement.shelterWork||s.lastUsed.flood>=s.day-1||report.weather==='cold'||developmentEnabled(s,'families')&&unsafeRiverWeather(s))return busy;
+  const available=order.filter(v=>safe(v)&&!v.practice.lessonToday&&!v.campJourney&&foodDaysFor(s,v)>=(familyUrgency?2:3)&&
     s.day-(v.lastNeighborDay??-100)>=r.partnerInterval);
   const choices=[];
   for(const traveler of available.filter(v=>!v.herbalist&&canLeaveCare(s,v)))for(const host of available){

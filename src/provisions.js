@@ -1,7 +1,39 @@
+import {developmentEnabled} from './development.js';
 // Finished food only. Main-valley camps share the main pantry, but a camp's
 // preserved stores can feed its own residents, not an inaccessible neighbor.
 export function communityOf(s,v){return s.local?.daughter?.members.includes(v.id)?'east':v.tribe||0;}
 export function communityMembers(s,community){return s.villagers.filter(v=>communityOf(s,v)===community);}
+export function pantryCapacity(s){
+  const baskets=(s.textiles||[]).filter(name=>name.endsWith('basket')).length;
+  return s.config.limits.stock+(s.local?.jars||0)*12+baskets*6+(s.pottery?.jars||0)*12+(s.fireTools?.includes('burn bowl')?8:0);
+}
+export function seasonalReserveDays(s){
+  if(!developmentEnabled(s,'planning'))return 4;
+  const length=s.config.learning.seasonLength,offset=Math.max(0,s.day-1+(s.local.seasonOffset||0)),season=Math.floor(offset/length)%4,age=offset%length;
+  if(season===0)return 3;
+  if(season===1)return 6;
+  if(season===2)return 10;
+  return Math.max(3,Math.min(10,(length-age)*.65));
+}
+export function seasonalPantryTarget(s){
+  const home=s.villagers.filter(v=>communityOf(s,v)!=='east').length;
+  const saved=Object.values(s.local?.campStores||{}).reduce((n,r)=>n+(r.saved||0),0);
+  const desired=Math.ceil(home*s.config.needs.fullnessLoss/s.config.needs.mealFullness*seasonalReserveDays(s));
+  // Keep the established founding buffer until real winter stores can take
+  // over. Reducing fresh reserves before preservation exists starves the
+  // first winter and prevents the tools/skills needed for later expansion.
+  const freshFloor=saved>=home*4&&s.local.lastWinterFood?home*2:home*4;
+  return Math.min(pantryCapacity(s),Math.max(freshFloor,desired-saved));
+}
+export function grainReserveTarget(s){
+  return Math.max(12,Math.ceil(s.villagers.length*(developmentEnabled(s,'planning')?Math.max(2,seasonalReserveDays(s)/2):2)));
+}
+export function advanceDryingRacks(s){
+  if(!developmentEnabled(s,'planning'))return;
+  for(const v of s.villagers)s.local.campStores[v.tribe||0]??={saved:0,rack:0};
+  if((s.local.climate?.mm||0)>=10)return;
+  for(const store of Object.values(s.local.campStores)){store.saved+=store.rack||0;store.rack=0;}
+}
 export function foodDaysFor(s,v){
   const community=communityOf(s,v),members=communityMembers(s,community),count=Math.max(1,members.length);
   if(community==='east')return s.local.daughter.food/count+(v.travelMeals||0);
@@ -47,7 +79,8 @@ export function recordFoodBalance(s,report){
   const now=foodLedger(s),hungry={home:false,east:false};
   for(const v of s.villagers)if(v.fullness<s.config.needs.recoveryMin&&!report.meals.includes(v.id))hungry[communityOf(s,v)==='east'?'east':'home']=true;
   const history=s.local.provisionHistory??=[];
-  history.push({day:s.day,home:now.home-report.foodAtDawn.home,east:now.east-report.foodAtDawn.east,hungryHome:hungry.home,hungryEast:hungry.east});
+  const investment=developmentEnabled(s,'families')&&report.actions?.some(a=>/^(Build |Prepare a field|Clear field|Make saddle quern)/.test(a.action));
+  history.push({day:s.day,home:now.home-report.foodAtDawn.home,east:now.east-report.foodAtDawn.east,hungryHome:hungry.home,hungryEast:hungry.east,...(investment?{investment:true}:{})});
   if(history.length>7)history.shift();
   if(s.local.season==='Winter'){
     const index=Math.floor(Math.max(0,s.day-1+(s.local.seasonOffset||0))/s.config.learning.seasonLength);
@@ -71,11 +104,19 @@ export function familyFoodStable(s,mother){
   // A newly loaded or founded world first gathers a week's actual evidence.
   // Stable reserves are sufficient: a full store cannot accumulate more food.
   // A declining stockpile still delays another child until the budget recovers.
-  if(history.length>=7&&history.reduce((sum,day)=>sum+day[east?'east':'home'],0)<0)return false;
+  if(history.length>=7&&history.reduce((sum,day)=>sum+day[east?'east':'home'],0)<0&&
+    !(developmentEnabled(s,'families')&&history.some(day=>day.investment)&&foodDaysFor(s,mother)>=4))return false;
   return true;
 }
 export function winterStorageTarget(s,residents,pantryCapacity){
   const minimum=residents.length*4,winter=s.local?.lastWinterFood;
+  if(developmentEnabled(s,'planning')&&residents.some(v=>v.practice?.known.drying&&((v.practice.winterFoodDays||0)>=7||(v.practice.used.drying||0)>=3))){
+    const demand=residents.length*s.config.needs.fullnessLoss/s.config.needs.mealFullness;
+    const homeCount=Math.max(1,s.villagers.filter(v=>communityOf(s,v)!=='east').length);
+    const expected=winter?.homePerPerson!==undefined?winter.homePerPerson*residents.length:(winter?.home||0)*residents.length/homeCount;
+    const allowance=winter?Math.max(0,demand-expected)*s.config.learning.seasonLength:demand*10;
+    return Math.max(minimum,Math.ceil(allowance));
+  }
   const planner=residents.some(v=>v.age>=s.config.life.adult&&v.practice?.known.drying&&(v.practice.winterFoodDays||0)>=7);
   if(!planner||!winter)return minimum;
   const homeCount=Math.max(1,s.villagers.filter(v=>communityOf(s,v)!=='east').length),share=residents.length/homeCount;

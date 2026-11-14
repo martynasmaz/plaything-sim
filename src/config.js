@@ -96,7 +96,8 @@ export const CONFIG = {
 // for replaying the reference simulations.
 export const HOMESTEAD_RULES = {
   start:{food:38,wood:22},
-  learning:{abundance:1,seasonLength:20,spoilage:.035,workCost:8,restGain:24,experimentChance:48,progress:1,lessonDays:2},
+  learning:{abundance:1,seasonLength:20,spoilage:.035,workCost:8,restGain:24,experimentChance:48,progress:1,lessonDays:2,
+    development:{fields:true,planning:true,roles:true,families:true}},
   power: null, // The playable homestead has unrestricted divine powers.
   settlement: { bedsPerHut: 3, shelterWork: 5, bridgeWork: 10, fuelReserve: 3, shelterBonus: 4 },
   birth: { consecutiveDays: 3, healthyParentsOnly: true },
@@ -116,5 +117,8 @@ export function makeConfig(overrides = {}) {
     }
     return result;
   }
-  return merge(CONFIG, overrides);
+  const result=merge(CONFIG, overrides);
+  // Explicit weather distributions remain useful for controlled experiments.
+  if(result.learning)result.learning.climate??=overrides.weather?.chances?false:'kaunas';
+  return result;
 }

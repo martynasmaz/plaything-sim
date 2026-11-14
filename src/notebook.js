@@ -2,8 +2,12 @@ import {practices,availablePractices} from './practices.js';
 import {healerMedicineStore} from './healer-home.js';
 import {magicEnabled,magicPracticeIds} from './magic.js';
 import {observeEvents} from './village-events.js';
+import {visibleResources} from './resources.js';
+import {createFamilyTree} from './genealogy.js';
+import {createEncyclopedia} from './encyclopedia.js';
+import {drawRockRecord} from './paintings-view.js';
 
-const resourceIcons={food:'🍲',wood:'🪵',stone:'🪨',fibre:'🌾',clay:'🏺',resin:'💧',hide:'🦌',charcoal:'🔥',fish:'🐟',berries:'🫐',boneMeal:'🌱',wheat:'🌾',flour:'🥣',quernStone:'🪨'};
+const resourceIcons={food:'🍲',wood:'🪵',stone:'🪨',fibre:'🌾',clay:'🏺',resin:'💧',hide:'🦌',charcoal:'🔥',fish:'🐟',berries:'🫐',bone:'🦴',herbs:'🌿',boneMeal:'🌱',wheat:'🌾',flour:'🥣',quernStone:'🪨'};
 
 function notebookResources(host,title){
   const heading=document.createElement('h3'),grid=document.createElement('dl');
@@ -12,6 +16,7 @@ function notebookResources(host,title){
   host.append(heading,grid);
   const cells=new Map();
   return amounts=>{
+    for(const [key,value] of cells)value.parentNode.hidden=!(key in amounts);
     for(const [key,amount] of Object.entries(amounts)){
       if(!cells.has(key)){
         const row=document.createElement('div'),label=document.createElement('dt');
@@ -22,6 +27,7 @@ function notebookResources(host,title){
         row.append(label,value);grid.append(row);cells.set(key,value);
       }
       const value=cells.get(key),count=Math.floor(amount);
+      value.parentNode.hidden=false;
       value.textContent=String(count);
       value.classList.toggle('empty-stock',count===0);
     }
@@ -40,6 +46,10 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
   const census=document.createElement('details');
   census.innerHTML='<summary><strong>Population history</strong></summary><p data-totals></p><p data-conditions></p><p data-period-note></p><div style="overflow:auto;max-height:270px"><table style="width:100%;text-align:center"><caption>Natural population change by period</caption><thead><tr><th>Days</th><th>Births</th><th>Deaths</th><th>Old age¹</th><th>Net</th><th>Rate²</th></tr></thead><tbody></tbody></table></div><small>¹ Deaths involving old age, included in Deaths. ² Births per 100 villagers per day, based on the population at the start of each day. Net is births minus deaths; spawned settlers are not births.</small>';
   el('nav').after(census);
+  const familyTree=createFamilyTree(panel,readState);
+  const encyclopedia=createEncyclopedia(panel,readState);
+  const paintings=document.createElement('details');paintings.hidden=true;paintings.innerHTML='<summary>Discovered rock paintings</summary><div></div>';panel.append(paintings);
+  let paintingKey='';
   function drawCensus(s){
     const h=s.local.populationHistory||[];
     census.querySelector('[data-totals]').textContent='Lifetime: '+s.stats.births+' births · '+s.stats.deaths+' deaths · '+s.villagers.length+' alive.';
@@ -63,6 +73,7 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
     .notebook-supplies h3{color:#485038;font: bold 16px Georgia,serif;margin:14px 0 6px;border-bottom:1px solid #ab9978;padding-bottom:4px}
     .notebook-supplies dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(114px,100%),1fr));gap:5px;margin:0}
     .notebook-supplies dl>div{display:flex;align-items:center;justify-content:space-between;gap:4px;background:#f8efd9;border:1px solid #cebea1;border-radius:4px;padding:5px 7px}
+    .notebook-supplies dl>div[hidden]{display:none}
     .notebook-supplies dt{display:flex;align-items:center;gap:5px;font-size:14px}
     .notebook-supplies dt span{width:19px;text-align:center;font-family:"Segoe UI Emoji",sans-serif}
     .notebook-supplies dd{margin:0;font-weight:bold;font-variant-numeric:tabular-nums}
@@ -83,6 +94,16 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
   function draw(){
     if(!panel.open)return;
     const s=readState(),l=s.local;if(!l)return;
+    familyTree.draw();
+    encyclopedia.draw();
+    const found=(l.paintings||[]).filter(p=>p.discoveredDay!==undefined);
+    paintings.hidden=!found.length;
+    const nextPaintingKey=s.seed+'/'+found.map(p=>p.id+':'+p.readBy.length).join('/');
+    if(nextPaintingKey!==paintingKey){paintingKey=nextPaintingKey;paintings.querySelector('div').replaceChildren(...found.map(p=>{
+      const row=document.createElement('p'),image=document.createElement('canvas'),caption=document.createElement('span');image.width=180;image.height=100;image.style.width='130px';image.style.display='block';
+      const g=image.getContext('2d');g.fillStyle='#e3d7b6';g.fillRect(0,0,180,100);drawRockRecord(g,90,83,p);
+      caption.textContent=p.motif+' · painted by '+p.authorName+' on day '+p.day+' · '+p.readBy.length+' readers. Pictures offer clues; they do not replace practice.';row.append(image,caption);return row;
+    }));}
     if(census.open)drawCensus(s);
     el('[data-clock]').textContent='Seed '+s.seed+' · Day '+s.day+' · '+l.season+' · '+s.villagers.length+' people · '+(s.speed?s.speed+'×':'paused');
     const stocks={food:s.food,wood:s.wood,...l.stock};
@@ -100,8 +121,8 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
       li.textContent=use?item+' · Day '+use.day+' · '+use.name+' · '+use.action+' ('+use.result+')':item+' · awaiting practice';
       return li;
     }));
-    showStores(stocks);
-    showDeposits(l.deposits);
+    showStores(visibleResources(s,stocks));
+    showDeposits(visibleResources(s,l.deposits));
     winterStores.textContent=Object.entries(l.campStores||{}).filter(([,r])=>r.built)
       .map(([camp,r])=>'Camp '+(Number(camp)+1)+' · '+r.rack+' drying · '+r.saved+' / '+(24*(r.racks||1)+12*(r.tradeJars||0))+' stored for winter').join(' | ');
     const soil=Object.entries(s.farming.boneSoil||{}).filter(([,f])=>f.remaining>0);
@@ -111,6 +132,7 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
       ' harvest trips · '+(s.farming.querns?.length||0)+' saddle querns · '+(s.farming.breadBaked||0)+
       ' bread portions baked. Grain and flour need processing; finished bread enters the food stores.';
     const post=l.daughter;
+    if(s.farming.known)winterStores.textContent+=' Fields: '+s.farming.plots.length+(s.farming.expansion?' · new field '+s.farming.expansion.work+'/3 prepared':'')+'.';
     if(post?.members.length){
       const names=s.villagers.filter(v=>post.members.includes(v.id)).map(v=>v.name);
       winterStores.textContent+=' Eastern '+(post.settled?'village':'outpost')+' · '+names.join(', ')+
@@ -151,6 +173,9 @@ export function createNotebook(readState,changeSpeed,{isPhone=()=>false}={}){
       }
       if(friends.length)el('[data-person]').textContent+=' Remembers help from '+friends.map(p=>p.name).join(', ')+'.';
       if(v.axeWear>=4)el('[data-person]').textContent+=' Axe needs repair.';
+      if(v.practice.inspiration?.until>=s.day)el('[data-person]').textContent+=' Wonders: '+v.practice.inspiration.question+' Inspired through day '+v.practice.inspiration.until+'.';
+      if(v.practice.occupation)el('[data-person]').textContent+=' Usual work: '+v.practice.occupation.role+' since day '+v.practice.occupation.since+'. Immediate needs still come first.';
+      if(v.huntsWon)el('[data-person]').textContent+=' Successful game hunts: '+v.huntsWon+'.';
       if(family.length)el('[data-person]').textContent+=' Household: '+family.join(', ')+'.';
       if(v.parentNames)el('[data-person]').textContent+=' Parents: '+v.parentNames.join(' and ')+'.';
       if(v.parentCommunities)el('[data-person]').textContent+=' Family connections: '+v.parentCommunities.map(c=>c==='east'?'the eastern village':'camp '+(c+1)).join(' and ')+'.';
