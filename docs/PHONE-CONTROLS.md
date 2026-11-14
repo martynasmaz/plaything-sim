@@ -28,7 +28,7 @@ and still require recorded history. Failed operations keep the previous action.
 Speak and the manually typed magic unlock do not become repeat buttons.
 Inspection cards move above the button so that neither covers the other.
 
-The phone day/phase display uses a dark bordered backing, bright outlined type,
+The phone day/phase display uses a compact, content-sized dark backing, bright outlined type,
 and larger text sized in screen pixels so portrait displays do not shrink it
 with the world map. Paused time is stated explicitly. The clock fits beside the
 phone's pause and home buttons.

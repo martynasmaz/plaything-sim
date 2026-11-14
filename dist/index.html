@@ -6674,19 +6674,23 @@ function boulder(g,x,y,size){
   line(g,-10,-11,-1,-15,'#c3bea1',2);line(g,1,-14,6,-8,'#646956',1.5);g.restore();
 }
 function skyClock(g,day,hour,speed,darkness,twilight,phone=false,width=390){
-  const radius=phone?25:32,orbit=phone?17:22;
+  const radius=phone?21:32,orbit=phone?13:22;
   // Dawn is the left horizon, noon the top, dusk the right, and midnight the bottom.
   const angle=(hour-12)*Math.PI/12-Math.PI/2;
   const sunX=orbit*Math.cos(angle),sunY=orbit*Math.sin(angle);
   const phase=hour>=5&&hour<7?'Dawn':hour>=17&&hour<19?'Dusk':hour>=7&&hour<17?'Daylight':'Night';
+  const status=speed===0&&phone?'Paused':speed>1?phase+' · '+speed+'×':phase;
   g.save();
-  const panelWidth=Math.min(220,width-144);
+  let panelWidth=0;
   if(phone){
-    g.save();g.shadowColor='#0c170c99';g.shadowBlur=7;g.shadowOffsetY=2;
-    g.fillStyle='#253222f5';g.strokeStyle='#cdb789';g.lineWidth=1.5;
-    g.beginPath();g.roundRect(8,8,panelWidth,64,8);g.fill();g.stroke();g.restore();
+    g.font='bold 17px Georgia';const dayWidth=g.measureText('Day '+day).width;
+    g.font='bold 13px Georgia';const statusWidth=g.measureText(status).width;
+    panelWidth=Math.min(Math.ceil(Math.max(dayWidth,statusWidth))+64,width-144);
+    g.save();g.shadowColor='#0c170c77';g.shadowBlur=4;g.shadowOffsetY=1;
+    g.fillStyle='#253222e8';g.strokeStyle='#bfa574b8';g.lineWidth=1;
+    g.beginPath();g.roundRect(8,8,panelWidth,50,7);g.fill();g.stroke();g.restore();
   }
-  g.translate(phone?36:49,phone?39:49);
+  g.translate(phone?32:49,phone?33:49);
   ellipse(g,0,1,radius+3,radius+3,'#382f27');
   ellipse(g,0,0,radius,radius,'#d8bc86');
   g.save();
@@ -6712,14 +6716,13 @@ function skyClock(g,day,hour,speed,darkness,twilight,phone=false,width=390){
   g.quadraticCurveTo(-3,0,6*Math.cos(Math.PI*.4),6*Math.sin(Math.PI*.4));
   g.closePath();g.fillStyle='#fff1cd';g.fill();g.strokeStyle='#625b51';g.lineWidth=1;g.stroke();
   g.restore();
-  g.textAlign='left';g.fillStyle=phone?'#fff3d6':'#f4e6c7';g.font=phone?'bold 18px Georgia':'15px Georgia';
-  const labelX=phone?37:43,textWidth=phone?panelWidth-78:undefined;
-  if(phone){g.strokeStyle='#13200f';g.lineWidth=2.5;g.strokeText('Day '+day,labelX,-4,textWidth);}
-  if(phone)g.fillText('Day '+day,labelX,-4,textWidth);else g.fillText('Day '+day,labelX,-3);
-  g.font=phone?'bold 14px Georgia':'12px Georgia';
-  const status=speed===0&&phone?'Paused':speed>1?phase+' · '+speed+'×':phase;
-  if(phone)g.strokeText(status,labelX,17,textWidth);
-  if(phone)g.fillText(status,labelX,17,textWidth);else g.fillText(status,labelX,13);
+  g.textAlign='left';g.fillStyle=phone?'#fff3d6':'#f4e6c7';g.font=phone?'bold 17px Georgia':'15px Georgia';
+  const labelX=phone?30:43,textWidth=phone?panelWidth-64:undefined;
+  if(phone){g.strokeStyle='#13200f';g.lineWidth=2;g.strokeText('Day '+day,labelX,-2,textWidth);}
+  if(phone)g.fillText('Day '+day,labelX,-2,textWidth);else g.fillText('Day '+day,labelX,-3);
+  g.font=phone?'bold 13px Georgia':'12px Georgia';
+  if(phone)g.strokeText(status,labelX,16,textWidth);
+  if(phone)g.fillText(status,labelX,16,textWidth);else g.fillText(status,labelX,13);
   g.restore();
 }
 function riverBands(width,height,baseWidth,flood,kaunas){
