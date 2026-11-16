@@ -1,3 +1,4 @@
+import {tributaryBridgeRules,bridgeUpgradeRules,stoneFordRules} from './river.js';
 // Draw only physical work recorded in the NPC project. All titles and progress
 // belong to clearing.js's corner inspection card, including unfinished frames.
 function healerStroke(g,x,y,ex,ey,color,width=1.5){
@@ -6,8 +7,67 @@ function healerStroke(g,x,y,ex,ey,color,width=1.5){
 function healerOval(g,x,y,rx,ry,color){
   g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fillStyle=color;g.fill();
 }
+// Vegetation and fallen thatch reflect saved neglect, never a new building.
+export function drawWeatheredSite(g,x,y,severity=1){
+  g.save();g.translate(x,y);g.lineCap='round';
+  for(let i=0;i<5+severity*2;i++){
+    const dx=(i*17%55)-27,dy=(i*7%11)-2;
+    healerStroke(g,dx,dy,dx-3,dy-5-severity*2,'#667245',1.7);
+    healerStroke(g,dx,dy,dx+3,dy-4-severity,'#8d965c',1.3);
+  }
+  for(let i=0;i<severity+1;i++)healerStroke(g,-17+i*15,2,-9+i*15,4,'#79684a',2);
+  g.restore();
+}
+export function drawStoneFord(g,banks,project){
+  const count=project?.spent?.stone||0;if(!count||!project?.work)return;
+  const total=Math.max(count,stoneFordRules[project.channel||'main'].stone),[x,y]=project.bank==='right'?banks.right:banks.left,
+    [ex,ey]=project.bank==='right'?banks.left:banks.right;
+  g.save();
+  for(let i=0;i<Math.min(count,40);i++){
+    const t=(i+.5)/total,px=x+(ex-x)*t,py=y+(ey-y)*t;
+    healerOval(g,px,py+1,5.5,3,'#525e53');healerOval(g,px-.5,py-1,5,3,'#929a84');
+  }
+  g.restore();
+}
+export function drawTributaryBridge(g,banks,project){
+  if(!project?.work)return;
+  const [left,y]=banks.left,[right]=banks.right,span=right-left,end=left+span*(project.completedDay!==undefined?1:Math.min(1,project.work/tributaryBridgeRules.work));
+  g.save();g.lineCap='round';
+  for(const dy of [-8,8])healerStroke(g,left,y+dy,end,y+dy,'#503d2a',4);
+  for(let x=left;x<end;x+=6)healerStroke(g,x,y-11,x+.5,y+11,'#ae8b57',4.5);
+  if((project.spent?.stone||0)>=1)healerOval(g,left,y+9,6,3,'#989b89');
+  if((project.spent?.stone||0)>=2)healerOval(g,right,y+9,6,3,'#989b89');
+  const railEnd=left+span*Math.min(1,(project.railWork||0)/bridgeUpgradeRules.railWork);
+  if(project.railWork)for(const dy of [-10,10]){
+    for(let x=left;x<=railEnd;x+=18)healerStroke(g,x,y+dy,x,y+dy-13,'#725434',2.7);
+    healerStroke(g,left,y+dy-13,railEnd,y+dy-13,'#c3a36b',2.2);
+  }
+  for(let i=0;i<Math.min(bridgeUpgradeRules.braceWork,project.braceWork||0);i++){
+    const x=left+span*(Math.floor(i/2)+.5)/3,side=i%2?1:-1;
+    healerStroke(g,x,y+side*20,x,y+side*11-5,'#624b31',3.5);
+    healerStroke(g,x-7,y+side*11,x,y+side*20,'#99784d',2.7);
+  }
+  g.restore();
+}
 // Raised floor, enclosed woven walls and a wide thatched roof distinguish
 // food storage from a dwelling. Each stage corresponds to paid NPC work.
+export function drawEarthenOven(g,x,y,project,finished=false,lit=false){
+  if(!project?.work)return;
+  g.save();g.translate(x,y);
+  healerOval(g,0,3,23,7,'#26362240');
+  if((project.spent?.stone||0)>0)for(const dx of [-16,-7,3,13])healerOval(g,dx,0,7,4,'#969283');
+  else healerOval(g,0,0,22,5,'#9b754b');
+  if(project.work>=2){
+    g.fillStyle='#ac8256';g.beginPath();g.moveTo(-19,0);g.bezierCurveTo(-23,-35,23,-35,19,0);g.closePath();g.fill();
+    healerStroke(g,-19,0,19,0,'#634e36',2);
+  }
+  if(project.work>=3){
+    g.fillStyle=finished?'#342b22':'#806145';g.beginPath();g.moveTo(-8,0);g.lineTo(-8,-9);g.arc(0,-9,8,Math.PI,0);g.lineTo(8,0);g.fill();
+    healerStroke(g,-14,-13,-10,-20,'#cfac78',1.3);healerStroke(g,6,-24,13,-17,'#cfac78',1.3);
+  }
+  if(finished&&lit){healerOval(g,0,-3,6,2,'#ed9d35');healerStroke(g,-4,-3,4,-3,'#f6d47b',1.5);}
+  g.restore();
+}
 export function drawGranary(g,x,y,project,food=0,finished=false){
   if(!project?.work)return;
   g.save();g.translate(x,y);g.lineCap='round';
@@ -67,7 +127,13 @@ export function drawBridgeImprovements(g,x,top,bottom,project){
 // circular footprint in the same oblique view used for the rest of the village.
 export function drawHouseholdHut(g,x,y,hut={},scale=1.75,lit=false){
   g.save();g.translate(x,y);g.scale(scale,scale);
-  if(hut.ruined){healerStroke(g,-14,0,11,-4,'#42362e',4);g.restore();return;}
+  if(hut.ruined){
+    healerOval(g,0,3,24,5,'#25332233');
+    g.fillStyle=hut.decayedDay!==undefined?'#817654':'#685444';
+    g.beginPath();g.moveTo(-20,0);g.lineTo(-11,-10);g.lineTo(2,-5);g.lineTo(18,1);g.closePath();g.fill();
+    healerStroke(g,-14,0,11,-4,'#42362e',3);healerStroke(g,-17,0,-16,-12,'#766346',2.5);
+    healerStroke(g,12,1,15,-7,'#766346',2.5);g.restore();return;
+  }
   const round=['round hut','dome hut'].includes(hut.shape);
   const wall=hut.scorched?'#685444':hut.wall==='drystone wall'?'#797766':hut.wall==='mud wall'?'#a27a53':'#ad946d';
   healerOval(g,0,3,24,5,'#25332233');
@@ -86,6 +152,10 @@ export function drawHouseholdHut(g,x,y,hut={},scale=1.75,lit=false){
   if(hut.shape==='pyramidal hut')healerStroke(g,6,-30,-5,-12,'#69583f',2);
   g.fillStyle='#4b3b2b';g.fillRect(-4,-11,8,round?14:11);
   if(hut.ondol){healerStroke(g,10,0,15,0,'#655247',3);if(lit)healerStroke(g,11,0,14,0,'#b97943',1);}
+  if(hut.foodStore?.work){
+    g.fillStyle='#765636';g.fillRect(10,-3,9,5);
+    if(hut.foodStore.work>=2){g.fillStyle='#b69962';g.fillRect(9,-4,11,2);}
+  }
   g.restore();
 }
 export function drawHealerHome(g,x,y,remedies=0,occupied=true,project){

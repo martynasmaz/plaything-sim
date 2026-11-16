@@ -1,12 +1,13 @@
 import {husbandryIds,livestockBuildingRules} from './husbandry.js';
 import {granaryFinished} from './storage.js';
-import {bridgeUpgradeRules} from './river.js';
+import {ovenFinished} from './hearths.js';
+import {bridgeUpgradeRules,tributaryBridgeBuilt,stoneFordBuilt} from './river.js';
 export function rememberCollection(s,recipes){
   if(!s.local)return;
   const made=s.local.collection??={};
   const mark=name=>{if(name)made[name]??={recordedDay:s.day};};
   for(const key of ['toolkit','fireTools','textiles'])for(const name of s[key]||[])mark(name);
-  for(const h of s.hutDetails||[]){mark(h.shape);mark(h.wall);if(h.chimney)mark('chimney');if(h.ondol)mark('ondol');}
+  for(const h of s.hutDetails||[]){if(!h)continue;mark(h.shape);mark(h.wall);if(h.chimney)mark('chimney');if(h.ondol)mark('ondol');}
   for(const v of s.villagers){
     mark(v.gear);if(v.fishTrap)mark('fish trap');
     for(const name of Object.keys(v.practice?.gear||{}))if(v.practice.gear[name])mark(name);
@@ -31,8 +32,13 @@ export function rememberCollection(s,recipes){
   if(s.farming.fieldHistory?.length)mark('cultivated field');
   if(Object.values(s.local.campStores||{}).some(r=>r.built))mark('drying rack');
   if(Object.values(s.local.campStores||{}).some(granaryFinished))mark('raised granary');
+  if(Object.values(s.local.ovens||{}).some(ovenFinished)){mark('earthen oven');mark('Earthen bread ovens');}
   if((s.local.bridgeUpgrade?.railWork||0)>=bridgeUpgradeRules.railWork)mark('bridge handrails');
   if((s.local.bridgeUpgrade?.braceWork||0)>=bridgeUpgradeRules.braceWork)mark('braced footbridge');
+  if(tributaryBridgeBuilt(s))mark('tributary footbridge');
+  if(stoneFordBuilt(s,'main'))mark('main stone ford');if(stoneFordBuilt(s,'tributary'))mark('tributary stone ford');
+  if((s.local.tributaryBridge?.railWork||0)>=bridgeUpgradeRules.railWork)mark('tributary handrails');
+  if((s.local.tributaryBridge?.braceWork||0)>=bridgeUpgradeRules.braceWork)mark('braced tributary bridge');
   const livestock=s.local.husbandry;
   if(livestock){
     if(livestock.pens.some(p=>p.enclosureDay!==undefined||p.work>=livestockBuildingRules.enclosure.work)){mark('animal enclosure');mark('Livestock enclosures');}

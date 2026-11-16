@@ -7,6 +7,8 @@
 // - "begin anew": ask, confirm within 10 s, timeout, other input, reload.
 // Screenshot: reports/save-begin-anew.png
 import assert from 'node:assert/strict';
+import {archivedCheck} from './archived-check.mjs';
+archivedCheck(import.meta.url,'Use node scripts/browser-smoke.mjs for current browser saves, plus tests/save.test.js for serialization edge cases.');
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import path from 'node:path';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');

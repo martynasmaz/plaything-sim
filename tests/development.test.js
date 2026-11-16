@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createState,stepDay,prepareField,preservationWork,shouldPlanHut,foodCapacity} from '../src/sim.js';
-import {HOMESTEAD_RULES} from '../src/config.js';
+import {HOMESTEAD_RULES} from './fixtures/eating-profile.js';
 import {practices,canExperiment,makePracticeProduct,worldTrees,standingTree,buildingSiteTree} from '../src/practices.js';
 import {fieldSite,recordOccupations} from '../src/development.js';
 import {advanceDryingRacks,seasonalPantryTarget,familyFoodStable,winterStorageTarget} from '../src/provisions.js';
 import {cerealReady,cerealFoodWork} from '../src/farming.js';
 import {serialize,deserialize} from '../src/save.js';
+import {familyMotivationRules} from '../src/family-motivation.js';
 const rules={...HOMESTEAD_RULES,traits:false,illness:{chance:0},weather:{chances:{normal:100,rain:0,drought:0,cold:0}}};
 function village(){
   const s=createState(rules,4);s.day=100;s.food=90;s.wood=50;s.fireKnown=s.fireLit=true;s.settlementWork=5;
@@ -28,13 +29,16 @@ test('field layout requires crop experience, tools, personal prerequisites and r
   const wood=s.wood,fibre=s.local.stock.fibre;assert.ok(makePracticeProduct(s,v,'fieldplanning',report()));
   assert.equal(s.wood,wood-1);assert.equal(s.local.stock.fibre,fibre-1);assert.ok(v.practice.gear['plot markers']);assert.equal(s.farming.plots.length,4);
 });
-test('founding work remains unchanged until the community has experience of a winter',()=>{
+test('winter-dependent development leaves founding work unchanged when independent family ambitions are disabled',()=>{
   const off={fields:false,planning:false,roles:false,families:false};
+  const familyEnabled=familyMotivationRules.enabled;familyMotivationRules.enabled=false;
+  try{
   let before=createState({...rules,learning:{...rules.learning,development:off}},4),after=createState(rules,4);
   for(let i=0;i<80&&!before.ended;i++){
     before=stepDay(before);after=stepDay(after);
     for(const key of ['food','wood','villagers','stats','farming'])assert.deepEqual(after[key],before[key],key+' on day '+after.day);
   }
+  }finally{familyMotivationRules.enabled=familyEnabled;}
   const s=village(),v=s.villagers[0];delete s.local.lastWinterFood;v.practice.known.fieldplanning=1;v.practice.gear['plot markers']=true;
   assert.equal(prepareField(s,v,report()),false);assert.equal(v.practice.known.fieldplanning,1,'loaded discoveries are retained');
 });
@@ -74,7 +78,9 @@ test('seasonal food targets use actual storage capacity and brewing no free meal
   const s=village(),v=s.villagers[0];s.local.jars=10;s.villagers=s.villagers.slice(0,2);s.food=110;s.local.stock.flour=16;s.farming.querns=[{camp:0}];v.practice.known.milling=v.practice.known.breadmaking=1;
   assert.ok(foodCapacity(s)>100);assert.ok(cerealReady(s,v,'breadmaking'),'expanded capacity permits baking above the former 92-food cutoff');
   s.day=55;s.food=0;const autumn=seasonalPantryTarget(s);s.day=5;assert.ok(autumn>seasonalPantryTarget(s));
-  v.fullness=0;assert.equal(cerealFoodWork(s,v,makePracticeProduct,report()),null);assert.equal(s.food,0);
+  const flour=s.local.stock.flour,wood=s.wood;v.fullness=0;
+  assert.equal(cerealFoodWork(s,v,makePracticeProduct,report()),'Bake hearth flatbread');assert.equal(s.food,16);
+  assert.equal(s.local.stock.flour,flour-8);assert.equal(s.wood,wood-2,'a hungry baker still pays for real ingredients and fuel');
 });
 test('odd-sized villages preserve whole portions and never consume a fractional cache as a full meal',()=>{
   const s=village(),v=s.villagers[0];s.villagers=s.villagers.slice(0,5);v.practice.known.drying=1;
@@ -96,7 +102,7 @@ test('a regular farmer harvests ripe food before sowing another bed',()=>{
   const next=stepDay(s);assert.equal(next.lastDay.actions[0].action,'Harvest');assert.equal(next.lastDay.plantings,0);
 });
 test('housing is anticipated and investment tolerance cannot excuse recent hunger or an ordinary food deficit',()=>{
-  const s=village(),mother=s.villagers[1];s.villagers=s.villagers.slice(0,5);assert.ok(shouldPlanHut(s));
+  const s=village(),mother=s.villagers[1];assert.ok(shouldPlanHut(s));
   s.local.provisionHistory=Array.from({length:7},()=>({home:-1,hungryHome:false}));assert.equal(familyFoodStable(s,mother),false);
   s.local.provisionHistory[0].investment=true;assert.equal(familyFoodStable(s,mother),true);
   s.local.provisionHistory[1].hungryHome=true;assert.equal(familyFoodStable(s,mother),false);

@@ -1,11 +1,15 @@
-import {communityOf,communityMembers,foodDaysFor,packLocalMeals,familyFoodReady} from './provisions.js';
+import {communityOf,communityMembers,foodDaysFor,packLocalMeals,familyFoodReady,pantryCapacity} from './provisions.js';
+import {storageCapacity} from './storage.js';
 import {assessNeeds} from './needs.js';
-import {campSites,practices,canExperiment,finishOrdinaryWork,settlementEvent} from './practices.js';
+import {campSites,practices,canExperiment,finishOrdinaryWork,settlementEvent,teachingPriority} from './practices.js';
 import {developmentEnabled} from './development.js';
 import {unsafeRiverWeather} from './climate.js';
 import {canLeaveLivestock} from './husbandry.js';
+import {familyPlanningFoundation} from './family-planning.js';
+import {rememberFamilyContact} from './family-motivation.js';
+import {beginWorkJourney,journeyPossible} from './journeys.js';
 
-export const neighborRules={interval:12,partnerInterval:6,meetingsToJoin:2,familyContactDays:20,rations:3};
+export const neighborRules={interval:12,partnerInterval:6,meetingsToJoin:2,familyContactDays:20,rations:3,reliefBatch:6,donorReserve:3};
 export function communitySite(s,key){return key==='east'?s.local.daughter?.site:campSites[key];}
 const label=key=>key==='east'?'the eastern village':'camp '+(key+1);
 function dependentChildren(s,v){return s.villagers.filter(child=>child.age<s.config.life.adult&&child.carers?.includes(v.id));}
@@ -27,8 +31,9 @@ export function rememberFamilyVisit(s,a,b){
   }
 }
 function shareTechnique(s,teacher,student,ready){
-  const recipe=Object.values(practices).find(r=>!r.magic&&r.id!=='herbalism'&&teacher.practice.known[r.id]&&teacher.practice.used[r.id]>0&&
-    canExperiment(s,student,r)&&ready(s,r.product));
+  const recipe=Object.values(practices).filter(r=>!r.magic&&r.id!=='herbalism'&&teacher.practice.known[r.id]&&teacher.practice.used[r.id]>0&&
+    (r.id==='familyplanning'?!student.practice.known[r.id]&&familyPlanningFoundation(s,student):
+      canExperiment(s,student,r)&&ready(s,r.product))).sort((a,b)=>teachingPriority(s,b.id,teacher)-teachingPriority(s,a.id,teacher))[0];
   if(!recipe)return false;
   const key='neighbor:'+teacher.id+'-'+recipe.id,p=student.practice;
   p.lessons[key]=(p.lessons[key]||0)+1;
@@ -36,6 +41,32 @@ function shareTechnique(s,teacher,student,ready){
   p.known[recipe.id]=1;
   settlementEvent(s,student.name+' learned '+recipe.name+' during visits with '+teacher.name+' from another village.');
   return true;
+}
+export function packVisitRelief(s,traveler,host,trip,report){
+  if(trip.reliefRations)return 0;
+  const recipient=communityOf(s,traveler),donor=communityOf(s,host);
+  if(recipient===donor||foodDaysFor(s,traveler)-(traveler.travelMeals||0)>=2)return 0;
+  const source=donor==='east'?s.local.daughter:s.local.campStores?.[donor],key=donor==='east'?'food':'saved';
+  if(!source)return 0;
+  const reserve=communityMembers(s,donor).length*neighborRules.donorReserve;
+  const amount=Math.floor(Math.min(neighborRules.reliefBatch,(source[key]||0)-reserve));
+  if(amount<=0)return 0;
+  source[key]-=amount;traveler.travelMeals=(traveler.travelMeals||0)+amount;trip.reliefRations=amount;
+  trip.reliefPreserved=key==='saved';
+  (report.relief??=[]).push({traveler:traveler.id,donor,recipient,packed:amount});return amount;
+}
+function deliverVisitRelief(s,traveler,trip,report){
+  const amount=Math.min(trip.reliefRations||0,traveler.travelMeals||0);if(!amount)return;
+  const camp=communityOf(s,traveler),store=camp==='east'?s.local.daughter:s.local.campStores?.[camp];
+  // A fresh gift may feed the pantry, but travel cannot turn it into preserved food.
+  const localRoom=camp==='east'?amount:trip.reliefPreserved?Math.max(0,storageCapacity(store)-(store?.saved||0)-(store?.rack||0)):0;
+  const local=Math.min(amount,localRoom),key=camp==='east'?'food':'saved';if(local)store[key]=(store[key]||0)+local;
+  const shared=camp==='east'?0:Math.min(amount-local,Math.max(0,pantryCapacity(s)-s.food));
+  if(shared)s.food+=shared;
+  const delivered=local+shared;traveler.travelMeals-=delivered;
+  const stats=s.local.communication??={};stats.foodShared=(stats.foodShared||0)+delivered;
+  (report.relief??=[]).push({traveler:traveler.id,recipient:camp,delivered});
+  if(delivered)settlementEvent(s,traveler.name+' brought '+delivered+' provisions home from a neighboring community.');
 }
 // A visit has a paid outward journey, a paired meeting, and a return journey
 // (or joining the host's household). No new people or buildings are created.
@@ -59,12 +90,18 @@ export function neighborWork(s,order,report,{unrelated,readyToInvent}){
     // An urgent need releases the workday to the ordinary needs planner.
     if(traveler.illnessDays||traveler.fullness<35||traveler.warmth<40||traveler.health<50||traveler.practice.energy<22){cancel();return busy;}
     if(trip.stage==='return'){
+      if(!beginWorkJourney(s,traveler,communitySite(s,trip.from),report,'return from visit',{oneWay:true})){busy.add(traveler.id);return busy;}
       perform(traveler,'Return from a neighboring village',communitySite(s,trip.from));
+      deliverVisitRelief(s,traveler,trip,report);
       delete traveler.campJourney;delete l.campVisit;l.nextNeighborDay=s.day+r.interval;return busy;
     }
-    if(!safe(host)||!safe(traveler)||!canLeaveCare(s,traveler)||host.practice.lessonToday||communityOf(s,host)!==trip.to||s.lastUsed.flood>=s.day-1){
+    const seekingPartner=compatible(traveler,host)&&(!localPartner(traveler)||!localPartner(host));
+    if(!safe(host)||!safe(traveler)||!canLeaveCare(s,traveler)||host.practice.lessonToday&&!seekingPartner||communityOf(s,host)!==trip.to||s.lastUsed.flood>=s.day-1){
       trip.stage='return';perform(traveler,'Rest after the village journey',communitySite(s,trip.to),true);return busy;
     }
+    const meetingSite=host.herbalist?.home||communitySite(s,trip.to);
+    if(!beginWorkJourney(s,traveler,meetingSite,report,'visit meeting',{oneWay:true})){busy.add(traveler.id);return busy;}
+    if(!beginWorkJourney(s,host,meetingSite,report,'host visit')){busy.add(host.id);perform(traveler,'Wait for a village meeting',meetingSite,true);return busy;}
     const stats=l.communication??={meetings:0,householdMoves:0,lessons:0,crossVillageBirths:0};
     for(const [person,peer,from,to] of [[traveler,host,trip.from,trip.to],[host,traveler,trip.to,trip.from]]){
       const contacts=person.practice.neighbors??={},contact=contacts[peer.id]??={name:peer.name,from,to,meetings:0};
@@ -73,11 +110,13 @@ export function neighborWork(s,order,report,{unrelated,readyToInvent}){
       person.happiness=Math.min(c.limits.need,person.happiness+c.needs.restHappiness);
     }
     stats.meetings=(stats.meetings||0)+1;
+    rememberFamilyContact(s,traveler,host,1);
     stats.lessons=(stats.lessons||0)+Number(shareTechnique(s,traveler,host,readyToInvent))+Number(shareTechnique(s,host,traveler,readyToInvent));
+    packVisitRelief(s,traveler,host,trip,report);
     report.neighborMeeting={traveler:traveler.id,host:host.id,from:trip.from,to:trip.to};
     const acquainted=traveler.practice.neighbors[host.id].meetings>=r.meetingsToJoin;
     const interested=compatible(traveler,host)&&(!localPartner(traveler)||!localPartner(host)||!(traveler.childrenBorn||0)||!(host.childrenBorn||0));
-    const canJoin=acquainted&&interested&&!traveler.herbalist&&!host.herbalist&&!dependentChildren(s,traveler).length&&!dependentChildren(s,host).length&&familyFoodReady(s,host);
+    const canJoin=!trip.reliefRations&&acquainted&&interested&&!traveler.herbalist&&!host.herbalist&&!dependentChildren(s,traveler).length&&!dependentChildren(s,host).length&&familyFoodReady(s,host);
     if(canJoin){
       // Leave the old household's remaining occupants together. This changes
       // residence at the place actually visited, never a map-wide teleport.
@@ -117,7 +156,7 @@ export function neighborWork(s,order,report,{unrelated,readyToInvent}){
   }
   const familyUrgency=developmentEnabled(s,'families')&&order.some(v=>safe(v)&&fertile(v)&&!localPartner(v));
   if(s.day<(l.nextNeighborDay||0)&&!familyUrgency||s.settlementWork<c.settlement.shelterWork||s.lastUsed.flood>=s.day-1||report.weather==='cold'||developmentEnabled(s,'families')&&unsafeRiverWeather(s))return busy;
-  const available=order.filter(v=>safe(v)&&!v.practice.lessonToday&&!v.campJourney&&foodDaysFor(s,v)>=(familyUrgency?2:3)&&
+  const available=order.filter(v=>safe(v)&&(!v.practice.lessonToday||familyUrgency&&fertile(v)&&!localPartner(v))&&!v.campJourney&&foodDaysFor(s,v)>=(familyUrgency?2:3)&&
     s.day-(v.lastNeighborDay??-100)>=r.partnerInterval);
   const choices=[];
   for(const traveler of available.filter(v=>!v.herbalist&&canLeaveCare(s,v)))for(const host of available){
@@ -125,11 +164,12 @@ export function neighborWork(s,order,report,{unrelated,readyToInvent}){
     const contact=traveler.practice.neighbors?.[host.id],courtship=compatible(traveler,host);
     const score=Number(courtship)*20+Number(courtship&&!localPartner(traveler))*40+Number(contact?.meetings===1)*30-
       (traveler.childrenBorn||0)-(host.childrenBorn||0)-Math.hypot(...communitySite(s,from).map((n,i)=>n-communitySite(s,to)[i]))/2000;
-    choices.push({traveler,host,from,to,score});
+    if(journeyPossible(s,traveler,host.herbalist?.home||communitySite(s,to),{oneWay:true}))choices.push({traveler,host,from,to,score});
   }
   choices.sort((a,b)=>b.score-a.score);
   const choice=choices[0];if(!choice||!packLocalMeals(s,choice.traveler,Math.max(0,r.rations-(choice.traveler.travelMeals||0))))return busy;
   const {traveler,host,from,to}=choice;
+  if(!beginWorkJourney(s,traveler,host.herbalist?.home||communitySite(s,to),report,'village visit',{oneWay:true})){busy.add(traveler.id);return busy;}
   trip=l.campVisit={traveler:traveler.id,host:host.id,from,to,stage:'meeting',startedDay:s.day};
   traveler.campJourney={site:[...(host.herbalist?.home||communitySite(s,to))],from,to};
   perform(traveler,'Visit '+host.name+' in '+label(to),traveler.campJourney.site);return busy;

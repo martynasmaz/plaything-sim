@@ -10,7 +10,7 @@ const rules={...HOMESTEAD_RULES,traits:false,illness:{chance:0},
   learning:{...HOMESTEAD_RULES.learning,seasonLength:1000},weather:{chances:{normal:100,rain:0,drought:0,cold:0}}};
 function world(enabled=true){
   let s=createState(rules,4);s.villagers=s.villagers.slice(0,2);s.nextId=3;
-  s.food=90;s.wood=40;s.fireKnown=s.fireLit=true;s.settlementWork=5;s.local.reaches=12;
+  s.food=90;s.wood=40;s.fireKnown=s.fireLit=true;s.settlementWork=15;s.local.reaches=12;
   Object.assign(s.local.stock,{bone:30,fibre:20,herbs:10,charcoal:10,resin:10});
   for(const v of s.villagers){
     v.fullness=v.warmth=v.health=v.happiness=100;v.practice.energy=100;v.gender='female';v.traits=[];
@@ -74,10 +74,15 @@ test('foretelling needs the actual divining bones and outdoor experience, then s
   assert.equal(makePracticeProduct(s,v,'foretelling'),false,'six-day cooldown');
 });
 test('an actual omen reads the existing next-dawn rolls without consuming extra randomness',()=>{
-  const s=world(),v=s.villagers[0];Object.assign(v.practice.known,{bonecasting:1,foretelling:1});v.practice.gear['casting bones']=true;
+  const readyWorld=enabled=>{
+    const s=world(enabled);s.toolkit=['hammer stone','stone blades','digging stick','hand axe','mallet & chisel'];
+    s.fireTools=['fire stick','bow drill','blowpipe','wooden tongs','burn bowl'];
+    for(const v of s.villagers)v.gear='bow';return s;
+  };
+  const s=readyWorld(true),v=s.villagers[0];Object.assign(v.practice.known,{bonecasting:1,foretelling:1});v.practice.gear['casting bones']=true;
   const next=stepDay(s);assert.ok(next.lastDay.magic?.some(r=>r.spell==='foretelling'));
   const omen=next.local.magic.omens.at(-1);assert.equal(omen.forDay,next.day+1);assert.equal(omen.weather,tomorrowWeather(next));
-  const control=stepDay(world(false));assert.equal(next.rng,control.rng);assert.equal(next.traitRng,control.traitRng);
+  const control=stepDay(readyWorld(false));assert.equal(next.rng,control.rng);assert.equal(next.traitRng,control.traitRng);
   const following=stepDay(next);assert.equal(following.lastDay.weather,omen.weather);
 });
 test('personal foretelling identifies the rolled illness target, with a conditional prediction',()=>{

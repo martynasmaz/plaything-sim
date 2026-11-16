@@ -5,16 +5,25 @@ import os from 'node:os';
 import path from 'node:path';
 import {THEME,t,spriteManifest,villagerTextureCandidates,commandLabel} from '../src/theme.js';
 import {COMMAND_WORDS,resolveCommand} from '../src/commands.js';
+import {HOMESTEAD_RULES} from '../src/config.js';
 import {createState as seededState,queueCommand,stepDay,availableCommands,validateCommand} from '../src/sim.js';
 // Alias tests isolate the parser/cooldown rules: fair weather, no natural illness.
 const createState=(o={})=>seededState({version:'v0.1',traits:false,...o,weather:{chances:{normal:100,rain:0,drought:0,cold:0}},illness:{chance:0}});
 import {inlineAssets} from '../scripts/build.mjs';
 // v0.2-only commands (shake off, teach sowing) are checked under v0.2 rules;
 // shake off needs someone ill to be useful.
-const stateFor=id=>{const s=createState(id==='heal'||id==='teach farming'?{version:'v0.2'}:{});if(id==='heal')s.villagers[0].illnessDays=2;return s;};
+const stateFor=id=>{const s=createState(id==='teach all'?HOMESTEAD_RULES:id==='heal'||id==='teach farming'?{version:'v0.2'}:{});if(id==='heal')s.villagers[0].illnessDays=2;return s;};
 const cast=(s,word)=>{const r=queueCommand(s,word);assert.equal(r.ok,true,r.message);return stepDay(r.state);};
 
 describe('Approved command names and shared aliases',()=>{
+  test('every playable command has the display and help copy required by the actual render loop',()=>{
+    const s=seededState(HOMESTEAD_RULES,4);
+    for(const command of availableCommands(s)){
+      assert.equal(typeof t('labels.commandNames.'+command),'string',command);
+      assert.ok(commandLabel(command).length,command);
+      assert.ok(t('help.'+command,{...s.config.commands[command],plots:s.config.farming.plots,damage:s.config.needs.illnessDamage,mood:s.config.needs.illnessHappinessLoss}).length,command);
+    }
+  });
   test('all name/alias pairs (six v0.1, two v0.2) produce precisely the same canonical state and pay once',()=>{
     for(const [id,[name,alias]] of Object.entries(COMMAND_WORDS)){
       const initial=stateFor(id);
@@ -29,7 +38,7 @@ describe('Approved command names and shared aliases',()=>{
   test('each pair has ONE cooldown in either direction, including once-per-run teaching',()=>{
     for(const [id,[name,alias]] of Object.entries(COMMAND_WORDS))for(const [first,second] of [[name,alias],[alias,name]]){
       let s=stateFor(id);s.power=100;s=cast(s,first);s.power=100;
-      const r=queueCommand(s,second);assert.equal(r.ok,false,id);assert.strictEqual(r.state,s);
+      const r=queueCommand(s,second);if(id==='teach all'){assert.equal(r.ok,true,'whole-village teaching can be repeated for later arrivals');continue;}assert.equal(r.ok,false,id);assert.strictEqual(r.state,s);
       assert.equal(s.lastUsed[id],1);assert.equal(s.lastUsed[name],undefined);
       assert.match(r.message,id==='teach fire'||id==='teach farming'?/once per run/:/cooling down/);
     }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createState,setSpeed,advanceTime} from '../src/sim.js';
-import {HOMESTEAD_RULES} from '../src/config.js';
+import {HOMESTEAD_RULES} from './fixtures/eating-profile.js';
 import {finishedDailyActivity,clearingSeconds} from '../src/clearing.js';
 import {serialize,deserialize} from '../src/save.js';
 

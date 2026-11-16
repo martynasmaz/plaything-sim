@@ -5,6 +5,16 @@ import {riverWaterAt,riverBankPoint} from './river.js';
 
 function stockOval(g,x,y,rx,ry,color){g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fillStyle=color;g.fill();}
 function stockLine(g,x,y,a,b,color,width=2){g.beginPath();g.moveTo(x,y);g.lineTo(a,b);g.strokeStyle=color;g.lineWidth=width;g.stroke();}
+// Building artwork, like people and houses, uses drawing units rather than
+// viewport-dependent map distances. Keep the fence, layout and hit area together.
+export const livestockDrawingScale=2;
+export const fodderDrawingScale=1.3;
+export function livestockPenHit(x,y,pen,width,height,tolerance=0){
+  if(pen.dismantledDay!==undefined)return false;
+  const dx=x-pen.site[0]*width/1000,dy=y-pen.site[1]*height/640,k=livestockDrawingScale;
+  return Math.abs(dx)<=37*k+tolerance&&dy>=-32*k-tolerance&&dy<=23*k+tolerance||
+    pen.shelterWork>0&&Math.abs(dx)<=30*k+tolerance&&dy>=-56*k-tolerance&&dy<=-15*k+tolerance;
+}
 export function livestockAppearance(s,animal){
   const growth=Math.max(0,Math.min(1,animal.age/(livestockKinds[animal.species].adult*4*s.config.learning.seasonLength)));
   return {young:growth<1,growthScale:.58+.42*growth};
@@ -16,7 +26,7 @@ function stockNoise(seed,id,salt){
 // Positions use map coordinates, but spacing uses the same drawing units as a
 // villager. Viewport width must never enlarge an animal relative to a person.
 // This is a pure visual layout: no animal, terrain or simulation dice are changed.
-export function livestockLayout(s,{width=1000,height=640,phase=0,keepers=new Map()}={}){
+export function livestockLayout(s,{width=1000,height=640,phase=0,keepers=new Map(),people=[]}={}){
   const h=s.local?.husbandry,result=new Map();if(!h)return result;
   const sx=width/1000,sy=height/640,flood=s.lastUsed.flood===s.day;
   const trees=worldTrees(s).filter((_,id)=>s.local.stumps?.[id]===undefined);
@@ -24,6 +34,12 @@ export function livestockLayout(s,{width=1000,height=640,phase=0,keepers=new Map
   const groups=h.pens.map(p=>({pen:p,site:p.site,animals:villageLivestock(s).filter(a=>a.penId===p.id)}));
   if(h.contacts.herders)groups.push({site:h.regional.site,animals:h.animals.filter(a=>a.location==='regional'&&a.status==='alive')});
   for(const {pen,site,animals} of groups){
+    const gateClear=(x,y,rx,ry)=>{
+      if(!pen||pen.grazing?.day!==s.day)return true;
+      const px=site[0]*sx,py=site[1]*sy,bottom=py+23*livestockDrawingScale;
+      return !(y<bottom+ry&&(Math.abs(x-px)+rx>36*livestockDrawingScale||y-ry<py-22*livestockDrawingScale))&&
+        !(Math.abs(y-bottom)<ry+2&&Math.abs(x-px)+rx>13*livestockDrawingScale-1);
+    };
     const placed=[],nearTrees=trees.filter(t=>Math.abs(t[0]-site[0])<150&&Math.abs(t[1]-site[1])<100);
     const safe=(x,y,rx,ry)=>!Object.values(riverWaterAt(x,y,width,height,flood,s.local.terrain==='kaunas',-rx-3)).some(Boolean)&&
       !nearTrees.some(t=>Math.abs(x-t[0]*sx)<rx+5*t[2]+3&&Math.abs(y-t[1]*sy)<ry+7)&&
@@ -33,18 +49,33 @@ export function livestockLayout(s,{width=1000,height=640,phase=0,keepers=new Map
     for(const animal of ordered){
       const {young,growthScale}=livestockAppearance(s,animal),cow=animal.species==='cattle';
       const rx=(cow?21:16)*growthScale,ry=(cow?10:8)*growthScale;
-      const keeper=keepers.get(animal.keeperId),leading=pen&&pen.careDay===s.day&&keeper&&Math.hypot(keeper[0]-site[0],keeper[1]-site[1])<80;
-      const center=leading?[keeper[0]*sx-24,keeper[1]*sy+7]:[site[0]*sx,site[1]*sy];
+      const keeper=keepers.get(animal.keeperId),leading=pen&&pen.careDay===s.day&&keeper;
+      let center=leading?[keeper[0]*sx-24,keeper[1]*sy+7]:[site[0]*sx,site[1]*sy];
+      if(leading&&pen.grazing?.day===s.day){
+        const hour=6+24*(s.elapsedMs||0)/s.config.dayMs;
+        const delay=ordered.indexOf(animal)*.22;
+        const progress=Math.max(0,Math.min(1,(hour-7-delay)/1.5,(18-hour-delay)/1.5));
+        const gate=[site[0]*sx,site[1]*sy+23*livestockDrawingScale],home=[site[0]*sx,site[1]*sy];
+        const target=[pen.grazing.site[0]*sx,pen.grazing.site[1]*sy];
+        const t=progress;
+        const a=t<.35?home:gate,b=t<.35?gate:target,u=t<.35?t/.35:(t-.35)/.65;
+        center=a.map((x,i)=>x+(b[i]-x)*u);
+      }
       const mother=young?placed.find(p=>p.id===animal.motherId):null;
       let best=null,bestCost=Infinity;
       for(let attempt=0;attempt<240;attempt++){
         const angle=stockNoise(s.seed,animal.id,attempt*2)*Math.PI*2,r=Math.sqrt(stockNoise(s.seed,animal.id,attempt*2+1));
-        const reach=pen?(leading?[44,27]:[Math.max(0,35*sx-rx),Math.max(0,20*sx-ry)]):[Math.max(110,65*sx),Math.max(70,38*sy)];
+        const reach=pen?(leading?[44,27]:[Math.max(0,35*livestockDrawingScale-rx),Math.max(0,20*livestockDrawingScale-ry)]):[Math.max(110,65*sx),Math.max(70,38*sy)];
         const close=mother&&attempt<80;
         const enclosed=pen&&!leading&&!close;
         const x=(close?mother.x:center[0])+(enclosed?stockNoise(s.seed,animal.id,attempt*2)*2-1:Math.cos(angle)*r)*(close?42:reach[0]);
         const y=(close?mother.y:center[1])+(enclosed?stockNoise(s.seed,animal.id,attempt*2+1)*2-1:Math.sin(angle)*r)*(close?28:reach[1]);
-        if(pen&&!leading&&(Math.abs(x-center[0])+rx>36*sx||Math.abs(y-center[1])+ry>22*sx))continue;
+        if(pen&&!leading&&(Math.abs(x-center[0])+rx>36*livestockDrawingScale||Math.abs(y-center[1])+ry>22*livestockDrawingScale))continue;
+        if(leading&&pen.grazing?.day===s.day){
+          const px=site[0]*sx,py=site[1]*sy,bottom=py+23*livestockDrawingScale;
+          if(y<bottom+ry&&(Math.abs(x-px)+rx>36*livestockDrawingScale||y-ry<py-22*livestockDrawingScale))continue;
+          if(Math.abs(y-bottom)<ry+2&&Math.abs(x-px)+rx>13*livestockDrawingScale-1)continue;
+        }
         if(!safe(x,y,rx,ry))continue;
         const cost=placed.reduce((sum,p)=>sum+Math.max(0,1-Math.hypot((x-p.x)/(rx+p.rx+5),(y-p.y)/(ry+p.ry+5))),0);
         if(cost<bestCost){best={id:animal.id,x,y,rx,ry};bestCost=cost;}
@@ -58,8 +89,8 @@ export function livestockLayout(s,{width=1000,height=640,phase=0,keepers=new Map
     // A full pen needs a little settling: random sequential placement alone
     // leaves gaps too small for the last animal even when the enclosure fits it.
     const settle=(p,x,y)=>{
-      if(pen&&!p.leading){x=Math.max(p.center[0]-36*sx+p.rx,Math.min(p.center[0]+36*sx-p.rx,x));y=Math.max(p.center[1]-22*sx+p.ry,Math.min(p.center[1]+22*sx-p.ry,y));}
-      if(safe(x,y,p.rx,p.ry)){p.x=x;p.y=y;}
+      if(pen&&!p.leading){x=Math.max(p.center[0]-36*livestockDrawingScale+p.rx,Math.min(p.center[0]+36*livestockDrawingScale-p.rx,x));y=Math.max(p.center[1]-22*livestockDrawingScale+p.ry,Math.min(p.center[1]+22*livestockDrawingScale-p.ry,y));}
+      if(safe(x,y,p.rx,p.ry)&&(!p.leading||gateClear(x,y,p.rx,p.ry))){p.x=x;p.y=y;}
     };
     for(let pass=0;pass<60;pass++){
       let crowded=false;
@@ -72,8 +103,21 @@ export function livestockLayout(s,{width=1000,height=640,phase=0,keepers=new Map
       if(!crowded)break;
     }
     for(const p of placed){
-      const dx=Math.sin(phase*.16+p.id*2.3)*1.2,dy=Math.cos(phase*.13+p.id)*.7;
-      result.set(p.id,[(p.x+dx)/sx,(p.y+dy)/sy]);
+      let dx=Math.sin(phase*.22+p.id*2.3)*12,dy=Math.sin(phase*.17+p.id)*8;
+      for(const person of people){
+        const ax=p.x-person[0]*sx,ay=p.y-person[1]*sy,d=Math.hypot(ax,ay),range=p.rx+16;
+        if(d>=range)continue;
+        dx+=(d?ax/d:Math.cos(p.id))*12*(1-d/range);dy+=(d?ay/d:Math.sin(p.id))*10*(1-d/range);
+      }
+      // Gentle walking arcs, checked against the same real obstacles and
+      // body footprints as resting positions. Crowded stock takes short steps.
+      for(const fraction of [1,.5,.25,.1,0]){
+        const x=p.x+dx*fraction,y=p.y+dy*fraction;
+        if(pen&&!p.leading&&(Math.abs(x-p.center[0])+p.rx>36*livestockDrawingScale||Math.abs(y-p.center[1])+p.ry>22*livestockDrawingScale))continue;
+        if(!safe(x,y,p.rx,p.ry)||p.leading&&!gateClear(x,y,p.rx,p.ry)||placed.some(q=>q!==p&&Math.hypot((x-q.x)/(p.rx+q.rx+1),(y-q.y)/(p.ry+q.ry+1))<1))continue;
+        p.x=x;p.y=y;break;
+      }
+      result.set(p.id,[p.x/sx,p.y/sy]);
     }
   }
   return result;
@@ -99,15 +143,22 @@ export function drawLivestockAnimal(g,animal,{scale=1,phase=0,young=false,growth
   if(animal.yoked){stockLine(g,5,-14,10,-14,'#b28e56',3);stockLine(g,6,-14,6,-7,'#795a36',1);}
   g.restore();
 }
-export function drawLivestockPen(g,pen,{front=false}={}){
+export function drawLivestockPen(g,pen,{front=false,gateOpen=false}={}){
+  if(pen.dismantledDay!==undefined)return;
   const work=pen.work||0;if(!work&&!pen.clearingWork)return;
   g.save();g.lineCap='round';
   const points=[[-37,-23],[-13,-23],[13,-23],[37,-23],[37,0],[37,23],[13,23],[-13,23],[-37,23],[-37,0]];
   const posts=Math.min(points.length,Math.ceil(work/livestockBuildingRules.enclosure.work*points.length));
   for(let i=0;i<posts;i++){
-    const [x,y]=points[i],isFront=y>=20;if(isFront!==front)continue;
-    stockLine(g,x,y,x,y-9,'#7c603c',2.4);
-    if(work>=livestockBuildingRules.enclosure.work*.5&&i>0){const [px,py]=points[i-1];stockLine(g,px,py-5,x,y-5,'#9d8054',1.7);if(work>=livestockBuildingRules.enclosure.work)stockLine(g,px,py-2,x,y-2,'#9d8054',1.5);}
+    const [x,y]=points[i];
+    if((y>=20)===front)stockLine(g,x,y,x,y-9,'#7c603c',2.4);
+    if(work>=livestockBuildingRules.enclosure.work*.5&&(i>0||posts===points.length)){
+      const [px,py]=points[(i+points.length-1)%points.length];
+      if(gateOpen&&work>=livestockBuildingRules.enclosure.work&&y===23&&py===23&&x===-13&&px===13){
+        if(front){stockLine(g,-13,18,-25,35,'#9d8054',1.7);stockLine(g,-13,21,-25,38,'#9d8054',1.5);}continue;
+      }
+      if((Math.max(y,py)>=20)===front){stockLine(g,px,py-5,x,y-5,'#9d8054',1.7);if(work>=livestockBuildingRules.enclosure.work)stockLine(g,px,py-2,x,y-2,'#9d8054',1.5);}
+    }
   }
   if(!front){
     const roof=(pen.shelterWork||0)/livestockBuildingRules.shelter.work*5;

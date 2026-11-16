@@ -100,6 +100,7 @@ const HOMESTEAD_BASE = {
   learning:{abundance:1,seasonLength:20,spoilage:.035,workCost:8,restGain:24,experimentChance:48,progress:1,lessonDays:2,
     development:{fields:true,planning:true,roles:true,families:true},husbandry:true},
   power: null, // The playable homestead has unrestricted divine powers.
+  commands:{'teach all':{cost:0,cooldown:0}},
   settlement: { bedsPerHut: 3, shelterWork: 5, bridgeWork: 10, fuelReserve: 3, shelterBonus: 4 },
   birth: { consecutiveDays: 3, healthyParentsOnly: true },
   illness: { chance: 9 },

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createState,stepDay} from '../src/sim.js';
-import {HOMESTEAD_RULES} from '../src/config.js';
+import {HOMESTEAD_RULES} from './fixtures/eating-profile.js';
 import {assessNeeds} from '../src/needs.js';
 import {canExperiment,practiceWork,practices} from '../src/practices.js';
 import {serialize,deserialize} from '../src/save.js';
@@ -48,6 +48,7 @@ test('personality changes social rhythm without overriding urgent needs',()=>{
 test('urgent warmth and recovery cannot be replaced by crafting or experiments',()=>{
   const s=calm();for(const v of s.villagers)v.warmth=20;
   const next=stepDay(s);
+  assert.equal(next.lastDay.actions.length,s.villagers.length);
   assert.ok(next.lastDay.actions.every(a=>a.action==='Warm up'));
   const sick=calm();sick.villagers[0].illnessDays=3;
   assert.equal(stepDay(sick).lastDay.actions.find(a=>a.id===1).action,'Rest');
@@ -83,6 +84,7 @@ test('experiments wait for security and retain their material and knowledge prer
 test('competence favors useful repetition while growth gives a new experiment priority',()=>{
   for(const [uses,expected] of [[0,'Make cord'],[3,'Experiment with stone']]){
     const s=calm(),v=s.villagers[0],p=v.practice;
+    s.huts=[0,0]; // No pending housing need to focus their experiments.
     p.known.cordage=1;p.used.cordage=uses;p.lastSkill='stone';p.properties=['fractures'];
     assert.equal(practiceWork(s,v,1),expected);
   }
@@ -91,7 +93,9 @@ test('competence favors useful repetition while growth gives a new experiment pr
 test('safe villagers satisfy belonging through actual company',()=>{
   const s=calm();s.day=8;
   const next=stepDay(s);
-  assert.ok(next.lastDay.actions.every(a=>a.action==='Rest'));
+  assert.equal(next.lastDay.actions.length,s.villagers.length);
+  assert.ok(next.lastDay.actions.every(a=>a.action==='Rest'||a.partner&&a.action.startsWith('Spend time with ')));
+  for(const a of next.lastDay.actions.filter(a=>a.partner))assert.ok(next.lastDay.actions.some(b=>b.id===a.partner&&b.partner===a.id),'companionship is actually paired');
   assert.ok(next.villagers.every(v=>v.lastCompanyDay===next.day&&Object.keys(v.favors).length>0));
 });
 
@@ -103,7 +107,7 @@ test('empty winter gathering grounds lead to warmth and fuel rather than idle st
 });
 
 test('adults can leave an isolated camp to find an unrelated partner',()=>{
-  const s=calm();s.tribeCount=2;s.settlementWork=5;
+  const s=calm();s.tribeCount=2;s.settlementWork=15;s.huts=[1];
   for(const v of s.villagers)v.tribe=v.gender==='male'?0:1;
   let next=stepDay(s);
   assert.equal(next.local.communication?.householdMoves||0,0,'meeting a neighbor takes actual workdays');
@@ -121,10 +125,10 @@ test('births diversify eligible families without allowing siblings to become par
   for(let i=0;i<2;i++){
     s.food=90;s.wood=30;
     for(const v of s.villagers)v.fullness=v.warmth=v.health=v.happiness=100;
-    s=stepDay(s);parents.push(s.villagers.find(v=>v.id===s.lastDay.birth).parents);
+    s=stepDay(s);for(const id of s.lastDay.births)parents.push(s.villagers.find(v=>v.id===id).parents);
   }
-  assert.equal(new Set(parents.map(p=>p[0])).size,2);
-  assert.equal(new Set(parents.map(p=>p[1])).size,2);
+  assert.ok(new Set(parents.map(p=>p[0])).size>=2);
+  assert.ok(new Set(parents.map(p=>p[1])).size>=2);
   const siblings=calm();siblings.config.birth.consecutiveDays=1;
   for(const v of siblings.villagers)v.parents=[100,101];
   assert.equal(stepDay(siblings).lastDay.birth,null);

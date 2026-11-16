@@ -1,7 +1,8 @@
 import {encyclopediaCatalog} from './sim.js';
-import {drawHouseholdHut,drawHealerHome,drawGranary,drawBridgeImprovements} from './settlement-view.js';
+import {drawHouseholdHut,drawHealerHome,drawGranary,drawBridgeImprovements,drawTributaryBridge,drawStoneFord,drawEarthenOven} from './settlement-view.js';
+import {hearthRules} from './hearths.js';
 import {granaryRules} from './storage.js';
-import {bridgeUpgradeRules} from './river.js';
+import {bridgeUpgradeRules,tributaryBridgeRules,stoneFordRules} from './river.js';
 import {drawSaddleQuern,drawWheat} from './farming-view.js';
 import {drawFishingMesh,drawWickerFishingTrap,drawCarriedFishingGear} from './fishing-view.js';
 import {drawRockRecord} from './paintings-view.js';
@@ -90,9 +91,18 @@ export function drawCollectionPicture(g,name){
   else if(/stored hay|compost heap/.test(name)){g.save();g.translate(90,64);g.scale(3,3);drawFodderBundle(g,0,0,{dry:true,compost:name==='compost heap'});g.restore();}
   else if(/fresh milk|milk curds/.test(name)){g.beginPath();g.ellipse(90,60,30,18,0,0,Math.PI*2);g.fillStyle='#a27f52';g.fill();g.beginPath();g.ellipse(90,52,29,12,0,0,Math.PI*2);g.fillStyle='#eee3c7';g.fill();}
   else if(/wool yarn/.test(name))drawWorkbenchObject(g,'cord');
+  else if(/Household planning|household food plan/.test(name)){
+    drawWorkbenchObject(g,'basket');
+    for(let i=0;i<5;i++){g.beginPath();g.arc(54+i*18,88,3,0,Math.PI*2);g.fillStyle='#7b7561';g.fill();}
+  }
   else if(/wool cloth|wool wrap/.test(name)){g.fillStyle='#b8ac8c';g.fillRect(54,29,72,48);for(let y=32;y<76;y+=4){g.beginPath();g.moveTo(54,y);g.lineTo(126,y);g.strokeStyle='#ded2ae';g.lineWidth=1;g.stroke();}}
   else if(/wooden cattle yoke/.test(name)){g.save();g.translate(90,77);drawLivestockAnimal(g,{species:'cattle',id:1,yoked:true},{scale:2.4});g.restore();}
+  else if(/earthen oven/i.test(name))drawEarthenOven(g,90,83,{work:hearthRules.ovenWork},true,true);
   else if(/granary|Raised food storage/.test(name))drawGranary(g,90,85,{work:granaryRules.work,bins:0},80,true);
+  else if(/stone ford|ford layout|Stepping-stone/.test(name))drawStoneFord(g,{left:[25,64],right:[155,64]},
+    {channel:'main',work:6,spent:{stone:12}});
+  else if(/tributary/.test(name))drawTributaryBridge(g,{left:[25,64],right:[155,64]},
+    {work:tributaryBridgeRules.work,railWork:name==='tributary footbridge'?0:4,braceWork:name==='braced tributary bridge'?6:0,spent:{stone:2}});
   else if(/bridge handrails|braced footbridge|bridge lashings|Bridge joinery/.test(name)){
     drawWorkbenchObject(g,'footbridge');drawBridgeImprovements(g,90,28,80,{railWork:4,braceWork:name==='braced footbridge'?6:0});
   }
@@ -125,19 +135,33 @@ export function createEncyclopedia(host,readState){
       needs.textContent='Needs: '+entry.needs.join('; ')+'.'+(!entry.available?' Earlier infrastructure is missing.':'')+(entry.experienced===false?' No villager currently has the required experience and opportunity.':'');
       if(entry.name==='cultivated field')needs.textContent='Needs: an experienced farmer with field-layout knowledge, real plot markers and a digging stick; room for more fields; spare food and fuel. Clear only trees inside the small field patch, then prepare and plant it.';
       if(entry.name==='drying rack')needs.textContent='Needs: a community practising food drying, basic tool knowledge and a worker with wood-working experience. The two construction workdays come before preserving food.';
-      if(entry.name==='raised granary')needs.textContent='Needs: raised-storage knowledge, shelter construction, cordage, wood-working experience, three preserved batches and a need for more storage. Clear a dry site, then build a raised floor, woven walls and thatch. Holds 96 provisions; additional paid bin sets hold 48 each.';
+      if(entry.name==='raised granary')needs.textContent='Needs: raised-storage knowledge, shelter construction, cordage, wood-working experience, three preserved batches and a need for more storage. Clear a dry site, then build a raised floor, woven walls and thatch. Holds '+granaryRules.capacity+' provisions; additional paid bin sets hold '+granaryRules.binCapacity+' each.';
+      if(entry.product==='earthen oven')needs.textContent='Needs: fire tending and clay shaping; practical clay experience plus '+hearthRules.ovenBakesBeforeStudy+' real bake(s) or '+hearthRules.ovenDryingBeforeStudy+' food-drying batches, followed by clay-only trial experiments. Villagers collect samples, choose a dry site and build a clay floor and dome. A finished local oven halves baking fuel; charcoal or spare wood can heat it.';
       if(entry.name==='bridge handrails')needs.textContent='Needs: a completed footbridge, personal bridge-joinery knowledge, shelter and cordage skills. Completed handrails reduce flood-crossing falls by 55% at the ford.';
       if(entry.name==='braced footbridge')needs.textContent='Needs: completed handrails, bridge joinery and a mallet and chisel or hafted tool. Completed bracing reduces flood-crossing falls by 85% at the ford. Flood crossings remain risky.';
       if(entry.name==='Field layout'||entry.name==='plot markers')needs.textContent+=' Field planning also needs experience of a winter, two harvests, five personal field workdays, wood-working experience and a digging stick.';
       const stageCosts={'cultivated field':{wood:1},'drying rack':{wood:3,fibre:1},'healer hut':{wood:6,fibre:2,stone:1},'herb drying rack':{wood:2,fibre:2},'healer marker':{wood:2,fibre:2},
         'communal shelter':{wood:s.config.settlement.shelterWork},footbridge:{wood:s.config.settlement.bridgeWork},'plank shed':{wood:s.config.shed.wood},'camp kiln':{clay:2,wood:2},farming:{food:s.config.farming.plantCost}};
       Object.assign(stageCosts,{'raised granary':granaryRules.cost,'bridge handrails':{wood:4,fibre:4},'braced footbridge':{wood:12,stone:6}});
-      const cost=entry.cost||stageCosts[entry.name];
+      Object.assign(stageCosts,{'tributary footbridge':tributaryBridgeRules.cost,'tributary handrails':{wood:4,fibre:4},'braced tributary bridge':{wood:12,stone:6}});
+      Object.assign(stageCosts,{'main stone ford':{stone:stoneFordRules.main.stone},'tributary stone ford':{stone:stoneFordRules.tributary.stone}});
+      if(entry.product==='earthen oven')stageCosts[entry.name]=hearthRules.ovenCost;
+      const cost=entry.product==='earthen oven'?hearthRules.ovenCost:entry.cost||stageCosts[entry.name];
       const amounts=cost?Object.entries(cost).filter(([,n])=>n>0).map(([k,n])=>k+' '+n+(((k==='wood'||k==='food')?s[k]:s.local.stock[k]||0)<n?' (short)':'')).join(', '):'';
       materials.textContent=cost?(stageCosts[entry.name]?'Stage materials: ':'Materials: ')+(amounts||'working material and a workday'):'Requires a real workday and the materials for the relevant building stage.';
       const stageWork={'cultivated field':3,'drying rack':2,'healer hut':6,'herb drying rack':2,'healer marker':2,'communal shelter':s.config.settlement.shelterWork,footbridge:s.config.settlement.bridgeWork};
       Object.assign(stageWork,{'animal enclosure':livestockBuildingRules.enclosure.work,'livestock shelter':livestockBuildingRules.shelter.work,'wooden cattle yoke':4});
       Object.assign(stageWork,{'raised granary':granaryRules.work,'bridge handrails':bridgeUpgradeRules.railWork,'braced footbridge':bridgeUpgradeRules.braceWork});
+      if(entry.product==='earthen oven')stageWork[entry.name]=hearthRules.ovenWork;
+      Object.assign(stageWork,{'tributary footbridge':tributaryBridgeRules.work,'tributary handrails':4,'braced tributary bridge':6});
+      Object.assign(stageWork,{'main stone ford':stoneFordRules.main.work+1,'tributary stone ford':stoneFordRules.tributary.work+1});
+      if(/tributary/.test(entry.name))needs.textContent='Needs: the tributary stone ford, personal bridge joinery, shelter and cordage skills, cutting tools, a safe workday and the materials for this stage. Each river crossing is built separately.';
+      if(/stone ford/.test(entry.name))needs.textContent='Needs: personal stepping-stone knowledge, a paid ford layout, stone-working skill and waterside observations. Survey this river, collect real stone, then place it over separate safe workdays. No initial crossing is supplied.';
+      if(entry.name==='footbridge')needs.textContent='Needs: the main-river stone ford, personal bridge joinery, shelter and cordage foundations, timber-working experience and real construction timber.';
+      if(/Household planning|household food plan/.test(entry.name)){
+        materials.textContent='Learning takes safe workdays spent comparing actual stores and household needs. This is a practice, not a physical object.';
+        needs.textContent='Needs: gathering and food drying, experience caring for children and a food store. Independent discovery also needs witnessed shortages affecting children and an uncertain chance to reflect. Experienced villagers can teach it without repeating the famine.';
+      }
       if(stageWork[entry.name])materials.textContent+=' · '+stageWork[entry.name]+' work units, plus any site clearing.';
       for(const p of [status,needs,materials])p.style.cssText='font-size:12px;margin:6px 0';
       card.append(canvas,title,status,materials,needs);return card;

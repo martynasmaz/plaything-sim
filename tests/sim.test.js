@@ -129,7 +129,8 @@ describe('Build check · three-day weather', () => {
   test('cloud wrangle on day 2 over a forecast cold snap: rain days 2–4, day 5 uses its natural roll', () => {
     // Find a seed whose natural day-2 weather is a cold snap (real dice).
     let seed=0,plain;
-    for(;;seed++){plain=stepDay(seededState({},seed));if(plain.natural.weather==='cold')break;}
+    for(;seed<1000;seed++){plain=stepDay(seededState({},seed));if(plain.natural.weather==='cold')break;}
+    assert.ok(seed<1000,'the fixed reference weather sample must include a cold forecast');
     assert.equal(forecastWeather(plain),'cold');
     let s=queueCommand(plain,'cloud wrangle').state;assert.equal(tomorrowWeather(s),'rain');
     const weathers=[];let untouched=plain;
@@ -145,6 +146,7 @@ describe('Build check · three-day weather', () => {
     // 70 −10 −40 +10 shelter = 30 → warm up +20 = 50.
     assert.equal(s.villagers[0].warmth,50);
     s=createState({weather:{chances:{normal:0,rain:0,drought:0,cold:100}}});s.food=0;for(const v of s.villagers)v.warmth=100;s=stepDay(s);
+    assert.ok(s.lastDay.actions.some(a=>a.action==='Forage'),'fixture must exercise foraging');
     assert.ok(s.lastDay.actions.filter(a=>a.action==='Forage').every(a=>a.gained===3));
     s=createState({weather:{chances:{normal:0,rain:100,drought:0,cold:0}}});
     assert.match(queueCommand(s,'rain').message,/Already cloud wrangle \(rain\)/);
@@ -156,6 +158,7 @@ describe('Build check · three-day weather', () => {
       if(s.day<day)s=stepDay(s);
       assert.equal(s.lastDay.weather,'rain');assert.equal(s.villagers[0].warmth,warmth);
       assert.equal(s.weather.daysLeft,left);
+      assert.ok(s.lastDay.actions.some(a=>a.action==='Forage'),'fixture must exercise foraging');
       assert.ok(s.lastDay.actions.filter(a=>a.action==='Forage').every(a=>a.gained===4));
     }
     s=stepDay(s);assert.equal(s.lastDay.weather,'normal');assert.equal(s.villagers[0].warmth,40);
@@ -165,6 +168,7 @@ describe('Build check · three-day weather', () => {
     const failed=queueCommand(s,'rain');assert.equal(failed.ok,false);assert.strictEqual(failed.state,s);
     s=cast(s,'drought');assert.equal(s.lastDay.weather,'drought');
     assert.deepEqual(s.weather,{type:'drought',daysLeft:2});
+    assert.ok(s.lastDay.actions.some(a=>a.action==='Forage'),'fixture must exercise foraging');
     assert.ok(s.lastDay.actions.filter(a=>a.action==='Forage').every(a=>a.gained===1));
     assert.equal(s.villagers[0].warmth,60);
   });

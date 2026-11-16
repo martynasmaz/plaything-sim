@@ -42,7 +42,7 @@ if(isMainThread){
     while(!s.ended&&s.day<workerData.horizon){
       const previous=s;s=stepDay(s);const report=s.lastDay;
       if(s.day===100)pop100=s.villagers.length;if(s.day===300)pop300=s.villagers.length;if(s.day===1000)pop1000=s.villagers.length;
-      if(report.birth!=null){lastBirth=s.day;birthDays.push(s.day);if(s.food<s.config.birth.foodPerPerson*(s.villagers.length-1)+s.config.birth.extraFood)storeSupportedBirths++;}
+      for(const id of report.births??(report.birth!=null?[report.birth]:[])){lastBirth=s.day;birthDays.push(s.day);if(s.food<s.config.birth.foodPerPerson*(s.villagers.length-1)+s.config.birth.extraFood)storeSupportedBirths++;}
       for(const d of report.deaths){for(const cause of d.causes)causes[cause]=(causes[cause]||0)+1;if(previous.villagers.find(v=>v.id===d.id).age+1<s.config.life.adult)childDeaths++;}
       if(!s.ended&&s.local.birthConditions?.includes('too little stored food'))foodBlocked++;
       if(!s.ended&&s.local.birthConditions?.includes('population cap reached'))capBlocked++;

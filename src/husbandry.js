@@ -1,7 +1,10 @@
 import {riverHabitat} from './ecology.js';
-import {foodDaysFor} from './provisions.js';
+import {foodDaysFor,mealCostFor} from './provisions.js';
 import {SCENARIO} from './scenario.js';
 import {fieldSite} from './development.js';
+import {chooseStorageSite,storageRackSite} from './storage.js';
+import {builtHutSite} from './settlement-layout.js';
+import {beginWorkJourney,journeyHome} from './journeys.js';
 
 // Livestock time follows the compressed four-season year, not human ages.
 // Feed units are an abstract ration, not kilograms. No livestock consumes the
@@ -15,7 +18,8 @@ export const husbandryEnabled=s=>!!s.config.learning?.husbandry;
 const livestockYear=s=>4*s.config.learning.seasonLength;
 export const animalAlive=a=>a.status==='alive';
 export const villageLivestock=s=>(s.local?.husbandry?.animals||[]).filter(a=>animalAlive(a)&&a.location==='village');
-export const livestockPen=(s,camp)=>(s.local?.husbandry?.pens||[]).find(p=>p.camp===camp);
+export const livestockPen=(s,camp)=>(s.local?.husbandry?.pens||[]).find(p=>p.camp===camp&&!p.pending&&p.retiredDay===undefined);
+const livestockCamps=[[227,222],[802,433],[702,153]];
 const herdAt=(s,pen)=>villageLivestock(s).filter(a=>a.penId===pen.id);
 const livestockEvent=(s,text)=>{s.local.events.push({day:s.day,text,type:'livestock'});if(s.local.events.length>100)s.local.events.shift();};
 function animalDice(s,id,salt){let h=Math.imul(s.seed^Math.imul(s.day+1,2654435761)^Math.imul(id+7,1597334677)^salt,1274126177);return ((h^(h>>>16))>>>0)/4294967296;}
@@ -26,7 +30,7 @@ const herdSpace=(s,animals)=>animals.reduce((n,a)=>n+livestockSpace(s,a),0);
 const hasVessel=(s,v)=>!!(v.practice.gear['clay vessel']||s.local.jars||s.pottery?.jars);
 const canCut=(s,v)=>!!(s.toolkit?.includes('stone blades')||v.practice.known.knapping&&v.practice.gear['cutting tool']);
 const animalCamp=(s,v)=>s.local.daughter?.members.includes(v.id)?null:v.tribe||0;
-const livestockInvestmentSafe=(s,v,cost=0)=>s.food>=s.villagers.length+cost&&foodDaysFor(s,v)-cost/Math.max(1,s.villagers.length)>=livestockRules.safeReserveDays;
+const livestockInvestmentSafe=(s,v,cost=0)=>s.food>=cost&&foodDaysFor(s,v)-cost/(Math.max(1,s.villagers.length)*mealCostFor(s))>=livestockRules.safeReserveDays;
 const livestockSafe=(s,v)=>v.age>=s.config.life.adult&&!v.illnessDays&&v.fullness>=40&&v.warmth>=45&&v.health>=50&&v.practice.energy>=32&&!v.herbalist&&animalCamp(s,v)!==null;
 const husbandryWinterReady=s=>(s.local.completedWinters??(s.local.lastWinterFood?1:0))>=livestockRules.minimumCompletedWinters;
 const livestockFoodSafe=(s,v)=>v.age>=s.config.life.adult&&!v.illnessDays&&v.warmth>=35&&v.health>=30&&v.practice.energy>=22&&animalCamp(s,v)!==null;
@@ -112,11 +116,71 @@ export const husbandryRecipes=[
   ['oxtraining','Cattle traction','wood','rigid',['herding','hafting','cordage'],{wood:1,fibre:1},'wooden cattle yoke',(s,v)=>husbandryReady(s,v,'oxtraining')]
 ];
 export function chooseLivestockSite(s,camp){
-  const homes=[[227,222],[802,433],[702,153]],home=homes[camp]||homes[0];
-  const candidates=[[105,-48],[105,38],[-104,-32],[-95,48],[65,-89]];
-  return candidates.map(([x,y])=>[home[0]+x,home[1]+y]).find(([x,y])=>{
-    const habitat=riverHabitat(x,y);return !habitat.wet&&x>30&&y>35&&x<970&&y<610&&Math.hypot((x-680)/110,(y-535)/70)>1;
-  })||[home[0]-106,home[1]-75];
+  // The same physical-site reservations as food storage: houses (including
+  // room for growth), fields, healer buildings, other pens and both river banks.
+  // No suitable site means postponing construction, never a forced overlap.
+  return chooseStorageSite(s,livestockCamps,camp);
+}
+export function livestockSiteObstructed(s,pen){
+  const near=(site,rx,ry)=>site&&Math.hypot((pen.site[0]-site[0])/rx,(pen.site[1]-site[1])/ry)<1;
+  const counts={};
+  for(const camp of s.huts||[]){const i=counts[camp]||0;counts[camp]=i+1;if(near(builtHutSite(s,livestockCamps,camp,i),62,55))return true;}
+  if(s.hutProject&&near(s.hutProject.site||builtHutSite(s,livestockCamps,s.hutProject.camp,s.hutProject.index??counts[s.hutProject.camp]??0),62,55))return true;
+  if(s.local.healerHome&&near(s.local.healerHome.home,75,65))return true;
+  for(const [camp,store] of Object.entries(s.local.campStores||{})){
+    const n=(store.built?(store.racks||1):0)+Number(!!store.rackWork);
+    for(let i=0;i<n;i++)if(near(storageRackSite(s,livestockCamps,Number(camp),i),52,42))return true;
+    if(store.granary&&near(store.granary.site,70,60))return true;
+  }
+  for(const site of Object.values(s.farming.sites||{}))if(near(site,50,45))return true;
+  return false;
+}
+
+// A replacement is a real project. The old enclosure continues to house its
+// animals until the new one is finished and a keeper leads the actual herd over.
+function rebuildObstructedPen(s,v,pen,die,report,deps){
+  if(!v.practice.known.herding||!v.practice.known.penbuilding)return false;
+  const h=s.local.husbandry;
+  const retired=h.pens.find(p=>p.camp===pen.camp&&p.retiredDay!==undefined&&p.dismantledDay===undefined);
+  if(retired){
+    retired.dismantledDay=s.day;retired.dismantledBy=v.id;
+    const timber=(retired.enclosureMaterials?.wood||0)+(retired.shelterMaterials?.wood||0);
+    retired.salvagedWood=Math.floor(timber/2);s.wood+=retired.salvagedWood;
+    livestockEvent(s,v.name+' dismantled the obstructing old livestock enclosure.');
+    return livestockAction(s,v,report,deps,'Dismantle obstructed livestock enclosure','wood',retired.site,'penbuilding');
+  }
+  let replacement=h.pens.find(p=>p.pending&&p.replaces===pen.id);
+  if(!replacement&&!livestockSiteObstructed(s,pen))return false;
+  const herd=herdAt(s,pen);
+  if(herd.length&&s.local.stock.hay<herd.filter(a=>a.species!=='pig').reduce((n,a)=>n+livestockFeed(s,a),0)*3)return false;
+  if(!replacement){
+    const site=chooseLivestockSite(s,pen.camp);if(!site)return false;
+    replacement={id:'pen-'+pen.camp+'-rebuild-'+h.pens.length,camp:pen.camp,site,pending:true,replaces:pen.id,plannedDay:s.day,
+      ownerId:pen.ownerId,keeperId:v.id,work:0,shelterWork:0,careDay:-10,dung:0,grass:36,mast:24,mud:0};
+    h.pens.push(replacement);livestockEvent(s,v.name+' planned a replacement livestock enclosure clear of nearby buildings.');
+  }
+  // Recheck unfinished sites: a saved project may have become obstructed too.
+  // Completed work is kept; it is never silently shifted by a renderer/load.
+  if(livestockSiteObstructed(s,replacement))return false;
+  const roofNeeded=pen.shelterWork>0;
+  const kind=replacement.work<livestockBuildingRules.enclosure.work?'enclosure':roofNeeded&&replacement.shelterWork<livestockBuildingRules.shelter.work?'shelter':null;
+  if(kind){
+    if(kind==='shelter'&&!v.practice.known.housing&&studyHusbandry(s,v,'housing',die,report,deps))return true;
+    if(kind==='shelter'&&!v.practice.known.stockshelter&&studyHusbandry(s,v,'stockshelter',die,report,deps))return true;
+    const material=kind==='shelter'&&s.local.stock.hide<1?'hide':s.local.stock.fibre<1?'fibre':null;
+    if(material&&s.local.deposits[material]>=1){
+      const amount=Math.min(3,Math.floor(s.local.deposits[material]));s.local.deposits[material]-=amount;s.local.stock[material]+=amount;livestockResourceSeen(s,material);
+      return livestockAction(s,v,report,deps,'Gather '+material+' for replacement enclosure',material==='hide'?'hunt':'reeds',material==='hide'?[385,165]:[308,305]);
+    }
+    return livestockBuild(s,v,replacement,kind,report,deps);
+  }
+  // Moving a herd is a separate workday from constructing its last fitting.
+  for(const animal of herd){animal.penId=replacement.id;animal.keeperId=v.id;}
+  replacement.pending=false;replacement.careDay=s.day;replacement.keeperId=v.id;replacement.openedDay=s.day;
+  pen.retiredDay=s.day;pen.replacedBy=replacement.id;
+  (h.relocations??=[]).push({day:s.day,from:pen.id,to:replacement.id,keeperId:v.id,animals:herd.map(a=>a.id)});
+  livestockEvent(s,v.name+' moved livestock into the completed replacement enclosure.');
+  return livestockAction(s,v,report,deps,herd.length?'Lead livestock to replacement enclosure':'Open replacement livestock enclosure','forage',replacement.site,'herding');
 }
 export function hayMeadowSite(pen){return [[52,0],[-52,0],[0,46],[0,-46]].map(([x,y])=>[pen.site[0]+x,pen.site[1]+y]).find(p=>!riverHabitat(...p).wet)||pen.site;}
 export function livestockTarget(s,camp){const n=s.villagers.filter(v=>animalCamp(s,v)===camp).length;return Math.min(livestockRules.maximumTarget,Math.max(livestockRules.minimumTarget,Math.floor(n/livestockRules.targetPeoplePerAnimal)));}
@@ -126,6 +190,22 @@ export function livestockWinterNeed(s,pen){
 function livestockUsed(s,v,id){
   const p=v.practice;p.used[id]=(p.used[id]||0)+1;p.known[id]=Math.max(1,p.known[id]||0);s.local.first[id]??=s.day;
   (p.made??={})[id]=(p.made[id]||0)+1;
+}
+export function livestockGrazingSite(s,pen){
+  if(s.local.season==='Winter')return null;
+  const bank=riverHabitat(...pen.site);
+  for(const distance of [80,105,130])for(const offset of [0,-.4,.4,-.8,.8]){
+    const angle=Math.PI/2+offset,site=[pen.site[0]+Math.cos(angle)*distance,pen.site[1]+Math.sin(angle)*distance],h=riverHabitat(...site);
+    if(site[0]<45||site[0]>955||site[1]>575||h.mainDistance<55||h.tributaryDistance<45||
+      Math.sign(site[1]-h.mainY)!==Math.sign(pen.site[1]-bank.mainY))continue;
+    if(s.local.husbandry.pens.some(p=>p!==pen&&p.dismantledDay===undefined&&Math.hypot(site[0]-p.site[0],site[1]-p.site[1])<85))continue;
+    if((s.huts||[]).some((camp,slot)=>{const index=s.huts.slice(0,slot).filter(c=>c===camp).length,p=builtHutSite(s,livestockCamps,camp,index);return Math.hypot(site[0]-p[0],site[1]-p[1])<55;}))continue;
+    const gate=riverHabitat(pen.site[0],pen.site[1]+30);
+    if(gate.mainDistance<30||gate.tributaryDistance<30)continue;
+    let dry=true;for(let t=.1;t<=1;t+=.1){const q=riverHabitat(pen.site[0]+(site[0]-pen.site[0])*t,pen.site[1]+(site[1]-pen.site[1])*t);if(q.mainDistance<35||q.tributaryDistance<30){dry=false;break;}}
+    if(dry)return site;
+  }
+  return null;
 }
 function livestockAction(s,v,report,deps,action,skill='forage',site,id){
   deps.finish(s,v,skill);v.activity=action;v.gained=0;
@@ -151,6 +231,7 @@ function studyHusbandry(s,v,id,die,report,deps){
 function livestockBuild(s,v,pen,kind,report,deps){
   const rules=livestockBuildingRules[kind],key=kind==='enclosure'?'work':'shelterWork',id=kind==='enclosure'?'penbuilding':'stockshelter';
   if(!v.practice.known[id]||!deps.recipes[id].requires.every(k=>v.practice.known[k])||!husbandryReady(s,v,id)||(pen[key]||0)>=rules.work)return false;
+  if(!beginWorkJourney(s,v,pen.site,report,'livestock construction'))return true;
   if(deps.siteTree(s,pen.site,'pen')!==null){
     if(!deps.clear(s,v,pen,pen.site,report,'pen'))return false;
     return livestockAction(s,v,report,deps,'Clear livestock building site','wood',pen.site);
@@ -229,14 +310,14 @@ export function slaughterLivestock(s,v,a,report,deps){
   if(!pen||!animalAlive(a)||a.penId!==pen.id||a.location!=='village'||!v.practice.known.herding||!canCut(s,v)||
     !(livestockSafe(s,v)||s.food<s.villagers.length&&livestockFoodSafe(s,v)))return false;
   const k=livestockKinds[a.species],yieldFood=Math.max(2,Math.floor(k.meat*Math.min(1,unitAge(s,a)/k.adult)*(a.condition/100)));
-  const food=Math.min(yieldFood,Math.max(0,deps.foodCapacity(s)-s.food));if(food<2)return false;
+  const food=Math.min(primaryFoodYield(s,yieldFood),Math.max(0,deps.foodCapacity(s)-s.food));if(food<2)return false;
   endAnimal(s,a,'slaughtered',report);s.local.husbandry.stats.slaughtered++;
   s.food+=food;s.local.stock.hide+=k.hide;s.local.stock.bone+=k.bone;report.gatheredFood+=food;
   livestockAction(s,v,report,deps,'Slaughter '+a.name,'hunt',pen.site,'herding');v.gained=food;report.actions.at(-1).gained=food;
   return true;
 }
 function chooseSlaughter(s,pen,urgent=false){
-  const animals=herdAt(s,pen),target=livestockTarget(s,pen.camp),excess=herdSpace(s,animals)>Math.min(12,target+2);
+  const animals=herdAt(s,pen),target=livestockTarget(s,pen.camp),excess=herdSpace(s,animals)>Math.min(livestockBuildingRules.enclosure.capacity,target+2);
   if(!urgent&&!excess&&animals.every(a=>a.health>35&&unitAge(s,a)<livestockKinds[a.species].life*.8))return null;
   const protectedAnimal=a=>animals.filter(b=>b!==a&&b.species===a.species&&b.sex===a.sex&&unitAge(s,b)>=livestockKinds[b.species].adult).length===0;
   return animals.filter(a=>!a.pregnancy&&unitAge(s,a)>=livestockKinds[a.species].adult&&(!protectedAnimal(a)||urgent))
@@ -282,6 +363,8 @@ function livestockJourney(s,v,report,deps){
   const h=s.local.husbandry,trip=h.journey;
   if(!trip||trip.travelerId!==v.id)return false;
   if(!livestockSafe(s,v)||s.lastUsed.flood>=s.day-1||(s.local.climate?.mm||0)>=10){h.journey=null;return false;}
+  const destination=trip.stage==='return'?(livestockPen(s,animalCamp(s,v))?.site||journeyHome(s,v)):herderSite;
+  if(!beginWorkJourney(s,v,destination,report,'herder journey',{oneWay:true}))return true;
   if(trip.stage==='out'){
     trip.stage='meeting';return livestockAction(s,v,report,deps,'Travel to distant herders','explore',herderSite);
   }
@@ -336,6 +419,7 @@ export function husbandryWork(s,v,die,report,deps,{urgent=false,develop=true,car
   if(!(livestockSafe(s,v)||urgent&&livestockFoodSafe(s,v))||v.practice.lessonToday){if(s.local.husbandry.journey?.travelerId===v.id)s.local.husbandry.journey=null;return false;}
   const h=s.local.husbandry,camp=animalCamp(s,v);let pen=livestockPen(s,camp);
   if(h.journey?.travelerId===v.id)return livestockJourney(s,v,report,deps);
+  if(pen&&!beginWorkJourney(s,v,pen.site,report,'livestock care'))return true;
   // One successor can work beside an actual keeper. This is a second paid
   // person-day, with materials, never passive inheritance of knowledge.
   if(!careOnly&&!v.practice.known.herding&&pen&&herdAt(s,pen).length&&livestockInvestmentSafe(s,v)&&
@@ -363,6 +447,9 @@ export function husbandryWork(s,v,die,report,deps,{urgent=false,develop=true,car
     const slaughter=chooseSlaughter(s,pen,urgent&&s.food<s.villagers.length);
     const excess=herdSpace(s,herd)>Math.min(livestockBuildingRules.enclosure.capacity,livestockTarget(s,camp)+2);
     if(slaughter&&(urgent||excess||slaughter.health<35||s.food<s.villagers.length*4)&&slaughterLivestock(s,v,slaughter,report,deps))return true;
+    // Feeding an urgently hungry person takes priority over a care workday.
+    // If dairy/slaughter could not supply supper, allow ordinary food work.
+    if(urgent)return false;
     // Essential care gets a chance before experiments. One keeper can supply
     // water, lead grazing and load fodder for this enclosure for two days.
     if(herd.length&&pen.careDay<s.day-1){
@@ -372,8 +459,12 @@ export function husbandryWork(s,v,die,report,deps,{urgent=false,develop=true,car
         const amount=Math.min(needed,Math.max(0,Math.floor(s.local.stock.wheat-reserve)));
         s.local.stock.wheat-=amount;s.local.stock.fodderGrain+=amount;if(amount>0)livestockResourceSeen(s,'fodderGrain');
       }
-      const milk=collectLivestockMilk(s,v,herd,report);
-      return act(milk?'Tend and milk livestock':'Tend livestock and lead grazing');
+      const milk=collectLivestockMilk(s,v,herd,report),pasture=livestockGrazingSite(s,pen);
+      if(pasture)pen.grazing={day:s.day,keeperId:v.id,site:pasture};
+      else delete pen.grazing;
+      act(milk?'Tend and milk livestock':'Tend livestock and lead grazing');
+      if(pasture)report.actions.at(-1).site=pasture;
+      return true;
     }
   }
   if(careOnly)return false;
@@ -406,6 +497,7 @@ export function husbandryWork(s,v,die,report,deps,{urgent=false,develop=true,car
     const trading=pen?.work>=livestockBuildingRules.enclosure.work&&Object.keys(livestockKinds).some(k=>tradeSpeciesReady(s,v,k,pen));
     const neededFibre=developingBasics?1:trading?2:(pen.integrity??100)<65?1:0;
     if((s.local.stock.fibre<neededFibre||!v.practice.properties.includes('flexible'))&&s.local.deposits.fibre>=1){
+      if(!beginWorkJourney(s,v,[308,305],report,'livestock fibre'))return true;
       const amount=Math.min(3,Math.floor(s.local.deposits.fibre));s.local.deposits.fibre-=amount;s.local.stock.fibre+=amount;
       return livestockAction(s,v,report,deps,'Gather fibre for livestock work','reeds',[308,305]);
     }
@@ -413,6 +505,7 @@ export function husbandryWork(s,v,die,report,deps,{urgent=false,develop=true,car
   if(knows.herding&&!knows.cordage&&studyHusbandry(s,v,'cordage',die,report,deps))return true;
   if(knows.herding&&!v.practice.properties.includes('rigid')&&s.wood>s.config.settlement.fuelReserve+1){s.wood--;return livestockAction(s,v,report,deps,'Shape an enclosure peg','wood',pen?.site);}
   if(knows.herding&&pen?.work>=livestockBuildingRules.enclosure.work&&pen.shelterWork<livestockBuildingRules.shelter.work&&s.local.stock.hide<(!knows.housing||!knows.stockshelter?2:1)&&s.local.deposits.hide>=1){
+    if(!beginWorkJourney(s,v,[385,165],report,'livestock hides'))return true;
     const amount=Math.min(3,Math.floor(s.local.deposits.hide));s.local.deposits.hide-=amount;s.local.stock.hide+=amount;
     return livestockAction(s,v,report,deps,'Collect hides for livestock shelter','hunt',[385,165]);
   }
@@ -420,7 +513,12 @@ export function husbandryWork(s,v,die,report,deps,{urgent=false,develop=true,car
   if(knows.herding&&pen?.work>=livestockBuildingRules.enclosure.work&&!knows.housing&&studyHusbandry(s,v,'housing',die,report,deps))return true;
   for(const id of ['herding','penbuilding','haymaking'])if(!knows[id]&&studyHusbandry(s,v,id,die,report,deps))return true;
   if(!knows.herding)return false;
-  if(!pen&&knows.penbuilding){pen={id:'pen-'+camp,camp,ownerId:v.id,keeperId:v.id,site:chooseLivestockSite(s,camp),work:0,shelterWork:0,careDay:-10,dung:0,grass:36,mast:24,mud:0};h.pens.push(pen);}
+  if(!pen&&knows.penbuilding){
+    const site=chooseLivestockSite(s,camp);if(!site)return false;
+    if(!beginWorkJourney(s,v,site,report,'choose livestock site'))return true;
+    pen={id:'pen-'+camp,camp,ownerId:v.id,keeperId:v.id,site,work:0,shelterWork:0,careDay:-10,dung:0,grass:36,mast:24,mud:0};h.pens.push(pen);
+  }
+  if(pen&&rebuildObstructedPen(s,v,pen,die,report,deps))return true;
   if(pen&&pen.work<livestockBuildingRules.enclosure.work&&livestockBuild(s,v,pen,'enclosure',report,deps))return true;
   if(!pen||pen.work<livestockBuildingRules.enclosure.work)return false;
   if(herd.length&&knows.penbuilding&&(pen.integrity??100)<65&&s.wood>s.config.settlement.fuelReserve&&s.local.stock.fibre>=1){spendLivestock(s,{wood:1,fibre:1});pen.integrity=Math.min(100,(pen.integrity??100)+40);return act('Repair livestock fence','wood','penbuilding');}
@@ -430,10 +528,12 @@ export function husbandryWork(s,v,die,report,deps,{urgent=false,develop=true,car
   }
   if(knows.haymaking&&canCut(s,v)&&s.local.season!=='Winter'&&(s.local.climate?.mm||0)<2){
     const preparingCattle=herd.length>=2&&(v.practice.husbandryDays||0)>=12&&s.farming.wheatHarvests>=2&&livestockTarget(s,camp)>=4;
-    const emptyPens=h.pens.filter(p=>p.work>=livestockBuildingRules.enclosure.work&&!herdAt(s,p).length).length;
+    const activePens=h.pens.filter(p=>!p.pending&&p.retiredDay===undefined);
+    const emptyPens=activePens.filter(p=>p.work>=livestockBuildingRules.enclosure.work&&!herdAt(s,p).length).length;
     const communalNeed=h.pens.reduce((n,p)=>n+livestockWinterNeed(s,p),0);
     const need=communalNeed+Math.max(emptyPens,communalNeed?0:1)*Math.ceil(s.config.learning.seasonLength*2*livestockRules.winterFeedMargin)+(preparingCattle?s.config.learning.seasonLength*6:0),pending=h.batches.reduce((n,b)=>n+b.amount,0);
-    if(s.local.stock.hay+pending<Math.min(240*Math.max(1,h.pens.length),need)&&pen.hayMeadow>=livestockRules.hayBundle){
+    if(s.local.stock.hay+pending<Math.min(240*Math.max(1,activePens.length),need)&&pen.hayMeadow>=livestockRules.hayBundle){
+      if(!beginWorkJourney(s,v,hayMeadowSite(pen),report,'hay meadow'))return true;
       pen.hayMeadow-=livestockRules.hayBundle;h.batches.push({amount:livestockRules.hayBundle,camp,site:pen.site.slice(),day:s.day,dryDays:0,wetDays:0});return livestockAction(s,v,report,deps,'Cut and bundle winter hay','forage',hayMeadowSite(pen),'haymaking');
     }
   }
@@ -469,17 +569,17 @@ export function husbandryWork(s,v,die,report,deps,{urgent=false,develop=true,car
     const i=s.farming.plots.findIndex((_,i)=>!(s.farming.manureSoil?.[i]?.remaining>0));
     if(i>=0){s.local.stock.compost--;s.farming.manureSoil??={};s.farming.manureSoil[i]={remaining:livestockRules.compostHarvests,appliedDay:s.day,readyDay:s.day+4};h.stats.manured++;return livestockAction(s,v,report,deps,'Work compost into a field','plant',fieldSite(s,i),'composting');}
   }
-  if(pen.dung>=8){pen.dung-=4;pen.mud=Math.max(0,pen.mud-3);s.local.stock.manure+=4;return act('Clean livestock enclosure');}
+  if(pen.dung>=8){pen.dung-=4;pen.mud=Math.max(0,pen.mud-3);s.local.stock.manure+=4;livestockResourceSeen(s,'manure');return act('Clean livestock enclosure');}
   if(trainLivestockOx(s,v,herd,act,deps))return true;
   for(const id of husbandryIds.slice(3))if(!knows[id]&&studyHusbandry(s,v,id,die,report,deps))return true;
-  if(!h.journey&&animalDice(s,camp,202)<livestockRules.tradeChance&&s.day>=(h.nextTradeDay||0)&&s.local.season!=='Winter'&&(s.local.climate?.mm||0)<10){
+  if(!h.journey&&canLeaveLivestock(s,v)&&animalDice(s,camp,202)<livestockRules.tradeChance&&s.day>=(h.nextTradeDay||0)&&s.local.season!=='Winter'&&(s.local.climate?.mm||0)<10){
     const species=Object.keys(livestockKinds).find(kind=>tradeSpeciesReady(s,v,kind,pen)&&livestockInvestmentSafe(s,v,2*livestockKinds[kind].price+livestockRules.journeyRations)&&s.local.stock.fibre>=2&&
       chooseLivestockTrade(s,pen,kind).length===livestockTradeSexes(s,herd,kind).length);
     if(species){s.food-=livestockRules.journeyRations;v.travelMeals=(v.travelMeals||0)+livestockRules.journeyRations;h.nextTradeDay=s.day+s.config.learning.seasonLength*livestockRules.tradeIntervalSeasons;h.journey={travelerId:v.id,stage:'out',started:s.day,species,rations:livestockRules.journeyRations};return livestockJourney(s,v,report,deps);}
   }
   return false;
 }
-function breedLivestock(s,animals,capacity,report,regional=false){
+function breedLivestock(s,animals,capacity,report,regional=false,allowConception=true){
   const h=s.local.husbandry;
   for(const mother of animals.filter(a=>a.sex==='female')){
     const k=livestockKinds[mother.species];
@@ -496,7 +596,7 @@ function breedLivestock(s,animals,capacity,report,regional=false){
       mother.lastBirthDay=s.day;mother.lactatingUntil=s.day+Math.round(livestockYear(s)*(mother.species==='cattle'?.65:.35));
       mother.nursingUntil=s.day+Math.round(livestockYear(s)*.25);mother.milkAvailable=0;
     }
-    if(mother.pregnancy||unitAge(s,mother)<k.adult||mother.fedDays<3||mother.condition<75||mother.health<70||
+    if(!allowConception||mother.pregnancy||unitAge(s,mother)<k.adult||mother.fedDays<3||mother.condition<75||mother.health<70||
       s.day-(mother.lastBirthDay??-10000)<k.interval*livestockYear(s))continue;
     if(mother.species==='sheep'&&!(s.local.season==='Autumn'&&(s.day-1+(s.local.seasonOffset||0))%s.config.learning.seasonLength>=s.config.learning.seasonLength*.6))continue;
     const reserved=animals.filter(a=>a.pregnancy).reduce((n,a)=>n+livestockKinds[a.species].litter*livestockKinds[a.species].space*.5,0);
@@ -510,6 +610,7 @@ export function finishHusbandryDay(s,report){
   if(!husbandryEnabled(s))return;const h=s.local.husbandry;
   if(h.journey&&!s.villagers.some(v=>v.id===h.journey.travelerId))h.journey=null;
   for(const pen of h.pens){
+    if(pen.retiredDay!==undefined||pen.pending)continue;
     const animals=herdAt(s,pen),cared=pen.careDay>=s.day-1&&s.villagers.some(v=>animalCamp(s,v)===pen.camp&&v.practice.known.herding),roofBuilt=pen.shelterWork>=livestockBuildingRules.shelter.work;
     let roofSpace=roofBuilt?livestockBuildingRules.shelter.capacity:0;
     const underRoof=new Set([...animals].sort((a,b)=>Number(b.age<livestockYear(s)*.2)-Number(a.age<livestockYear(s)*.2)||Number(!!b.pregnancy)-Number(!!a.pregnancy)||a.id-b.id).filter(a=>{const space=livestockSpace(s,a);if(space>roofSpace)return false;roofSpace-=space;return true;}).map(a=>a.id));
@@ -548,12 +649,14 @@ export function finishHusbandryDay(s,report){
       if(a.lactatingUntil>=s.day&&fraction>=.99&&a.health>=60&&a.species!=='pig'){
         // Young receive their share first. Milk is replenished once at dusk,
         // can be collected next workday, and never stacks across missed days.
-        a.milkAvailable=Math.max(0,k.milk-(a.nursingUntil>=s.day?1:0));
+        a.milkAvailable=primaryFoodYield(s,Math.max(0,k.milk-(a.nursingUntil>=s.day?1:0)));
       }
     }
     const living=animals.filter(animalAlive),target=Math.min(livestockBuildingRules.enclosure.capacity,livestockTarget(s,pen.camp)+2);
-    if(cared&&(roofBuilt||s.local.season!=='Winter')&&s.local.stock.hay>=living.filter(a=>a.species!=='pig').reduce((n,a)=>n+livestockFeed(s,a),0)*3)
-      breedLivestock(s,living,target,report);
+    const canConceive=cared&&(roofBuilt||s.local.season!=='Winter')&&s.local.stock.hay>=living.filter(a=>a.species!=='pig').reduce((n,a)=>n+livestockFeed(s,a),0)*3;
+    // Existing pregnancies resolve on their due date even when winter stores,
+    // housing or care no longer permit starting another pregnancy.
+    breedLivestock(s,living,target,report,false,canConceive);
   }
   // The experienced distant household works too: one person gathers fodder,
   // the other tends its finite herd. It has no trade restock timer.
@@ -593,3 +696,4 @@ export function livestockSummary(s){
   const animals=villageLivestock(s),pens=h.pens;
   return {animals,pens,contact:h.contacts.herders,hay:s.local.stock.hay,hayDrying:h.batches.reduce((n,b)=>n+b.amount,0),winterNeed:pens.reduce((n,p)=>n+livestockWinterNeed(s,p),0),stats:h.stats};
 }
+import {primaryFoodYield} from './food-yields.js';

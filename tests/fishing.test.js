@@ -65,7 +65,7 @@ test('existing fishing gear is usable without rediscovering its recipe and remai
   s.local.deposits.fish=0;
   const next=stepDay(s),catches=Object.values(next.lastDay.fishing||{});
   assert.ok(catches.length>0);assert.ok(catches.every(f=>f.method==='net'));
-  assert.ok(catches.reduce((n,f)=>n+f.caught,0)<=3);
+  assert.ok(catches.reduce((n,f)=>n+f.caught,0)<=6,'three source units yield at most six food portions');
 });
 test('an existing set net is checked before the same stock is used by individual spear fishers',()=>{
   const s=fresh();s.food=0;s.gameAnimals=0;s.local.deposits.fish=0;
@@ -74,7 +74,7 @@ test('an existing set net is checked before the same stock is used by individual
   const next=stepDay(s),first=next.lastDay.actions.find(a=>a.action==='Fish');
   assert.equal(first.id,s.villagers.at(-1).id);
   assert.equal(next.lastDay.fishing[first.id].method,'net');
-  assert.equal(next.lastDay.fishing[first.id].caught,3);
+  assert.equal(next.lastDay.fishing[first.id].caught,6);
 });
 test('flooded or frozen water prevents every fishing method, including weekly checks',()=>{
   for(const frozen of [false,true]){

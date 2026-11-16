@@ -3,7 +3,7 @@ import { createSaveSlot, createFreshStart, serialize, deserialize } from './save
 import { CONFIG, HOMESTEAD_RULES } from './config.js';
 import {scenarioStartSeed} from './scenario.js';
 import { createState, stepDay, cancelCommand, setSpeed, advanceTime,
-  recordRiverFall,bringSettlersHome, restart, availableCommands, validateCommand, tomorrowWeather, currentWeather, castText, foodCapacity, populationCap, shelterPlaces } from './sim.js';
+  bringSettlersHome, restart, availableCommands, validateCommand, tomorrowWeather, currentWeather, castText, foodCapacity, populationCap, shelterPlaces } from './sim.js';
 import { makeVillageScene } from './village-view.js';
 import { createClearing } from './clearing.js';
 import { THEME, t, commandLabel, resolveUi, uiHiddenClasses } from './theme.js';
@@ -127,13 +127,18 @@ function clearFaint(){
   if(input.classList.contains('faint-placeholder')){input.setAttribute('placeholder',placeholder);input.classList.remove('faint-placeholder','fading');}
 }
 function select(id){selectedId=id;render();}
-const clearing=immersive?createClearing($('#village'),()=>state,{onRiverFall:id=>{const fall=recordRiverFall(state,id);state=fall.state;slot.save(state);return fall;}}):null;
+const clearing=immersive?createClearing($('#village'),()=>state):null;
 const game=immersive?null:new Phaser.Game({type:Phaser.CANVAS,...THEME.layout.canvas,parent:'village',
   backgroundColor:THEME.palette.cream,banner:false,audio:{noAudio:true},
   scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},scene:makeVillageScene(()=>state,select)});
 if(immersive)input.placeholder='Speak to the homestead…';
 
-const notebook=createNotebook(()=>state,speed=>{state=setSpeed(state,speed);render();},{isPhone:()=>immersive&&phoneLayoutEnabled()});
+const notebook=createNotebook(()=>state,speed=>{state=setSpeed(state,speed);render();},{isPhone:()=>immersive&&phoneLayoutEnabled(),changeNeeds:(key,value)=>{
+  if(!['eatsFood','hungerDeathsEnabled'].includes(key)||typeof value!=='boolean')return;
+  state=structuredClone(state);state.local.needSettings={...(state.local.needSettings||{}),[key]:value};state.config.needs[key]=value;
+  if(state.config.needs.eatsFood===false)for(const v of state.villagers)v.fullness=state.config.limits.need;
+  slot.save(state);rememberDay();render();
+}});
 function render(){
   notebook.draw();
   phoneControls?.refresh();
@@ -166,7 +171,7 @@ function render(){
     const illness=v.illnessDays?t('hud.ill',{days:v.illnessDays}):t(v.illToday?'hud.lastIllDay':'hud.notIll');
     $('#villager-detail').innerHTML=`<div class="person-title"><strong>${escapeHtml(v.name)}</strong><span>${escapeHtml(v.gender)} · ${htmlText('hud.person',{id:v.id,stage,age:v.age})}</span></div>${v.traits.length?`<div class="person-traits">${htmlText('hud.traits',{traits:v.traits.map(tr=>t('labels.traits.'+tr)).join(t('labels.separators.traits'))})}</div>`:''}<div class="activity">${escapeHtml(THEME.copy.labels.activities[v.activity]??v.activity)}${gainKey?htmlText('hud.gain',{amount:v.gained,unit:t('labels.units.'+gainKey)}):''}</div>`+
       ['fullness','warmth','health','safety','happiness'].map(key=>`<div class="need"><span>${htmlText('labels.needs.'+key)}</span><div class="need-track"><div class="need-fill" style="width:${v[key]}%;background:${v[key]<THEME.layout.needs.badBelow?'var(--red)':v[key]<THEME.layout.needs.warningBelow?'var(--mustard)':'var(--green)'}"></div></div><strong>${v[key]}</strong></div>`).join('')+
-      `<div class="person-status">${escapeHtml(illness)}<br>${htmlText('hud.personStatus',{shelter:t('labels.resources.shelter'),places:shelterPlaces(state),counter:state.birthCounter,required:c.birth.consecutiveDays})}</div>`;
+      `<div class="person-status">${escapeHtml(illness)}<br>${c.learning?htmlText('hud.familyStatus',{shelter:t('labels.resources.shelter'),places:shelterPlaces(state)}):htmlText('hud.personStatus',{shelter:t('labels.resources.shelter'),places:shelterPlaces(state),counter:state.birthCounter,required:c.birth.consecutiveDays})}</div>`;
   }else $('#villager-detail').textContent=t('hud.empty');
   $('#command-list').innerHTML=availableCommands(state).map(command=>{
     const check=validateCommand(state,command,state.day,true);
@@ -278,7 +283,7 @@ const guideGroups={
     ['food 20','Give 20 food, up to the storage limit. Change the number, or type food alone for 10.'],
     ['harvest','Give the camp a fixed gift of provisions.'],['bless','Raise health and happiness throughout the village.'],
     ['heal','Cure everyone currently sick.'],['teach fire','Teach fire making if the village has enough wood.'],
-    ['teach farming','Teach the village to sow crops.'],['inspire','Encourage a ready villager to investigate a question suggested by their experience.'],['recall settlers','Bring the eastern settlement home with its supplies.']],
+    ['teach farming','Teach the village to sow crops.'],['teach all','Teach everyone all practical knowledge. Enable magic separately to include magical practices; tools and buildings still need work.'],['inspire','Encourage a ready villager to investigate a question suggested by their experience.'],['recall settlers','Bring the eastern settlement home with its supplies.']],
   'Weather and disasters':[
     ['rain','Bring rain.'],['drought','Start a dry spell.'],['flood','Raise the river; catches stored on the low bank can wash away.'],
     ['plague','Make the villagers sick.'],['earthquake','Shake the camp, lose wood and lower morale.'],
@@ -439,7 +444,7 @@ $('#cancel').onclick=()=>{state=cancelCommand(state);feedback(t('feedback.cancel
 for(const b of document.querySelectorAll('[data-speed]'))b.onclick=()=>{state=setSpeed(state,Number(b.dataset.speed));render();};
 $('#next-day').onclick=()=>{state=stepDay(state);rememberDay();slot.save(state);showCommandResult();render();};
 // A new run with a new seed; it replaces the save at once.
-function reset(){freshStart.cancel();state=withUiSpeed(restart(state,scenarioStartSeed(randomSeed)));recentDays.clear();rememberDay();slot.save(state);selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
+function reset(){freshStart.cancel();const needSettings=state.local?.needSettings;state=withUiSpeed(restart(state,scenarioStartSeed(randomSeed)));if(needSettings)state.local.needSettings=structuredClone(needSettings);recentDays.clear();rememberDay();slot.save(state);selectedId=1;$('#command-input').value='';feedback(t('feedback.reset'));render();}
 $('#undo-skip').onclick=undoSkip;$('#rewind-ended').onclick=()=>{if(!skipping)void backDays('back 1');};
 $('#restart').onclick=reset;$('#restart-ended').onclick=reset;
 function showCommandResult(result=state.lastDay?.command){

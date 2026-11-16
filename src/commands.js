@@ -17,7 +17,8 @@ export const COMMAND_WORDS = {
   'teach fire':['teach spark','teach fire'],
   harvest:['feast drop','harvest'],
   heal:['shake off','heal'],
-  'teach farming':['teach sowing','teach farming']
+  'teach farming':['teach sowing','teach farming'],
+  'teach all':['teach everything','teach all']
 };
 export const normalizeWords = text => String(text).trim().replace(/\s+/g,' ').toLowerCase();
 export function resolveCommand(text) {
@@ -42,10 +43,11 @@ export const COMMAND_KEYWORDS = {
   'teach fire':['teach spark','teach fire','fire','spark','flame','flames','bonfire','light','warm','warmth'],
   harvest:['feast drop','harvest','feast','food','provisions','bread','eat','meal','supper','bounty'],
   heal:['shake off','heal','cure','mend','medicine','remedy','recover'],
-  'teach farming':['teach sowing','teach farming','sow','sowing','farm','farming','plant','planting','seeds','crops','grow']
+  'teach farming':['teach sowing','teach farming','sow','sowing','farm','farming','plant','planting','seeds','crops','grow'],
+  'teach all':['teach all','teach everything']
 };
 // When several commands match, the first in this order wins (helpful first).
-export const KEYWORD_PRIORITY = ['godzilla','meteor','volcano','earth crack','earthquake','flood','spawn people','teach fire','teach farming','heal','bless','harvest','rain','drought','plague'];
+export const KEYWORD_PRIORITY = ['godzilla','meteor','volcano','earth crack','earthquake','flood','spawn people','teach all','teach fire','teach farming','heal','bless','harvest','rain','drought','plague'];
 // Lowercase; anything but a-z and 0-9 (apostrophes too) becomes a space.
 export const cleanWords = text => String(text).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 // `allowed` lists the command keys this version accepts; returns a key or null.

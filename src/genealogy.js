@@ -1,4 +1,4 @@
-import {createFamilyTreeView} from './family-tree-view.js';
+import {dailyBirthIds} from './village-events.js';
 export function rememberPerson(s,v,origin){
   if(!s.local)return;
   const people=(s.local.genealogy??={people:{},recordedFrom:s.day}).people;
@@ -8,7 +8,6 @@ export function rememberPerson(s,v,origin){
       origin:origin||(v.parents?.length?'born':v.arrivalDay!==undefined?'arrival':v.id<=s.config.start.ages.length?'founder':'unknown'),
       parents:[...(v.parents||[])],...(v.arrivalDay!==undefined?{arrivalDay:v.arrivalDay}:{})};
   }
-  record.appearance={age:v.age,gender:v.gender??null,tribe:v.tribe||0,furWraps:!!s.furWraps,woolWrap:!!v.practice?.gear['wool wrap']};
   if(v.parents?.length&&!record.parents.length)record.parents=[...v.parents];
   for(const [i,id] of (v.parents||[]).entries())people[id]??={id,name:v.parentNames?.[i]||'Unknown ancestor',parents:[],origin:'unknown',placeholder:true};
   return record;
@@ -47,11 +46,11 @@ export function recordLifeDay(s,before,report){
     const r=s.local.genealogy.people[dead.id];
     if(r){r.deathDay=s.day;r.causes=[...dead.causes];}
   }
-  for(const v of s.villagers)rememberPerson(s,v,v.id===report.birth?'born':undefined);
+  const newborns=new Set(dailyBirthIds(report));
+  for(const v of s.villagers)rememberPerson(s,v,newborns.has(v.id)?'born':undefined);
 }
 export function familyOf(s,id){
   const people=s.local?.genealogy?.people||{},person=people[id];
   return {person,parents:(person?.parents||[]).map(id=>people[id]).filter(Boolean),
     children:Object.values(people).filter(p=>p.parents.includes(Number(id)))};
 }
-export function createFamilyTree(host,readState){return createFamilyTreeView(host,readState);}

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createState,stepDay,castText,advanceTime,shelterPlaces} from '../src/sim.js';
 import {HOMESTEAD_RULES} from '../src/config.js';
-import {beginSettlementDay,canExperiment,practiceWork,planLessons,practices,takeDeposit} from '../src/practices.js';
+import {beginSettlementDay,canExperiment,practiceWork,planLessons,practices,takeDeposit,completePracticeLessons} from '../src/practices.js';
 const fresh=()=>createState(HOMESTEAD_RULES,4);
 test('counted spawn commands add the full population even with every bed occupied',()=>{
   const crowded=castText(fresh(),'spawn people 12').state;
@@ -18,6 +18,7 @@ test('counted spawn commands add the full population even with every bed occupie
 });
 test('basket experiments require experience, knowledge, usable materials, and spare energy',()=>{
   const s=fresh(),v=s.villagers[0],p=v.practice,r=practices.baskets;
+  s.huts=[0,0]; // Isolate basket study from the early housing agenda.
   p.properties=['flexible'];p.lastSkill='berries';p.limitedTrips=2;
   assert.equal(canExperiment(s,v,r),false);
   p.known.cordage=1;s.local.stock.fibre=1;assert.equal(canExperiment(s,v,r),false);
@@ -35,10 +36,16 @@ test('teaching takes repeated joint workdays and actual contact',()=>{
   const s=fresh();s.day=3;
   const [teacher,pupil]=s.villagers;s.villagers=[teacher,pupil];
   teacher.practice.known.cordage=2;teacher.practice.used.cordage=1;
+  pupil.practice.properties.push('flexible');
   teacher.practice.site='wood';pupil.practice.site='clay';beginSettlementDay(s);
   planLessons(s,s.villagers);assert.equal(pupil.practice.lessonToday,null);
   pupil.practice.site=teacher.practice.site='camp';
-  for(let i=0;i<2;i++){beginSettlementDay(s);planLessons(s,s.villagers);practiceWork(s,teacher,1);practiceWork(s,pupil,1);if(!i)assert(!pupil.practice.known.cordage);}
+  for(let i=0;i<2;i++){
+    beginSettlementDay(s);planLessons(s,s.villagers);const report={actions:[]};
+    for(const v of [teacher,pupil]){const action=practiceWork(s,v,1,report);report.actions.push({id:v.id,action});}
+    assert(!pupil.practice.known.cordage);completePracticeLessons(s,report);
+    if(!i)assert(!pupil.practice.known.cordage);
+  }
   assert.equal(pupil.practice.known.cordage,1);assert(!pupil.practice.used.cordage);
 });
 test('deposits deplete exactly and seeded days replay',()=>{

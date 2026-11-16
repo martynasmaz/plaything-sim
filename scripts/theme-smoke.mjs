@@ -1,6 +1,8 @@
 // Optional integration test: assemble a TEMPORARY art-enabled skin from artist
 // SVGs, not a change to the default zero-asset theme or the user's desktop.
 import assert from 'node:assert/strict';
+import {archivedCheck} from './archived-check.mjs';
+archivedCheck(import.meta.url,'Use node scripts/browser-smoke.mjs for current startup; tests/theme.test.js covers asset embedding. The historical artist-SVG scenario needs redesign before reuse.');
 import {mkdtemp,cp,mkdir,readFile,writeFile,appendFile,rm} from 'node:fs/promises';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import path from 'node:path';

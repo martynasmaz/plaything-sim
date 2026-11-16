@@ -1,4 +1,5 @@
 // Typed records plus compatibility with the short event strings in older saves.
+export function dailyBirthIds(report){return report?.births??(report?.birth!=null?[report.birth]:[]);}
 export function villageEventKind(event){
   if(event.type)return event.type;
   if(/^.+ was born(?: in the eastern village)?\.$/.test(event.text))return 'birth';
@@ -6,10 +7,17 @@ export function villageEventKind(event){
   return 'other';
 }
 function distinctEvents(events){
-  const records=new Map();
+  const records=new Map(),identified=new Map();
+  for(const event of events){
+    const kind=villageEventKind(event),name=event.name||event.text.split(kind==='birth'?' was born':' died')[0];
+    if((kind==='birth'||kind==='death')&&event.id!=null){const alias=kind+'|'+event.day+'|'+name;let ids=identified.get(alias);if(!ids)identified.set(alias,ids=new Set());ids.add(event.id);}
+  }
   for(const [index,event] of events.entries()){
     const kind=villageEventKind(event),name=event.name||event.text.split(kind==='birth'?' was born':' died')[0];
-    const key=kind==='birth'||kind==='death'?kind+'|'+event.day+'|'+name:'other|'+index;
+    const alias=kind+'|'+event.day+'|'+name,ids=identified.get(alias);
+    if(event.id==null&&ids?.size>1)continue; // Prefer the distinct identified people over an ambiguous legacy duplicate.
+    const id=event.id??(ids?.size===1?[...ids][0]:null);
+    const key=kind==='birth'||kind==='death'?kind+'|'+event.day+'|'+(id!=null?'#'+id:name):'other|'+index;
     const old=records.get(key);
     records.set(key,{event:old&&old.event.text.length>event.text.length?old.event:event,index});
   }

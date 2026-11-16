@@ -124,7 +124,7 @@ test('rebuilding works at the existing ruined house instead of clearing a new pl
   const target=hutBuildingSite(s,s.villagers[0]);assert.equal(target.camp,1);assert.equal(target.index,0);
   s.local.stumps=Object.fromEntries(worldTrees(s).flatMap((tree,id)=>inBuildingPatch(tree,target.site)?[[id,s.day]]:[]));
   s=stepDay(s);
-  assert.deepEqual(s.lastDay.hutSites[s.villagers[0].id],{camp:1,index:0});
+  assert.deepEqual(s.lastDay.hutSites[s.villagers[0].id],{camp:1,index:0,site:target.site});
   for(let i=0;i<10&&s.hutDetails[1].ruined;i++)s=stepDay(s);
   assert.equal(s.hutDetails[1].ruined,false);assert.deepEqual(s.huts,[0,1]);
 });

@@ -33,8 +33,8 @@ test('births have a dated permanent record with parents and survive the recent e
   assert.equal(birth.id,s.lastDay.birth);assert.equal(birth.parentNames.length,2);assert.match(birth.text,/was born to/);
   for(let i=0;i<120;i++)settlementEvent(s,'A craft was practised '+i+'.');
   assert.equal(s.local.events.some(e=>e.type==='birth'),false);
-  const loaded=deserialize(serialize(s),rules);assert.deepEqual(observeEvents(loaded.local,'births'),[birth]);
-  const spawned=castText(loaded,'spawn people 2').state;assert.deepEqual(spawned.local.birthHistory,[birth]);
+  const births=structuredClone(s.local.birthHistory),loaded=deserialize(serialize(s),rules);assert.deepEqual(observeEvents(loaded.local,'births'),[...births].reverse());
+  const spawned=castText(loaded,'spawn people 2').state;assert.deepEqual(spawned.local.birthHistory,births);
 });
 test('birth, death and combined filters return dated life events once, newest first, without mutating history',()=>{
   const birth={day:2,type:'birth',name:'Aiste',text:'Aiste was born to Rasa and Jonas.'};

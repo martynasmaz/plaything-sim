@@ -50,7 +50,7 @@ test('real harvesting receives the bounded soil bonus through normal field work'
   let s=field(),v=s.villagers[0];v.practice.known.bonemeal=1;s.local.stock.boneMeal=1;applyBoneFertilizer(s,v);
   s.day=s.config.learning.seasonLength;s.farming.plots=[6,null,null,null];s.food=1;v.fullness=5;
   s=stepDay(s);assert.equal(s.lastDay.actions[0].action,'Harvest');
-  assert.equal(s.lastDay.actions[0].gained,s.config.farming.harvestFood+2);
+  assert.equal(s.lastDay.actions[0].gained,(s.config.farming.harvestFood+2)*2);
   assert.equal(s.farming.boneSoil[0].remaining,2);
 });
 test('old saves retain their fields and discoveries; processed bone and soil progress survive reload',()=>{

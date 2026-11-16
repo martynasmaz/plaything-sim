@@ -2,6 +2,8 @@
 // profile: never attaches to the desktop browser or uses any signed-in account.
 // Requires a locally installed playwright-core; npm test does NOT require it.
 import assert from 'node:assert/strict';
+import {archivedCheck} from './archived-check.mjs';
+archivedCheck(import.meta.url,'Use node scripts/browser-smoke.mjs.');
 import {THEME,slotPosition} from '../src/theme.js';
 import {createState,stepDay} from '../src/sim.js';
 import {chooseCommand} from '../tests/strategies.js';

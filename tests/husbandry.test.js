@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createState,stepDay,readyToInvent,foodCapacity} from '../src/sim.js';
-import {HOMESTEAD_RULES} from '../src/config.js';
-import {practices,canExperiment,makePracticeProduct,finishOrdinaryWork,buildingSiteTree,clearBuildingTree,completeHusbandryLessons,worldTrees,planLessons} from '../src/practices.js';
-import {husbandryWork,beginHusbandryDay,finishHusbandryDay,livestockKinds,villageLivestock,animalRelated,slaughterLivestock,transferLivestockOwnership,cattleFieldWork,husbandryIds,canLeaveLivestock} from '../src/husbandry.js';
+import {HOMESTEAD_RULES} from './fixtures/eating-profile.js';
+import {practices,canExperiment,makePracticeProduct,finishOrdinaryWork,buildingSiteTree,clearBuildingTree,completeHusbandryLessons,worldTrees,planLessons,hutBuildingSite} from '../src/practices.js';
+import {husbandryWork,beginHusbandryDay,finishHusbandryDay,livestockKinds,villageLivestock,animalRelated,slaughterLivestock,transferLivestockOwnership,cattleFieldWork,husbandryIds,canLeaveLivestock,chooseLivestockSite,livestockBuildingRules,livestockSiteObstructed,livestockPen} from '../src/husbandry.js';
+import {householdHutSite,builtHutSite} from '../src/settlement-layout.js';
+import {buildingPatches} from '../src/ecology.js';
 import {boneHarvestBonus} from '../src/farming.js';
 import {serialize,deserialize} from '../src/save.js';
 import {rememberCollection} from '../src/collection.js';
@@ -30,11 +32,137 @@ function stockAnimal(s,pen,species='sheep',sex='female'){
 }
 function stockReport(s){const r={actions:[],gatheredFood:0,gatheredWood:0};beginHusbandryDay(s,r);return r;}
 function knowStock(v,...ids){for(const id of ids)v.practice.known[id]=1;}
+test('actual paid care records a pasture journey; winter care stays at the enclosure',()=>{
+  for(const season of ['Spring','Winter']){
+    const s=stockWorld(),pen=stockPen(s),v=s.villagers[0];stockAnimal(s,pen);knowStock(v,'herding','penbuilding');
+    s.local.season=season;pen.careDay=s.day-3;const energy=v.practice.energy,r=stockReport(s);
+    assert.ok(husbandryWork(s,v,1000,r,livestockDeps));assert.equal(r.actions.length,1);assert.ok(v.practice.energy<energy);
+    if(season==='Spring'){assert.ok(pen.grazing);assert.deepEqual(r.actions[0].site,pen.grazing.site);assert.notDeepEqual(pen.grazing.site,pen.site);}
+    else assert.equal(pen.grazing,undefined);
+  }
+});
+function obstructedStockWorld(){
+  const s=stockWorld(),pen=stockPen(s),v=s.villagers[0];s.huts=Array(5).fill(0);s.hutDetails=s.huts.map(()=>({shape:'dome hut'}));
+  pen.site=[332,174];pen.enclosureMaterials={wood:6,fibre:3};pen.shelterMaterials={wood:8,fibre:4,hide:1};
+  knowStock(v,'herding','penbuilding','haymaking','stockshelter');stockAnimal(s,pen);stockAnimal(s,pen,'sheep','male');return s;
+}
+
+test('saved overlapping pens are rebuilt with materials and separate workdays before moving animals and dismantling',()=>{
+  const s=obstructedStockWorld(),h=s.local.husbandry,old=h.pens[0],v=s.villagers[0],ids=villageLivestock(s).map(a=>a.id);
+  const stores={wood:s.wood,fibre:s.local.stock.fibre,hide:s.local.stock.hide},houses=structuredClone(s.hutDetails),actions=[];
+  assert.ok(livestockSiteObstructed(s,old));
+  for(let day=0;day<11;day++){
+    v.practice.energy=100;old.careDay=s.day;const r=stockReport(s);assert.ok(husbandryWork(s,v,1000,r,livestockDeps));assert.equal(r.actions.length,1);actions.push(v.activity);
+    if(day<9){assert.ok(villageLivestock(s).every(a=>a.penId===old.id));assert.equal(old.retiredDay,undefined);}
+    s.day++;
+  }
+  const replacement=livestockPen(s,0);assert.notEqual(replacement.id,old.id);assert.equal(livestockSiteObstructed(s,replacement),false);
+  assert.equal(replacement.work,4);assert.equal(replacement.shelterWork,5);assert.equal(old.work,4);assert.equal(old.shelterWork,5,'historical work retained');
+  assert.ok(old.dismantledDay);assert.equal(h.relocations.length,1);assert.equal(actions[9],'Lead livestock to replacement enclosure');assert.equal(actions[10],'Dismantle obstructed livestock enclosure');
+  assert.equal(s.wood,stores.wood-14+7);assert.equal(s.local.stock.fibre,stores.fibre-7);assert.equal(s.local.stock.hide,stores.hide-1);
+  assert.deepEqual(villageLivestock(s).map(a=>a.id),ids);assert.ok(villageLivestock(s).every(a=>a.penId===replacement.id));assert.deepEqual(s.hutDetails,houses);
+  assert.ok(!buildingPatches(s,[[227,222],[802,433],[702,153]]).some(p=>p.kind==='pen'&&p.site===old.site));
+});
+test('replacement construction pauses for hunger and survives save/load and a builder death',()=>{
+  let s=obstructedStockWorld(),v=s.villagers[0],old=s.local.husbandry.pens[0];
+  assert.ok(husbandryWork(s,v,1000,stockReport(s),livestockDeps));
+  s.day++;v.fullness=0;const pausedReport=stockReport(s),project=structuredClone(s.local.husbandry.pens[1]);
+  assert.equal(husbandryWork(s,v,1000,pausedReport,livestockDeps),false);assert.deepEqual(s.local.husbandry.pens[1],project);
+  s=deserialize(serialize(s),livestockTestRules);assert.equal(s.local.husbandry.pens[1].work,1);assert.ok(s.local.husbandry.pens[1].pending);
+  const deadId=s.villagers[0].id;s.villagers=s.villagers.filter(p=>p.id!==deadId);v=s.villagers[0];knowStock(v,'herding','penbuilding','haymaking','stockshelter');
+  const ids=villageLivestock(s).map(a=>a.id);
+  for(let day=0;day<18&&s.local.husbandry.pens[0].dismantledDay===undefined;day++){s.day++;v.practice.energy=100;s.local.husbandry.pens[0].careDay=s.day;husbandryWork(s,v,1000,stockReport(s),livestockDeps);}
+  assert.ok(s.local.husbandry.pens[0].dismantledDay);assert.deepEqual(villageLivestock(s).map(a=>a.id),ids);assert.notEqual(livestockPen(s,0).ownerId,deadId);
+});
+test('relocation clears actual trees as paid work before constructing and never moves a saved site for free',()=>{
+  const s=obstructedStockWorld(),v=s.villagers[0],wood=s.wood;
+  const r=stockReport(s);assert.ok(husbandryWork(s,v,1000,r,{...livestockDeps,siteTree:buildingSiteTree}));
+  const replacement=s.local.husbandry.pens.find(p=>p.pending);assert.ok(replacement);assert.equal(villageLivestock(s)[0].penId,s.local.husbandry.pens[0].id);
+  if(v.activity==='Clear livestock building site'){assert.equal(replacement.work,0);assert.ok(replacement.clearedTrees.length);assert.ok(s.wood>wood);}
+  else assert.equal(replacement.work,1);
+  const before=structuredClone(replacement.site);s.day++;beginHusbandryDay(s,{actions:[]});assert.deepEqual(replacement.site,before);
+});
+test('ordinary autonomous days recover an overlapping saved enclosure without god commands',()=>{
+  let s=obstructedStockWorld();s.config.birth.consecutiveDays=10000;s.config.illness.chance=0;
+  const houses=structuredClone(s.hutDetails),oldId=s.local.husbandry.pens[0].id;
+  // The paid recovery competes with fuel, meals and genuine learning. Allow
+  // two compressed years, rather than relying on the former free practice.
+  for(let day=0;day<8*s.config.learning.seasonLength&&!s.ended&&s.local.husbandry.pens[0].dismantledDay===undefined;day++){
+    const before=s;s=stepDay(s);
+    for(let i=0;i<houses.length;i++)for(const key of ['shape','wall','chimney','ondol'])if(before.hutDetails[i]?.[key]!==s.hutDetails[i]?.[key]){
+      const fitting=key==='shape'||key==='wall'?s.hutDetails[i][key]:key;
+      assert.ok(s.lastDay.actions.some(a=>a.action==='Build '+fitting),'houses change only through actual NPC improvements');
+    }
+  }
+  const old=s.local.husbandry.pens.find(p=>p.id===oldId);assert.ok(old.dismantledDay,'existing daily decisions must actually perform the recovery');
+  assert.ok(s.local.husbandry.relocations.length);assert.equal(livestockSiteObstructed(s,livestockPen(s,0)),false);
+  assert.deepEqual(s.hutDetails.slice(0,houses.length).map(h=>h.site),houses.map(h=>h.site));
+});
 
 test('new worlds contain no village animals or free structures; off-map stock is finite',()=>{
   const s=createState(HOMESTEAD_RULES,7);assert.equal(villageLivestock(s).length,0);assert.equal(s.local.husbandry.pens.length,0);
   assert.equal(s.local.husbandry.animals.length,12);assert.equal(s.local.husbandry.contacts.herders,undefined);
   assert.equal(createState({...HOMESTEAD_RULES,learning:{...HOMESTEAD_RULES.learning,husbandry:false}},7).local.husbandry,undefined);
+});
+test('new pen sites reserve homes, crops and existing buildings instead of using a fixed offset',()=>{
+  const s=stockWorld();s.huts=[0,0,0,0,0,1,1,2];
+  s.local.healerHome={home:[120,120],work:6};s.local.campStores[0]={built:true,rackSites:[[309,270]]};
+  const before=JSON.stringify(s),site=chooseLivestockSite(s,0);assert.ok(site);assert.equal(JSON.stringify(s),before);
+  for(let i=0;i<8;i++){const home=householdHutSite([227,222],i);assert.ok(Math.hypot((site[0]-home[0])/62,(site[1]-home[1])/55)>=1);}
+  assert.ok(Math.hypot((site[0]-309)/52,(site[1]-270)/42)>=1);
+  assert.ok(Math.hypot((site[0]-120)/75,(site[1]-120)/65)>=1);
+});
+test('due pregnancies resolve without waiting for fresh hay, care or a completed winter roof',()=>{
+  for(const problem of ['hay','care','roof']){
+    const s=stockWorld(),pen=stockPen(s),mother=stockAnimal(s,pen),father=stockAnimal(s,pen,'sheep','male');knowStock(s.villagers[0],'herding');
+    mother.pregnancy={fatherId:father.id,due:s.day};
+    if(problem==='hay')s.local.stock.hay=0;
+    if(problem==='care')pen.careDay=s.day-3;
+    if(problem==='roof'){s.local.season='Winter';pen.shelterWork=0;}
+    const r=stockReport(s);finishHusbandryDay(s,r);
+    assert.equal(r.livestock.births.length,1,problem);assert.equal(mother.pregnancy,undefined);
+    const restored=deserialize(serialize(s),livestockTestRules);assert.equal(restored.local.husbandry.animals.filter(a=>a.motherId===mother.id).length,1);
+  }
+});
+test('urgent human hunger is not displaced by animal care when the herd cannot supply supper',()=>{
+  const s=stockWorld(),pen=stockPen(s),v=s.villagers[0],young=stockAnimal(s,pen);knowStock(v,'herding');
+  young.age=10;s.food=0;pen.careDay=s.day-3;v.fullness=40;
+  const r=stockReport(s),before=pen.careDay;
+  assert.equal(husbandryWork(s,v,1000,r,livestockDeps,{careOnly:true,urgent:true}),false);
+  assert.equal(pen.careDay,before);assert.equal(r.actions.length,0,'villager remains available for ordinary food work');
+});
+test('the sole trained keeper cannot leave an existing herd for a trading journey',()=>{
+  const s=stockWorld(),pen=stockPen(s),v=s.villagers[0];stockAnimal(s,pen);knowStock(v,...husbandryIds);
+  pen.site=[332,174];s.local.husbandry.nextTradeDay=0;pen.careDay=s.day;
+  Object.assign(s.local.stock,{wool:24,woolYarn:24,woolCloth:16});for(const person of s.villagers)person.practice.gear['wool wrap']=true;
+  const r=stockReport(s),food=s.food;husbandryWork(s,v,1000,r,livestockDeps);
+  assert.equal(s.local.husbandry.journey,undefined);assert.equal(s.food,food);
+  knowStock(s.villagers[1],'herding');v.practice.energy=100;
+  assert.ok(husbandryWork(s,v,1000,stockReport(s),livestockDeps));assert.equal(s.local.husbandry.journey?.travelerId,v.id,'a replacement keeper makes the same trip possible');
+});
+test('later houses choose and retain a site outside an existing pen; legacy buildings keep their places',()=>{
+  const s=stockWorld(),v=s.villagers[0],camps=[[227,222],[802,433],[702,153]];
+  s.huts=Array(9).fill(0);s.hutDetails=s.huts.map(()=>({shape:'round hut'}));
+  const legacy=householdHutSite(camps[0],4),original=householdHutSite(camps[0],9);
+  const pen=stockPen(s);pen.site=original.slice();
+  assert.deepEqual(builtHutSite(s,camps,0,4),legacy);
+  const proposal=hutBuildingSite(s,v);assert.equal(proposal.blocked,false);assert.notDeepEqual(proposal.site,original);
+  assert.ok(Math.hypot((proposal.site[0]-original[0])/68,(proposal.site[1]-original[1])/60)>=1);
+  s.hutProject={camp:0,index:9,work:1,site:proposal.site.slice()};
+  worldTrees(s).forEach((tree,id)=>{if(Math.hypot((tree[0]-proposal.site[0])/26,(tree[1]-proposal.site[1])/24)<1)(s.local.stumps??={})[id]=s.day;});
+  const next=stepDay(s);assert.ok(Object.values(next.lastDay.hutSites||{}).some(job=>job.site?.[0]===proposal.site[0]&&job.site?.[1]===proposal.site[1]),'builder report carries the exact chosen site to the renderer');
+  const restored=deserialize(serialize(s),livestockTestRules);assert.deepEqual(hutBuildingSite(restored,restored.villagers[0]).site,proposal.site);
+  assert.deepEqual(builtHutSite(restored,camps,0,9),proposal.site);
+  assert.ok(buildingPatches(restored,camps).some(p=>p.kind==='hut'&&p.site[0]===proposal.site[0]&&p.site[1]===proposal.site[1]));
+  restored.huts.push(0);restored.hutDetails.push({shape:'round hut',site:proposal.site});restored.hutProject=null;
+  assert.deepEqual(builtHutSite(restored,camps,0,9),proposal.site);
+});
+test('surplus management respects the configured enclosure capacity',()=>{
+  const s=stockWorld(),pen=stockPen(s),v=s.villagers[0];knowStock(v,'herding');
+  const first=stockAnimal(s,pen);for(let i=0;i<3;i++)s.local.husbandry.animals.push({...first,id:100+i,motherId:null});
+  const capacity=livestockBuildingRules.enclosure.capacity;livestockBuildingRules.enclosure.capacity=3;
+  try {const r=stockReport(s);assert.ok(husbandryWork(s,v,1000,r,livestockDeps));assert.equal(villageLivestock(s).length,3);assert.match(v.activity,/^Slaughter /);}
+  finally {livestockBuildingRules.enclosure.capacity=capacity;}
 });
 test('discovery requires personal observations, prerequisites, real materials and a winter',()=>{
   const s=stockWorld(),v=s.villagers[0];assert.ok(canExperiment(s,v,practices.herding));
@@ -92,9 +220,9 @@ test('breeding needs adults of both sexes, safe condition, care and capacity; bi
 test('milk requires a fed lactating mother, collection work and vessels; it cannot be collected twice',()=>{
   const s=stockWorld(),pen=stockPen(s),a=stockAnimal(s,pen),v=s.villagers[0];knowStock(v,'herding','penbuilding','haymaking','stockshelter','milking');
   let r=stockReport(s);finishHusbandryDay(s,r);assert.equal(a.milkAvailable,0);
-  a.lactatingUntil=s.day+12;a.nursingUntil=s.day+3;finishHusbandryDay(s,r);assert.equal(a.milkAvailable,1);
-  assert.ok(husbandryWork(s,v,1000,r,livestockDeps));assert.equal(s.local.stock.milk,1);assert.equal(a.milkAvailable,0);
-  delete s.local.husbandry.workedDay;v.practice.energy=100;husbandryWork(s,v,1000,r,livestockDeps);assert.equal(s.local.stock.milk,1);
+  a.lactatingUntil=s.day+12;a.nursingUntil=s.day+3;finishHusbandryDay(s,r);assert.equal(a.milkAvailable,2);
+  assert.ok(husbandryWork(s,v,1000,r,livestockDeps));assert.equal(s.local.stock.milk,2);assert.equal(a.milkAvailable,0);
+  delete s.local.husbandry.workedDay;v.practice.energy=100;husbandryWork(s,v,1000,r,livestockDeps);assert.equal(s.local.stock.milk,2);
   for(let i=0;i<3;i++){s.day++;stockReport(s);}assert.equal(s.local.stock.milk,0);
 });
 test('curds consume fresh milk and fuel in a separate workday and enter the finished-food ledger once',()=>{
@@ -105,7 +233,7 @@ test('curds consume fresh milk and fuel in a separate workday and enter the fini
 });
 test('slaughter consumes one living animal once, grants finite products and keeps its history',()=>{
   const s=stockWorld(),pen=stockPen(s),a=stockAnimal(s,pen),v=s.villagers[0];knowStock(v,'herding');const r=stockReport(s),food=s.food;
-  assert.ok(slaughterLivestock(s,v,a,r,livestockDeps));assert.equal(a.status,'dead');assert.equal(a.deathCause,'slaughtered');assert.equal(s.food,food+12);assert.equal(s.local.stock.bone,2);assert.equal(slaughterLivestock(s,v,a,r,livestockDeps),false);
+  assert.ok(slaughterLivestock(s,v,a,r,livestockDeps));assert.equal(a.status,'dead');assert.equal(a.deathCause,'slaughtered');assert.equal(s.food,food+24);assert.equal(s.local.stock.bone,2);assert.equal(slaughterLivestock(s,v,a,r,livestockDeps),false);
   assert.ok(s.local.husbandry.animals.includes(a));
 });
 test('livestock and buildings survive a caretaker death; succession does not confer skill',()=>{
@@ -182,7 +310,7 @@ test('finished curds feed villagers through the normal meal system and are count
   const s=stockWorld(),v=s.villagers[0];s.villagers=[v];s.food=0;s.local.stock.curds=4;v.fullness=40;v.warmth=100;v.practice.energy=0;
   s.local.deposits.berries=0;s.local.deposits.fish=0;s.local.wildPatches=[];s.local.harvests=0;s.farming.plots=[];s.toolkit=[];s.gameAnimals=0;s.day=120;s.local.seasonOffset=20;
   assert.equal(foodLedger(s).home,4);assert.equal(foodDaysFor(s,v),4);
-  const next=stepDay(s);assert.ok(next.lastDay.meals.includes(v.id));assert.equal(next.local.stock.curds,3);assert.equal(next.food,0);assert.equal(foodLedger(next).home,3);
+  const next=stepDay(s);assert.ok(next.lastDay.meals.includes(v.id));assert.equal(next.local.stock.curds,3.5);assert.equal(next.food,0);assert.equal(foodLedger(next).home,3.5);
 });
 test('winter pig feed is delivered even while summer mast remains on the ground',()=>{
   const s=stockWorld(),pen=stockPen(s),v=s.villagers[0],pig=stockAnimal(s,pen,'pig');knowStock(v,'herding');s.local.season='Winter';pen.careDay=s.day-3;pen.mast=45;s.local.stock.fodderGrain=0;

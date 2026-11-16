@@ -1,12 +1,26 @@
-import {householdHutSite} from './settlement-layout.js';
+import {builtHutSite} from './settlement-layout.js';
 import {riverHabitat} from './ecology.js';
 import {developmentEnabled} from './development.js';
+import {SCENARIO} from './scenario.js';
 
-export const granaryRules={work:8,capacity:96,cost:{wood:12,fibre:4,stone:2},binWork:4,binCapacity:48,binCost:{wood:6,fibre:2}};
+export const granaryRules={work:8,get capacity(){return SCENARIO.storage.granaryCapacity;},cost:{wood:12,fibre:4,stone:2},binWork:4,get binCapacity(){return SCENARIO.storage.granaryBinCapacity;},binCost:{wood:6,fibre:2}};
 export const granaryFinished=store=>(store?.granary?.work||0)>=granaryRules.work;
 export function storageCapacity(store){
-  return (store?.built?24*(store.racks||1):0)+12*(store?.tradeJars||0)+
+  return (store?.houseCapacity||0)+(store?.built?SCENARIO.storage.rackCapacity*(store.racks||1):0)+SCENARIO.storage.jarCapacity*(store?.tradeJars||0)+
     (granaryFinished(store)?granaryRules.capacity+(store.granary.bins||0)*granaryRules.binCapacity:0);
+}
+export const houseStorageRules={work:2,get capacity(){return SCENARIO.storage.houseCapacity;},cost:{wood:2,fibre:2}};
+// House fittings add space to the camp's one preserved-food account, never a
+// second copy of its food. Derive capacity from actual completed fittings.
+export function refreshHouseStorage(s){
+  if(!s.local)return;
+  for(const store of Object.values(s.local.campStores||{}))store.houseCapacity=0;
+  (s.huts||[]).forEach((camp,i)=>{
+    const hut=s.hutDetails?.[i];
+    if(hut?.ruined||(hut?.foodStore?.work||0)<houseStorageRules.work)return;
+    const store=s.local.campStores[camp]??={saved:0,rack:0};
+    store.houseCapacity=(store.houseCapacity||0)+houseStorageRules.capacity;
+  });
 }
 export function granaryStudyReady(s,v){
   const store=s.local?.campStores?.[v.tribe||0],p=v.practice;
@@ -18,15 +32,15 @@ export const granaryRecipe=['granaries','Raised food storage','wood','rigid',['d
 
 // A site is chosen by construction, then saved. Reserve growing households,
 // paths and other projects; storage stays on its camp's side of both rivers.
-export function chooseStorageSite(s,camps,camp,extra=[],trees=[]){
-  const home=camps[camp],bank=riverHabitat(...home),occupied=[...extra];
+export function chooseStorageSite(s,camps,camp,extra=[],trees=[],purpose='storage'){
+  const domestic=purpose==='oven',home=domestic&&(s.huts||[]).includes(camp)?builtHutSite(s,camps,camp,0):camps[camp],bank=riverHabitat(...home),occupied=[...extra];
   camps.forEach((c,id)=>{
     occupied.push({site:c,rx:55,ry:45});
-    const count=Math.max(8,(s.huts||[]).filter(n=>n===id).length+2);
-    for(let i=0;i<count;i++)occupied.push({site:householdHutSite(c,i),rx:62,ry:55});
+    const count=domestic?(s.huts||[]).filter(n=>n===id).length:Math.max(8,(s.huts||[]).filter(n=>n===id).length+2);
+    for(let i=0;i<count;i++)occupied.push({site:builtHutSite(s,camps,id,i),rx:domestic?44:62,ry:domestic?38:55});
   });
   if(s.local.healerHome)occupied.push({site:s.local.healerHome.home,rx:75,ry:65});
-  for(const p of s.local.husbandry?.pens||[])occupied.push({site:p.site,rx:80,ry:65});
+  for(const p of s.local.husbandry?.pens||[])if(p.dismantledDay===undefined)occupied.push({site:p.site,rx:80,ry:65});
   for(const site of Object.values(s.farming.sites||{}))occupied.push({site,rx:50,ry:45});
   // The original cultivated beds and shared pantry also need clear space.
   occupied.push({site:[680,535],rx:110,ry:60},{site:[310,168],rx:60,ry:50});
@@ -34,7 +48,8 @@ export function chooseStorageSite(s,camps,camp,extra=[],trees=[]){
     for(const site of store.rackSites||[])occupied.push({site,rx:52,ry:42});
     if(store.granary)occupied.push({site:store.granary.site,rx:70,ry:60});
   }
-  for(let radius=95;radius<=310;radius+=20)for(let i=0;i<48;i++){
+  for(const oven of Object.values(s.local.ovens||{}))occupied.push({site:oven.site,rx:55,ry:45});
+  for(let radius=domestic?55:95;radius<=(domestic?195:310);radius+=20)for(let i=0;i<48;i++){
     const angle=i*Math.PI/24,site=home.map((n,j)=>Math.round(n+radius*(j?Math.sin(angle):Math.cos(angle))));
     const [x,y]=site,h=riverHabitat(x,y);
     if(x<45||x>955||y<90||y>580||h.mainDistance<65||h.tributaryDistance<55||

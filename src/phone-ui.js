@@ -24,6 +24,7 @@ export const phonePowers=[
   {group:'Nature',name:'Rain',command:'rain',description:'Bring rain to the valley.'},
   {group:'Knowledge',name:'Teach fire',command:'teach fire',description:'Teach fire making when the camp has enough wood.'},
   {group:'Knowledge',name:'Teach farming',command:'teach farming',description:'Teach the village to sow crops.'},
+  {group:'Knowledge',name:'Teach all',command:'teach all',description:'Give everyone all practical knowledge. Tools and buildings still need work. Enable magic separately to include magical knowledge.'},
   {group:'Knowledge',name:'Inspire',command:'inspire',description:'Give a ready villager a question that fits their experience. It encourages experiments and grants no discovery.'},
   {group:'People',name:'Call settlers',command:'spawn people 5',description:'Bring five adult settlers to the village.'},
   {group:'People',name:'Recall settlers',command:'recall settlers',description:'Bring the eastern household home with its supplies.'},

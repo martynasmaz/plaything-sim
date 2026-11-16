@@ -1,6 +1,8 @@
 // Read-only instrumentation at the actual birth decision. The live source is
 // loaded into memory with two observation calls; no game file/rule is edited.
 import {Worker,isMainThread,workerData,parentPort} from 'node:worker_threads';
+import {archivedCheck} from './archived-check.mjs';
+archivedCheck(import.meta.url,'Use node scripts/population-1000-audit.mjs FIRST COUNT UNIQUE_REPORT_NAME 1000 for current end-of-day observations.');
 import {readFileSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
@@ -102,7 +104,7 @@ if(isMainThread){
     let firstHealer=null;
     while(!state.ended&&state.day<workerData.horizon){
       const previous=state;state=stepDay(state);const report=state.lastDay;
-      if(report.birth!=null){const child=state.villagers.find(v=>v.id===report.birth),generation=1+Math.max(...child.parents.map(id=>generations.get(id)||0));generations.set(child.id,generation);
+      for(const id of report.births??(report.birth!=null?[report.birth]:[])){const child=state.villagers.find(v=>v.id===id),generation=1+Math.max(...child.parents.map(id=>generations.get(id)||0));generations.set(child.id,generation);
         births.push({day:state.day,id:child.id,gender:child.gender,parents:child.parents,generation,food:state.food,cap:populationCap(state)});}
       for(const v of state.villagers)if(generations.get(v.id)>0&&v.age>=state.config.life.adult)matured.add(v.id);
       if(firstHealer===null&&state.villagers.some(v=>v.herbalist))firstHealer=state.day;

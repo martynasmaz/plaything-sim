@@ -14,9 +14,10 @@ export function createLivestockNotebook(host,readState){
       ' Births: '+data.stats.births+' · acquired through exchange: '+data.stats.traded+' · slaughtered: '+data.stats.slaughtered+' · other deaths: '+(data.stats.deaths-data.stats.slaughtered)+' · escaped: '+data.stats.escaped+'.';
     pens.replaceChildren(...data.pens.map(p=>{
       const row=document.createElement('p'),keeper=s.villagers.find(v=>v.id===p.keeperId),owner=s.villagers.find(v=>v.id===p.ownerId);
+      if(p.retiredDay!==undefined){row.textContent='Camp '+(p.camp+1)+' · former enclosure · '+(p.dismantledDay!==undefined?'dismantled on day '+p.dismantledDay:'livestock moved on day '+p.retiredDay+'; awaiting dismantling')+'. Construction history retained.';return row;}
       row.textContent='Camp '+(p.camp+1)+' · enclosure '+p.work+'/'+livestockBuildingRules.enclosure.work+' · shelter '+p.shelterWork+'/'+livestockBuildingRules.shelter.work+' · '+(owner?'Household of '+owner.name:'Awaiting a successor')+
         ' · keeper '+(keeper?.name||'needed')+' · winter hay estimate '+livestockWinterNeed(s,p)+' · grazing '+Math.floor(p.grass)+' · woodland forage '+Math.floor(p.mast)+
-        ' · manure in pen '+Math.floor(p.dung)+'.'+(p.careDay<s.day-1?' Animals need care.':'');return row;
+        ' · manure in pen '+Math.floor(p.dung)+'.'+(p.pending?' Replacement under construction; animals remain in their old enclosure.':h.pens.some(other=>other.pending&&other.replaces===p.id)?' A replacement is being built clear of nearby buildings.':p.careDay<s.day-1&&living.some(a=>a.penId===p.id)?' Animals need care.':'');return row;
     }));
     if(h.journey){const row=document.createElement('p');row.textContent=(s.villagers.find(v=>v.id===h.journey.travelerId)?.name||'A villager')+' is visiting distant herders'+(h.journey.species?' to exchange for '+livestockKinds[h.journey.species].label.toLowerCase():'')+'.';pens.append(row);}
     const nextKey=s.seed+'/'+all.map(a=>a.id+':'+a.status).join(',');

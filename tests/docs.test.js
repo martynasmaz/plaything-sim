@@ -1,4 +1,5 @@
-// Docs are the source of truth: numbers quoted in "How a Gourdling decides"
+// Historical reference-rule documentation contract, not a current Homestead
+// mechanics check: numbers quoted in "How a Gourdling decides"
 // (docs/IMPLEMENTATION.md) must match src/config.js. Each check is a phrase
 // pattern with ONE captured number and the config value it must equal.
 import { test } from 'node:test';

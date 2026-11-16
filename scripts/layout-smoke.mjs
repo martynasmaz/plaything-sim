@@ -2,6 +2,8 @@
 // so all slots fill on day 0; we then play days and assert that no sprite or
 // name label overlaps another Gourdling or a scene label. Real art, then shapes.
 import assert from 'node:assert/strict';
+import {archivedCheck} from './archived-check.mjs';
+archivedCheck(import.meta.url,'Use tests/settlement-layout.test.js and tests/husbandry-view.test.js for current spacing contracts, and scripts/browser-smoke.mjs for startup. This legacy eight-slot screenshot scenario needs redesign before reuse.');
 import {mkdtemp,cp,readFile,writeFile,appendFile,rm} from 'node:fs/promises';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import path from 'node:path';

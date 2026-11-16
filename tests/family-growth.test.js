@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createState,stepDay,shouldPlanHut,unrelated} from '../src/sim.js';
-import {HOMESTEAD_RULES} from '../src/config.js';
-import {communityOf,familyFoodReady,mainFoodRequired,foodDaysFor,familyFoodStable,foodLedger,recordFoodBalance,winterStorageTarget} from '../src/provisions.js';
+import {HOMESTEAD_RULES} from './fixtures/eating-profile.js';
+import {communityOf,familyFoodReady,mainFoodRequired,foodDaysFor,familyFoodStable,foodLedger,recordFoodBalance,winterStorageTarget,mealCostFor} from '../src/provisions.js';
 import {neighborWork,crossVillageParents,recentVillagePartner} from '../src/neighbors.js';
 import {beginSettlementDay} from '../src/practices.js';
 import {serialize,deserialize} from '../src/save.js';
@@ -33,9 +33,10 @@ test('finished local provisions support family readiness without spending or dup
   s.local.campStores[0]={saved:0,rack:100};assert.equal(familyFoodReady(s,mother),false);assert.equal(foodDaysFor(s,mother),0);
   s.local.campStores[1]={saved:100};assert.equal(familyFoodReady(s,mother),false,'abandoned caches cannot feed this camp');
 });
-test('a camp cannot pay for another occupied camp from its inaccessible preserved stock',()=>{
+test('a secure camp can plan locally while its private food remains inaccessible to another camp',()=>{
   const s=settled();s.villagers.forEach((v,i)=>v.tribe=i<3?0:1);s.food=0;s.local.campStores[0]={saved:100};
-  assert.equal(mainFoodRequired(s,0),6);assert.equal(familyFoodReady(s,s.villagers[1]),false);
+  assert.equal(mainFoodRequired(s,0),6);assert.equal(familyFoodReady(s,s.villagers[1]),true);
+  assert.equal(familyFoodReady(s,s.villagers[3]),false);
   s.food=6;assert.equal(familyFoodReady(s,s.villagers[1]),true);assert.equal(familyFoodReady(s,s.villagers[3]),false);
 });
 test('the eastern village uses its own supplies and is not blocked by the main pantry',()=>{
@@ -54,13 +55,13 @@ test('a well-stocked camp does not take the shared meals needed by a camp withou
   s.villagers.forEach(v=>{v.tribe=v.id<=6?0:1;v.fullness=40;v.warmth=5;});
   s.food=2;s.local.campStores[0]={saved:18,rack:0};s.local.seasonOffset=60;s.local.deposits.berries=0;s.local.wildPatches=[];
   s=stepDay(s);assert.ok(s.lastDay.meals.includes(7));assert.ok(s.lastDay.meals.includes(8));assert.equal(s.lastDay.meals.length,8);
-  assert.equal(s.food,0);assert.equal(s.local.campStores[0].saved,12);assert.equal(s.villagers.length,8);
+  assert.equal(s.food,0);assert.equal(s.local.campStores[0].saved,16);assert.equal(s.villagers.length,8);
 });
-test('actual births use stored meals while retaining the three-day check and maternal recovery',()=>{
+test('actual births use stored meals while retaining independent three-day checks and maternal recovery',()=>{
   let s=settled();s.food=0;s.local.campStores[0]={saved:70,rack:0};s.local.deposits.berries=0;s.local.deposits.fish=0;s.local.wildPatches=[];s.local.seasonOffset=60;
-  for(let day=1;day<=3;day++){s=stepDay(s);assert.equal(s.stats.births,day===3?1:0);}
+  for(let day=1;day<=3;day++){s=stepDay(s);if(day<3)assert.equal(s.stats.births,0);else assert.ok(s.stats.births>=1);}
   const child=s.villagers.find(v=>v.id===s.lastDay.birth),mother=s.villagers.find(v=>v.id===child.parents[0]);
-  assert.equal(mother.recoveryUntil,s.day+7);assert.ok(s.local.campStores[0].saved<70,'meals really consume the preserved stock');
+  assert.equal(mother.recoveryUntil,s.day+s.config.birth.recoveryDays);assert.ok(s.local.campStores[0].saved<70,'meals really consume the preserved stock');
 });
 test('early housing plans create physical work before a split village hits its birth cap',()=>{
   let s=settled();s.villagers.forEach((v,i)=>v.tribe=i<4?0:1);s.tribeCount=2;
@@ -73,7 +74,7 @@ test('hungry, cold villagers do not get locked onto early construction',()=>{
   let s=settled();s.food=0;s.local.deposits.berries=0;s.local.wildPatches=[];for(const v of s.villagers)v.warmth=5;
   s=stepDay(s);assert.equal(s.hutProject,undefined);assert.equal(s.huts,undefined);assert.ok(s.lastDay.actions.every(a=>a.action==='Warm up'));
 });
-test('an old food stockpile does not permit births while current production runs below consumption',()=>{
+test('the food-stability diagnostic distinguishes shrinking, stable and hungry stores; it is not a birth veto',()=>{
   const s=settled(),mother=s.villagers[1];s.local.campStores[0]={saved:100};
   s.local.provisionHistory=Array.from({length:7},(_,i)=>({day:i+1,home:-1,east:0,hungryHome:false,hungryEast:false}));
   assert.equal(familyFoodReady(s,mother),true);assert.equal(familyFoodStable(s,mother),false);
@@ -86,16 +87,16 @@ test('moving meals into a camp store or a travel packet is not food production',
   assert.deepEqual(foodLedger(s),before);recordFoodBalance(s,{foodAtDawn:before,meals:[]});
   assert.equal(s.local.provisionHistory[0].home,0);
 });
-test('winter storage planning requires experienced living preservers and learned winter yields',()=>{
+test('winter capacity target covers the camp peak without imposing a family food cap',()=>{
   const s=settled(),mother=s.villagers[1];s.food=30;s.local.lastWinterFood={home:1,east:0};
-  assert.equal(winterStorageTarget(s,s.villagers,10),24,'without a trained food preserver the normal storage practice remains');
+  assert.equal(winterStorageTarget(s,s.villagers,10),120,'six residents for twenty days at normal portions');
   mother.practice.known.drying=1;mother.practice.winterFoodDays=7;
   assert.ok(winterStorageTarget(s,s.villagers,10)>24,'past winter experience justifies paid storage expansion');
   assert.equal(familyFoodStable(s,mother),true,'planning storage does not impose a hidden population cap');
 });
 test('observing a winter records food income once and keeps experience through a save',()=>{
   const s=settled(),v=s.villagers[0];v.practice.known.drying=1;s.local.season='Winter';s.day=61;
-  for(let day=0;day<7;day++){s.day++;const dawn=foodLedger(s);s.food+=2;recordFoodBalance(s,{foodAtDawn:dawn,meals:[v.id]});}
+  for(let day=0;day<7;day++){s.day++;const dawn=foodLedger(s);s.food+=3-mealCostFor(s);recordFoodBalance(s,{foodAtDawn:dawn,meals:[v.id]});}
   assert.equal(v.practice.winterFoodDays,7);assert.equal(s.local.winterFoodObservation.days,7);
   s.local.season='Spring';recordFoodBalance(s,{foodAtDawn:foodLedger(s),meals:[]});
   assert.equal(s.local.lastWinterFood.home,3);assert.equal(s.local.winterFoodObservation,undefined);
@@ -143,6 +144,18 @@ test('a neighbor can teach a practised technique through repeated meetings, with
   s.day=s.local.nextNeighborDay-1;visitDay(s);visitDay(s);assert.equal(student.practice.known.cordage,1);assert.equal(s.local.communication.lessons,1);
   const gated=neighbors();gated.villagers[2].practice.known.cordage=1;gated.villagers[2].practice.used.cordage=3;meetTwice(gated);
   assert.equal(gated.villagers[0].practice.known.cordage,undefined,'a missing material property cannot be skipped by teaching');
+});
+
+test('household planning can pass between villages without requiring another famine',()=>{
+  const s=neighbors(),student=s.villagers[0],teacher=s.villagers[2];
+  s.local.campStores[0]={built:true,saved:0,rack:0};s.local.campStores[1]={built:true,saved:0,rack:0};
+  for(const v of [teacher,student]){
+    v.practice.known.drying=1;v.practice.skills.berries=5;v.practice.properties=['perishable'];
+    v.practice.familyExperience={careDays:4,shortageDays:0,childShortageDays:0};
+  }
+  teacher.practice.known.familyplanning=1;teacher.practice.used.familyplanning=2;
+  meetTwice(s);assert.ok(student.practice.known.familyplanning);
+  assert.equal(student.practice.familyExperience.shortageDays,0);assert.equal(s.local.communication.lessons,1);
 });
 test('urgent needs, floods and sole childcare duties take priority over optional trips',()=>{
   for(const reason of ['food','cold','illness','energy','flood']){

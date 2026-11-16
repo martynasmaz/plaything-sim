@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createState,stepDay,preservationWork,improveBridge,readyToInvent} from '../src/sim.js';
+import {createState,stepDay,preservationWork,improveBridge,buildTributaryBridge,readyToInvent} from '../src/sim.js';
 import {HOMESTEAD_RULES} from '../src/config.js';
-import {practices,canExperiment,makePracticeProduct,planLessons,practiceWork,campSites,worldTrees,buildingSiteTree} from '../src/practices.js';
+import {practices,canExperiment,makePracticeProduct,planLessons,practiceWork,campSites,worldTrees,buildingSiteTree,completePracticeLessons} from '../src/practices.js';
 import {granaryRules,granaryFinished,storageCapacity,chooseStorageSite} from '../src/storage.js';
-import {bridgeProtection,bridgeFallChance,riverCrossingRoll} from '../src/river.js';
+import {bridgeProtection,bridgeFallChance,riverCrossingRoll,tributaryBridgeRules,tributaryBridgeBuilt,tributaryCrossingBanks,riverWaterAt} from '../src/river.js';
+import {SCENARIO} from '../src/scenario.js';
 import {walkRiver} from '../src/clearing.js';
 import {inBuildingPatch} from '../src/ecology.js';
 import {serialize,deserialize} from '../src/save.js';
@@ -21,9 +22,52 @@ function established(){
     v.practice.properties=['rigid','flexible','perishable'];
   }
   s.local.campStores[0]={built:true,racks:1,batches:3,saved:24,rack:0,rackSites:[[330,120]]};
+  s.local.fords={tributary:{channel:'tributary',work:4,spent:{stone:8},completedDay:80,site:[500,154]}};
   return s;
 }
 const report=()=>({actions:[],gatheredWood:0,gatheredFood:0});
+test('the tributary bridge is built independently, paid in stages, and persists after its builder dies',()=>{
+  let s=established(),v=s.villagers[0];s.local.terrain='kaunas';v.practice.known.bridgecraft=1;
+  const before={wood:s.wood,fibre:s.local.stock.fibre,stone:s.local.stock.stone};
+  assert.equal(tributaryBridgeBuilt(s),false,'the main bridge cannot grant a free second bridge');
+  for(let i=1;i<=tributaryBridgeRules.work;i++){
+    v.practice.energy=100;const r=report();assert.ok(buildTributaryBridge(s,v,r));
+    assert.equal(s.local.tributaryBridge.work,i);assert.equal(tributaryBridgeBuilt(s),i===tributaryBridgeRules.work);
+    assert.equal(buildTributaryBridge(s,s.villagers[1],r),false,'one workday at the site per day');
+  }
+  for(const key of ['wood','fibre','stone'])assert.equal(before[key]-(key==='wood'?s.wood:s.local.stock[key]),tributaryBridgeRules.cost[key]);
+  assert.equal(bridgeProtection(s).tributary.rails,false);
+  for(let i=0;i<10;i++){v.practice.energy=100;assert.ok(buildTributaryBridge(s,v,report()));}
+  assert.deepEqual(bridgeProtection(s).tributary,{built:true,ford:true,rails:true,braced:true});
+  const project=structuredClone(s.local.tributaryBridge);s.villagers.shift();s=deserialize(serialize(s),rules);
+  assert.deepEqual(s.local.tributaryBridge,project);
+  const work=tributaryBridgeRules.work;
+  try{tributaryBridgeRules.work=work+3;assert.ok(tributaryBridgeBuilt(s),'a settings edit cannot unbuild a finished bridge');}
+  finally{tributaryBridgeRules.work=work;}
+});
+test('tributary construction waits for prerequisites, hunger, weather and real supplies',()=>{
+  for(const issue of ['craft','tool','hunger','rain','wood']){
+    const s=established(),v=s.villagers[0];s.local.terrain='kaunas';v.practice.known.bridgecraft=1;
+    if(issue==='craft')delete v.practice.known.cordage;
+    if(issue==='tool')s.toolkit=[];
+    if(issue==='hunger')v.fullness=0;
+    if(issue==='rain')s.local.climate.mm=12;
+    if(issue==='wood')s.wood=0;
+    assert.equal(buildTributaryBridge(s,v,report()),false,issue);assert.equal(s.local.tributaryBridge,undefined);
+  }
+});
+test('completed tributary decks span real banks and safely carry cold children in fair weather',()=>{
+  for(const [w,h] of [[1000,640],[1920,4155],[4551,1920]]){
+    const banks=tributaryCrossingBanks(w,h,true);
+    for(const bank of [banks.left,banks.right])assert.deepEqual(riverWaterAt(...bank,w,h,true,true),{main:false,tributary:false});
+    for(const built of [false,true]){
+      const p={x:banks.left[0]-4,y:banks.left[1],leg:0,travel:0,seed:4,goal:[banks.right[0]+8,banks.right[1]]};let falls=0;
+      const protection={built:true,tributary:{built}};
+      for(let i=0;i<400&&p.goal;i++)walkRiver(p,p.goal,1,w,h,false,{id:5,warmth:20},true,protection,null,false,w*3,true,()=>{falls++;return {};});
+      assert.equal(falls,0);if(built)assert.equal(p.goal,null);else assert.equal(p.waitingCrossing,'tributary');
+    }
+  }
+});
 function clearSite(s,site){
   s.local.stumps??={};worldTrees(s).forEach((tree,id)=>{if(inBuildingPatch(tree,site,'granary'))s.local.stumps[id]=s.day;});
 }
@@ -37,7 +81,7 @@ test('storage and bridge discoveries require their crafts, infrastructure and pe
       if(['housing','cordage'].includes(missing))delete p.practice.known[missing];
       if(missing==='skill')p.practice.skills.wood=1;
       if(missing==='material')x.local.stock.fibre=0;
-      if(missing==='infrastructure'){if(id==='granaries')x.local.campStores={};else x.settlementWork=5;}
+      if(missing==='infrastructure'){if(id==='granaries')x.local.campStores={};else {x.settlementWork=5;x.local.fords={};}}
       if(missing==='experience'){if(id==='granaries')p.practice.used.drying=0;else {p.practice.used.cordage=0;p.practice.skills.fibre=0;}}
       assert.equal(canExperiment(x,p,r),false,id+': '+missing);
     }
@@ -57,7 +101,10 @@ test('teaching cannot bypass new construction prerequisites',()=>{
     student.practice.known.housing=1;
     for(let day=102;day<108&&!student.practice.known[id];day++){
       s.day=day;for(const p of s.villagers){delete p.practice.lessonToday;p.practice.energy=100;p.lastCompanyDay=day;}
-      planLessons(s,s.villagers);if(student.practice.lessonToday?.id===id)practiceWork(s,student,1,report());
+      planLessons(s,s.villagers);if(student.practice.lessonToday?.id===id){
+        const r=report();for(const v of [teacher,student])r.actions.push({id:v.id,action:practiceWork(s,v,1,r)});
+        completePracticeLessons(s,r);
+      }
     }
     assert.ok(student.practice.known[id],'experienced pupils learn through repeated lessons once dependencies exist');
   }
@@ -116,12 +163,12 @@ test('bridge upgrades consume separate workdays and materials and wait for tools
   let s=established(),v=s.villagers[0];v.practice.known.bridgecraft=1;const wood=s.wood,fibre=s.local.stock.fibre,stone=s.local.stock.stone;
   for(let i=1;i<=4;i++){
     v.practice.energy=100;assert.ok(improveBridge(s,v,report()));assert.equal(s.local.bridgeUpgrade.railWork,i);
-    assert.equal(bridgeFallChance(bridgeProtection(s),true),i<4?1:.45);
+    assert.equal(bridgeFallChance(bridgeProtection(s),true),i<4?SCENARIO.river.floodCrossingChance.deck:SCENARIO.river.floodCrossingChance.rails);
   }
   s.toolkit=[];assert.equal(improveBridge(s,v,report()),false);s.toolkit=['mallet & chisel'];
   for(let i=1;i<=6;i++){
     v.practice.energy=100;assert.ok(improveBridge(s,v,report()));assert.equal(s.local.bridgeUpgrade.braceWork,i);
-    assert.equal(bridgeFallChance(bridgeProtection(s),true),i<6?.45:.15);
+    assert.equal(bridgeFallChance(bridgeProtection(s),true),i<6?SCENARIO.river.floodCrossingChance.rails:SCENARIO.river.floodCrossingChance.braced);
   }
   assert.equal(s.wood,wood-16);assert.equal(s.local.stock.fibre,fibre-4);assert.equal(s.local.stock.stone,stone-6);
   assert.equal(improveBridge(s,v,report()),false);
@@ -138,6 +185,7 @@ test('ordinary NPC daily work can select a learned bridge improvement',()=>{
   const s=established();s.villagers=s.villagers.slice(0,2);s.huts=[0,0,0];s.hutDetails=[{},{},{}];
   for(const v of s.villagers){v.practice.known.bridgecraft=1;v.traits=['Loner'];v.gear='bow';v.fishTrap=true;v.practice.gear['fish trap']=true;}
   const next=stepDay(s);assert.ok(next.lastDay.actions.some(a=>a.action==='Build bridge handrails'),JSON.stringify(next.lastDay.actions));
+  assert.ok(next.lastDay.actions.some(a=>a.action==='Build tributary footbridge'),'ordinary NPC work also starts the separate small crossing');
   assert.equal(next.local.bridgeUpgrade.railWork,1,'one improvement worker per day');
 });
 
@@ -146,14 +194,18 @@ test('flood falls use one stable roll per crossing; rails and bracing reduce fal
   const totals=[];
   for(const protection of [true,{built:true,rails:true},{built:true,rails:true,braced:true}]){
     let falls=0;
-    for(let id=1;id<=1000;id++){
+    for(let id=1;id<=10000;id++){
       const p={x,y:center,seed:4,crossing:1,crossingTrips:1,travel:0},v={id,warmth:100};
       walkRiver(p,[x,center+90],.01,1000,640,true,v,false,protection,null,false,2000,false,()=>{falls++;return {fatal:false};});
       if(!p.swept)for(let i=0;i<30;i++)walkRiver(p,[x,center+90],.01,1000,640,true,v,false,protection,null,false,2000,false,()=>{falls++;return {};});
     }
     totals.push(falls);
   }
-  assert.equal(totals[0],1000);assert.ok(totals[1]>400&&totals[1]<500,totals.join(','));assert.ok(totals[2]>110&&totals[2]<190,totals.join(','));
+  for(const [i,chance] of Object.values(SCENARIO.river.floodCrossingChance).entries()){
+    const expected=Array.from({length:10000},(_,id)=>riverCrossingRoll(4,id+1,1)).filter(roll=>roll<chance).length;
+    assert.equal(totals[i],expected,'a crossing gets one draw, regardless of frames spent on the bridge');
+  }
+  assert.ok(totals[0]>totals[1]&&totals[1]>totals[2]&&totals[2]>0,totals.join(','));
   assert.equal(bridgeFallChance({built:true,rails:true,braced:true},false),0);
   assert.equal(riverCrossingRoll(4,7,1),riverCrossingRoll(4,7,1));assert.notEqual(riverCrossingRoll(4,7,1),riverCrossingRoll(4,7,2));
 });

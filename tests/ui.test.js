@@ -1,6 +1,7 @@
-// UI switches (THEME.ui): defaults keep today's screen, the minimal preset
+// Static UI configuration contracts, not browser visibility/layout tests.
+// UI switches (THEME.ui): the full preset
 // leaves only the world canvas and the command box, and every flag points at
-// real page parts. The browser half lives in scripts/ui-smoke.mjs.
+// real page parts. Current browser startup lives in scripts/browser-smoke.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -8,7 +9,7 @@ import {THEME, resolveUi, uiHiddenClasses} from '../src/theme.js';
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
 const showFlags=Object.keys(THEME.ui.defaults).filter(k=>k.startsWith('show'));
 
-test('default flags show everything (but the removed no-save notice) and keep the sim start speed', ()=>{
+test('the full HUD preset flags show everything except the removed no-save notice', ()=>{
   const ui=resolveUi();
   for(const k of showFlags)assert.equal(ui[k],k!=='showNotice',k);
   // v0.2 saves itself, so the no-save notice is off by default (design section 10).

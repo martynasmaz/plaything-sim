@@ -46,8 +46,9 @@ test('river exits vary and tributary crossings finish on land without being pull
   assert.equal(p.swept||0,0);assert.equal(p.goal,null);assert.ok(Math.abs(p.x/1000-nerisX(p.y/640))>.0115);
 });
 test('river death chance is approximately one per thousand and a fatal fall persists without consuming weather dice',()=>{
-  let deaths=0;for(let i=1;i<=200000;i++)deaths+=riverFallOutcome(4,i);assert.ok(deaths>145&&deaths<255,deaths);
-  const s=createState(HOMESTEAD_RULES,4);let count=1;while(!riverFallOutcome(s.seed,count))count++;
+  let deaths=0,count;for(let i=1;i<=200000;i++)if(riverFallOutcome(4,i)){deaths++;count??=i;}assert.ok(deaths>145&&deaths<255,deaths);
+  assert.ok(count,'the bounded sample must include a fatal outcome');
+  const s=createState(HOMESTEAD_RULES,4);
   s.local.riverFalls=count-1;const id=s.villagers[0].id,r=recordRiverFall(s,id);
   assert.equal(r.fatal,true);assert.equal(r.state.stats.deaths,s.stats.deaths+1);assert.equal(r.state.rng,s.rng);
   assert.equal(r.state.local.genealogy.people[id].deathDay,s.day);assert.equal(s.villagers.length,6);
@@ -81,7 +82,7 @@ test('milling needs a quern but not building knowledge; supervised work consumes
   teacher.practice.known.milling=1;teacher.practice.used.milling=1;
   assert.ok(canExperiment(s,student,practices.milling));assert.equal(student.practice.known.quernmaking,undefined);
   const report={actions:[{id:teacher.id,action:'Grind wheat into flour'}]},grain=s.local.stock.wheat;
-  assert.equal(makeSupervisedFood(s,student,'milling',report),true);assert.equal(s.local.stock.wheat,grain-4);assert.equal(s.local.stock.flour,4);
+  assert.equal(makeSupervisedFood(s,student,'milling',report),true);assert.equal(s.local.stock.wheat,grain-8);assert.equal(s.local.stock.flour,8);
   assert.equal(student.practice.known.milling,undefined);assert.equal(makeSupervisedFood(s,student,'milling',report),false);
 });
 test('collection requires actual making; discovered paintings provide clues without granting recipe knowledge',()=>{

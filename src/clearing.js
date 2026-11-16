@@ -1,30 +1,35 @@
+import {walkRiver} from './river-travel.js';
+export {walkRiver};
 import {paintWorker} from './villager-appearance.js';
+import {dailyBirthIds} from './village-events.js';
 import {materialSites,worldTrees,standingTree,explorationSites,nerisX,campSites,valleySeason} from './practices.js';
-import {riverHabitat,woodlandSpecies,treeKeptClear} from './ecology.js';
+import {riverHabitat,woodlandSpecies,treeKeptClear,buildingPatches,landUseKey,landUseRules} from './ecology.js';
 import { spriteManifest } from './theme.js';
 import { animalBehavior, currentWeather, sleepingHut, foodCapacity, stepDay, campFireLit } from './sim.js';
 import {fishingCrafts,fishingMethod,fishingMethodNames,fishingPhase} from './fishing.js';
 import {drawRiverFishing,drawRiverFish,drawFishingMesh,drawWickerFishingTrap,drawCarriedFishingGear} from './fishing-view.js';
 import {assessNeeds} from './needs.js';
-import {shelterDrawingScale,compactWorkSpot,householdHutSite} from './settlement-layout.js';
-import {drawHealerHome,drawHouseholdHut} from './settlement-view.js';
+import {shelterDrawingScale,compactWorkSpot,builtHutSite} from './settlement-layout.js';
+import {drawHealerHome,drawHouseholdHut,drawWeatheredSite,drawStoneFord} from './settlement-view.js';
 import {healerHomeView,healerMedicineStore,healerTrainingComplete} from './healer-home.js';
 import {magicEnabled,magicActions} from './magic.js';
 import {drawFolkRite} from './magic-view.js';
 import {activityEmoji,villagerSpeech,drawEmojiSpeech} from './village-speech.js';
 import {phoneLayoutEnabled,createPhoneGesture} from './phone-ui.js';
-import {cropRipeAt} from './farming.js';
+import {cropRipeAt,quernSite} from './farming.js';
 import {drawWheat,drawSaddleQuern} from './farming-view.js';
 import {stormRainCells,stormRainStrength,drawStormRain} from './weather-view.js';
 import {rainConditions} from './climate.js';
-import {riverLandingFraction,bridgeProtection,bridgeFallChance,riverCrossingRoll,streamY,riverHalfWidth,tributaryCourse,riverWaterAt,riverBankPoint} from './river.js';
-import {storageRackSite,granaryFinished} from './storage.js';
-import {drawGranary,drawBridgeImprovements} from './settlement-view.js';
+import {riverLandingFraction,bridgeProtection,bridgeFallChance,riverCrossingRoll,streamY,riverHalfWidth,tributaryCourse,riverWaterAt,riverBankPoint,tributaryCrossingBanks,tributaryBridgeBuilt,tributaryBridgeRules} from './river.js';
+import {storageRackSite,granaryFinished,houseStorageRules} from './storage.js';
+import {drawGranary,drawBridgeImprovements,drawTributaryBridge,drawEarthenOven} from './settlement-view.js';
+import {ovenFinished} from './hearths.js';
+import {campHearths} from './camp-hearths.js';
 import {drawRockRecord} from './paintings-view.js';
 import {paintingSite} from './paintings.js';
 import {fieldSite} from './development.js';
 import {villageLivestock,livestockWinterNeed,livestockBuildingRules} from './husbandry.js';
-import {drawLivestockPen,drawLivestockAnimal,drawFodderBundle,livestockLayout,livestockAppearance} from './husbandry-view.js';
+import {drawLivestockPen,drawLivestockAnimal,drawFodderBundle,livestockLayout,livestockAppearance,livestockDrawingScale,fodderDrawingScale,livestockPenHit} from './husbandry-view.js';
 
 function ellipse(ctx,x,y,rx,ry,fill){
   ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,2*Math.PI);ctx.fillStyle=fill;ctx.fill();
@@ -34,8 +39,8 @@ function line(ctx,x,y,ex,ey,color,width){
 }
 const fordFraction=.43,nerisFord=.24;
 const camps=campSites;
-function hutSite(camp,index){
-  return householdHutSite(camps[camp],index);
+function hutSite(camp,index,s){
+  return builtHutSite(s,camps,camp,index);
 }
 const huntingGround=[385,165],berryPatch=[272,568];
 const foodCache=[310,168];
@@ -140,110 +145,6 @@ function paintHare(g,x,y,t){
 }
 function bankY(x,side,width,height,flood){
   return streamY(x,width,height)+side*(riverHalfWidth(x,width,flood)+6);
-}
-// Keep a walker's whole silhouette clear of the small hearth. Follow its
-// perimeter until the straight route to the destination opens up again.
-function aroundHearth(p,x,y,hearth){
-  const [cx,cy]=hearth,radius=37;
-  const ax=p.x-cx,ay=p.y-cy,start=Math.atan2(ay,ax);
-  const dx=x-p.x,dy=y-p.y,length2=dx*dx+dy*dy;
-  if(Math.hypot(ax,ay)<radius-.01){
-    p.x=cx+radius*Math.cos(start);p.y=cy+radius*Math.sin(start);
-    return [p.x,p.y];
-  }
-  if(!length2)return [x,y];
-  const nearest=Math.max(0,Math.min(1,-(ax*dx+ay*dy)/length2));
-  if(Math.hypot(ax+dx*nearest,ay+dy*nearest)>=radius-.01)return [x,y];
-  const turn=ax*(y-cy)-ay*(x-cx)>=0?1:-1;
-  const angle=start+turn*.45;
-  return [cx+(radius+5)*Math.cos(angle),cy+(radius+5)*Math.sin(angle)];
-}
-export function walkRiver(p,goal,distance,width,height,flood,v,child,bridge,hearth,frozen,worldWidth,kaunas,onFall){
-  const ford=width*fordFraction;
-  const center=streamY(p.x,width,height);
-  const side=Math.sign(p.y-center)||1;
-  if(distance<=0)return false;
-  if(!frozen&&!p.swept&&Object.values(riverWaterAt(goal[0],goal[1],width,height,flood,kaunas,-4)).some(Boolean))
-    goal=riverBankPoint(goal[0],goal[1],width,height,flood,kaunas);
-  if(frozen){p.swept=0;p.crossing=0;p.tributaryCrossing=0;}
-  if(p.swept){
-    const drift=distance*(flood?4:3);
-    if(p.channel==='neris'){
-      p.y=Math.min(p.landing,p.y+drift*.65);p.x=nerisX(p.y/height)*width;
-      if(p.y>=p.landing){p.x+=p.swept*width*(flood?.022:.018);p.swept=0;p.goal=null;p.wait=4;}
-      return true;
-    }
-    p.x=kaunas?Math.max(-width+19,p.x-drift):Math.min(worldWidth-19,p.x+drift);
-    p.y=streamY(p.x,width,height)+6*Math.sin(p.x*.06);
-    if(kaunas?p.x<=p.landing:p.x>=p.landing){
-      p.y=bankY(p.x,p.swept,width,height,flood);p.swept=0;p.goal=null;p.wait=4;
-    }
-    return distance>0;
-  }
-  const goalSide=Math.sign(goal[1]-streamY(goal[0],width,height))||1;
-  if(!frozen&&!p.crossing&&side!==goalSide&&Math.abs(p.x-ford)<2){
-    p.crossing=goalSide;p.crossingTrips=(p.crossingTrips||0)+1;delete p.bridgeCrossingRoll;
-  }
-  const water=riverWaterAt(p.x,p.y,width,height,flood,kaunas),deep=riverWaterAt(p.x,p.y,width,height,flood,kaunas,2);
-  const inWater=water.main,inTributary=water.tributary&&!water.main;
-  const vulnerable=child||v.illToday||v.illnessDays>0||v.warmth<40;
-  const builtBridge=typeof bridge==='object'?bridge.built:bridge;
-  const mainChance=bridgeFallChance(bridge,flood,vulnerable);
-  if(inWater&&Math.abs(p.x-ford)<=12&&mainChance>0&&mainChance<1)
-    p.bridgeCrossingRoll??=riverCrossingRoll(p.seed||0,v.id||0,p.crossingTrips||0);
-  const unsafeMain=deep.main&&(Math.abs(p.x-ford)>12||(p.bridgeCrossingRoll??0)<mainChance);
-  const unsafeNeris=deep.tributary&&!water.main&&(Math.abs(p.y/height-nerisFord)>.018||flood||vulnerable);
-  if(!frozen&&(unsafeMain||unsafeNeris)){
-    p.falls=(p.falls||0)+1;
-    const event=onFall?.(v.id);p.fatal=!!event?.fatal;
-    p.swept=unsafeNeris?(Math.sign(p.x/width-nerisX(p.y/height))||1):(p.crossing||side);
-    p.channel=unsafeNeris?'neris':'main';p.crossing=0;p.tributaryCrossing=0;
-    const random=riverLandingFraction(p.seed||0,v.id||0,event?.count||p.falls);
-    if(unsafeNeris){
-      const mouth=height*.43;
-      p.landing=p.y+Math.max(5,mouth-p.y)*(.2+.65*random);
-    }else{
-      const available=kaunas?p.x+width-20:worldWidth-20-p.x;
-      const drift=Math.min(width*(flood?.5:.35),Math.max(0,available))*(.3+.7*random);
-      p.landing=p.x+(kaunas?-1:1)*drift;
-    }
-    return false;
-  }
-  let x=goal[0],y=goal[1];
-  if(p.crossing){x=ford;y=bankY(ford,p.crossing,width,height,flood);}
-  else if(!frozen&&side!==goalSide){x=ford;y=bankY(ford,side,width,height,flood);}
-  if(kaunas&&!frozen&&p.y<center&&y<streamY(x,width,height)){
-    const bank=Math.sign(p.x/width-nerisX(p.y/height))||1;
-    if(p.tributaryCrossing||bank!==(Math.sign(x/width-nerisX(y/height))||1)){
-      const fordY=height*nerisFord;
-      // Approach a shallow crossing on the near bank, then traverse it.
-      if(!p.tributaryCrossing&&Math.abs(p.y-fordY)>2){x=(nerisX(nerisFord)+bank*.027)*width;y=fordY;}
-      else{p.tributaryCrossing||=-bank;x=(nerisX(nerisFord)+p.tributaryCrossing*.027)*width;y=fordY;}
-    }
-  }
-  if(hearth){
-    const detour=aroundHearth(p,x,y,hearth);
-    if(detour[0]===p.x&&detour[1]===p.y&&(x!==p.x||y!==p.y))return false;
-    [x,y]=detour;
-  }
-  const dx=x-p.x,dy=y-p.y,d=Math.hypot(dx,dy);
-  if(d<1){
-    if(p.tributaryCrossing)p.tributaryCrossing=0;
-    else if(p.crossing)p.crossing=0;
-    else if(side===goalSide){p.goal=null;p.leg++;p.wait=1.4+v.id%4;}
-    return false;
-  }
-  const wading=!frozen&&(inWater&&!builtBridge||inTributary);
-  const step=Math.min(d,distance*(wading?0.55:1));
-  const previous=[p.x,p.y];
-  p.x+=dx/d*step;p.y+=dy/d*step;
-  if(!frozen&&!p.crossing){
-    const edge=bankY(p.x,side,width,height,flood);
-    if((p.y-edge)*side<0)p.y=edge;
-  }
-  if(!frozen&&kaunas&&!p.tributaryCrossing&&!p.crossing&&riverWaterAt(p.x,p.y,width,height,flood,true).tributary)
-    [p.x,p.y]=riverBankPoint(p.x,p.y,width,height,flood,true,6,previous);
-  p.travel+=step;return step>0;
 }
 function berryShrub(g,x,y,size,fruit){
   g.save();g.translate(x,y);g.scale(size,size);
@@ -458,16 +359,7 @@ function landscape(canvas,width,height,flood,baseWidth,season,kaunas){
     const end=x+3+rand()*9;
     line(g,x,y,end,streamY(end,baseWidth,height)+riverHalfWidth(end,baseWidth)*offset,'#a7bfb1',.9);
   }
-  if(kaunas){
-    const y=height*nerisFord,x=baseWidth*nerisX(nerisFord),half=baseWidth*.014;
-    for(let i=-5;i<=5;i++){
-      const px=x+half*i/5,py=y+Math.sin(i*.7)*3;
-      ellipse(g,px,py+1,5,2,season.frozen?'#b8c9c7':'#93a59a');
-      if(!flood)boulder(g,px,py,.28+(i%2===0?.08:0));
-    }
-  }
-  const ford=baseWidth*fordFraction,half=riverHalfWidth(ford,baseWidth);
-  for(let i=-half;i<=half;i+=12)boulder(g,ford+4*Math.sin(i),streamY(ford,baseWidth,height)+i,.45);
+  // Crossing stones are physical NPC projects, drawn in the daily layer.
 }
 
 // Route on a coarse land grid. Existing worn ground is cheaper, so trips out
@@ -579,7 +471,7 @@ export function createClearing(host,getState,{onRiverFall}={}){
   const paint=(key,x,y,w,h)=>{
     const img=images.get(key);if(img)ctx.drawImage(img,x-w/2,y-h,w,h);
   };
-  let clock=0,gustLeft=0,signalLeft=0,refused=false,lastSeed,seenDay=-1,birthId,birthTime=0;
+  let clock=0,gustLeft=0,signalLeft=0,refused=false,lastSeed,seenDay=-1,birthIds=new Set(),birthTime=0;
   let fieldWidth=1000,fieldHeight=640,previousFlood,previousSeason;
   let oldPaper,lastTrailKey;
   const trailPaper=document.createElement('canvas');
@@ -629,7 +521,11 @@ export function createClearing(host,getState,{onRiverFall}={}){
       if(Math.abs(x-p[0])<Math.max(12,touch?rx:0)&&Math.abs(y-p[1]+7)<Math.max(10,ry)){selected='animal:'+id;break;}
     }
     if(selected===null)for(const pen of getState().local?.husbandry?.pens||[]){
-      if(pen.work&&Math.abs(x-pen.site[0]*fieldWidth/1000)<40*fieldWidth/1000&&Math.abs(y-pen.site[1]*fieldHeight/640)<30*fieldHeight/640){selected='pen:'+pen.id;break;}
+      if(pen.work&&livestockPenHit(x,y,pen,fieldWidth,fieldHeight,touch?rx:0)){selected='pen:'+pen.id;break;}
+    }
+    if(selected===null)for(const [camp,oven] of Object.entries(getState().local?.ovens||{})){
+      const [ox,oy]=[oven.site[0]*fieldWidth/1000,oven.site[1]*fieldHeight/640];
+      if(oven.work&&Math.abs(x-ox)<Math.max(23,rx)&&Math.abs(y-oy+12)<Math.max(22,ry)){selected='oven:'+camp;break;}
     }
     if(selected===null){
       const home=healerHomeView(getState(),camps[0]);
@@ -639,10 +535,14 @@ export function createClearing(host,getState,{onRiverFall}={}){
       }
     }
     if(selected===null&&Math.abs(x-foodCache[0]*fieldWidth/1000)<Math.max(23,touch?rx:0)&&Math.abs(y-foodCache[1]*fieldHeight/640+8)<Math.max(14,ry))selected='cache';
+    if(selected===null&&getState().local?.tributaryBridge?.work){
+      const banks=tributaryCrossingBanks(fieldWidth,fieldHeight,true);
+      if(x>=banks.left[0]-rx&&x<=banks.right[0]+rx&&Math.abs(y-banks.left[1])<Math.max(24,ry))selected='tributary-bridge';
+    }
     if(touch&&selected===null){
       const s=getState();
       for(const [slot,camp] of (s.huts||[]).entries()){
-        const site=hutSite(camp,s.huts.slice(0,slot).filter(c=>c===camp).length),hx=site[0]*fieldWidth/1000,hy=site[1]*fieldHeight/640;
+        const site=hutSite(camp,s.huts.slice(0,slot).filter(c=>c===camp).length,s),hx=site[0]*fieldWidth/1000,hy=site[1]*fieldHeight/640;
         if(Math.abs(x-hx)<Math.max(48,rx)&&Math.abs(y-hy+25)<Math.max(45,ry)){selected='hut:'+slot;break;}
       }
       if(selected===null&&s.settlementWork>0&&Math.abs(x-227*fieldWidth/1000)<Math.max(40,rx)&&Math.abs(y-217*fieldHeight/640)<Math.max(30,ry))selected='communal';
@@ -742,7 +642,8 @@ export function createClearing(host,getState,{onRiverFall}={}){
       const unit=Math.min(rect.width,rect.height)/1920 || 1;
       const nextWidth=rect.width/unit,nextHeight=rect.height/unit;
       for(const p of people.values()){
-        p.x*=nextWidth/fieldWidth;p.y*=nextHeight/fieldHeight;p.landing*=nextWidth/fieldWidth;p.goal=null;
+        p.x*=nextWidth/fieldWidth;p.y*=nextHeight/fieldHeight;
+        p.landing*=p.channel==='neris'?nextHeight/fieldHeight:nextWidth/fieldWidth;p.goal=null;
       }
       fieldWidth=nextWidth;fieldHeight=nextHeight;
       canvas.width=w;canvas.height=h;paper.width=Math.min(4096,w*3);paper.height=Math.min(4096,h*3);
@@ -754,7 +655,7 @@ export function createClearing(host,getState,{onRiverFall}={}){
       landscape(paper,fieldWidth*span,fieldHeight,flood,fieldWidth,season,kaunas);canvas.dataset.sized='1';previousFlood=flood;
     }
     if(s.seed!==lastSeed||s.day<seenDay){people.clear();clock=0;birthTime=0;gustLeft=0;lastSeed=s.seed;}
-    if(s.day!==seenDay&&s.lastDay?.birth){birthId=s.lastDay.birth;birthTime=5;}
+    if(s.day!==seenDay&&dailyBirthIds(s.lastDay).length){birthIds=new Set(dailyBirthIds(s.lastDay));birthTime=5;}
     seenDay=s.day;
     const worldWidth=fieldWidth*span;
     const seconds=clearingSeconds(dt,s.speed);
@@ -803,9 +704,7 @@ export function createClearing(host,getState,{onRiverFall}={}){
       lastTrailKey=trailKey;
     }
     ctx.drawImage(trailPaper,-fieldWidth,-fieldHeight,worldWidth,3*fieldHeight);
-    const hearths=camps.slice(0,s.tribeCount||1).map(site=>{
-      const [x,y]=point(...site);return [x+86,y-22];
-    });
+    const hearths=[];for(const {camp,site} of campHearths(s,camps))hearths[camp]=point(...site);
     const hour=(6+24*s.elapsedMs/s.config.dayMs)%24;
     const sunlight=Math.cos((hour-12)*Math.PI/12);
     const darkness=Math.max(0,Math.min(1,(.25-sunlight)/.85));
@@ -817,13 +716,16 @@ export function createClearing(host,getState,{onRiverFall}={}){
       const keepers=new Map();
       if(hour>=7&&hour<18)for(const person of s.villagers){
         const keeper=people.get(person.id);
-        if(keeper&&!keeper.swept&&person.activity==='Tend livestock and lead grazing')keepers.set(person.id,[keeper.x*1000/fieldWidth,keeper.y*640/fieldHeight]);
+        if(keeper&&!keeper.swept&&['Tend livestock and lead grazing','Tend and milk livestock'].includes(person.activity))keepers.set(person.id,[keeper.x*1000/fieldWidth,keeper.y*640/fieldHeight]);
       }
-      const stockPositions=livestockLayout(s,{width:fieldWidth,height:fieldHeight,phase:clock,keepers});
+      const stockPositions=livestockLayout(s,{width:fieldWidth,height:fieldHeight,phase:clock,keepers,
+        people:[...people.values()].filter(p=>!p.swept).map(p=>[p.x*1000/fieldWidth,p.y*640/fieldHeight])});
       for(const pen of husbandry.pens){
-        const [x,y]=point(...pen.site),scale=fieldWidth/1000;
-        layers.push({y:y-24*scale,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);drawLivestockPen(ctx,pen);ctx.restore();}});
-        layers.push({y:y+24*scale,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);drawLivestockPen(ctx,pen,{front:true});ctx.restore();}});
+        if(pen.dismantledDay!==undefined)continue;
+        const [x,y]=point(...pen.site),scale=livestockDrawingScale;
+        const gateOpen=pen.grazing?.day===s.day&&keepers.has(pen.grazing.keeperId)&&hour>=7&&hour<18;
+        layers.push({y:y-24*scale,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);drawLivestockPen(ctx,pen,{gateOpen});ctx.restore();}});
+        layers.push({y:y+24*scale,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);drawLivestockPen(ctx,pen,{front:true,gateOpen});ctx.restore();}});
       }
       for(const animal of villageLivestock(s)){
         const site=stockPositions.get(animal.id);if(!site)continue;
@@ -832,13 +734,17 @@ export function createClearing(host,getState,{onRiverFall}={}){
       }
       for(const batch of [...husbandry.batches,...husbandry.compost]){
         const [x,y]=point(batch.site[0]+(batch.dryDays!==undefined?35:0),batch.site[1]+8);
-        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(fieldWidth/1000,fieldWidth/1000);drawFodderBundle(ctx,0,0,{compost:batch.readyDay!==undefined});ctx.restore();}});
+        layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);ctx.scale(fodderDrawingScale,fodderDrawingScale);drawFodderBundle(ctx,0,0,{compost:batch.readyDay!==undefined});ctx.restore();}});
       }
       if(husbandry.contacts.herders)for(const animal of husbandry.animals.filter(a=>a.location==='regional'&&a.status==='alive')){
         const site=stockPositions.get(animal.id);if(!site)continue;
         const [x,y]=point(...site);
         layers.push({y,draw:()=>{ctx.save();ctx.translate(x,y);drawLivestockAnimal(ctx,animal,{...livestockAppearance(s,animal),phase:clock,grazing:Math.sin(clock*.3+animal.id)>.2,direction:animal.id%2?1:-1});ctx.restore();}});
       }
+    }
+    for(const oven of Object.values(s.local?.ovens||{})){
+      const [x,y]=point(...oven.site),lit=(s.lastDay?.actions||[]).some(a=>a.action==='Bake hearth flatbread'&&a.site&&Math.hypot(a.site[0]-oven.site[0],a.site[1]-oven.site[1])<2);
+      layers.push({y,draw:()=>drawEarthenOven(ctx,x,y,oven,ovenFinished(oven),lit)});
     }
     for(const [camp,store] of Object.entries(s.local?.campStores||{})){
       if(store.granary){const [x,y]=point(...store.granary.site);layers.push({y,draw:()=>drawGranary(ctx,x,y,store.granary,store.saved,granaryFinished(store))});}
@@ -857,8 +763,9 @@ export function createClearing(host,getState,{onRiverFall}={}){
       }});
       }
     }
-    const easternSite=daughter||s.local?.daughter;
-    if(easternSite){
+    const currentEasternSite=daughter||s.local?.daughter;
+    const oldOutposts=(s.local?.outposts||[]).filter((post,i,list)=>post.shelter>0&&(!currentEasternSite||post.site.join(',')!==currentEasternSite.site.join(','))&&list.findIndex(other=>other.site.join(',')===post.site.join(','))===i);
+    for(const easternSite of [...oldOutposts,...(currentEasternSite?[currentEasternSite]:[])]){
       const [x,y]=point(...easternSite.site);
       const [hx,hy]=point(...camps[easternSite.origin]);
       for(let i=1;i<=8;i++){
@@ -1028,6 +935,11 @@ export function createClearing(host,getState,{onRiverFall}={}){
         ctx.restore();
       }});
     }
+    const fordX=fieldWidth*fordFraction,fordY=streamY(fordX,fieldWidth,fieldHeight),fordHalf=riverHalfWidth(fordX,fieldWidth);
+    if(!flood){
+      drawStoneFord(ctx,{left:[fordX,fordY-fordHalf],right:[fordX,fordY+fordHalf]},s.local?.fords?.main);
+      drawStoneFord(ctx,tributaryCrossingBanks(fieldWidth,fieldHeight,false),s.local?.fords?.tributary);
+    }
     if(bridgeSteps){
       const x=fieldWidth*fordFraction,top=bankY(x,-1,fieldWidth,fieldHeight,false),bottom=bankY(x,1,fieldWidth,fieldHeight,false);
       const end=top+(bottom-top)*bridgeSteps/project.bridgeWork;
@@ -1035,16 +947,25 @@ export function createClearing(host,getState,{onRiverFall}={}){
       for(let y=top;y<end;y+=6)line(ctx,x-12,y,x+12,y+1,'#ad8a55',4.5);
       drawBridgeImprovements(ctx,x,top,end,s.local?.bridgeUpgrade);
     }
+    drawTributaryBridge(ctx,tributaryCrossingBanks(fieldWidth,fieldHeight,true),s.local?.tributaryBridge);
     const prop=(key,x,y,width,height)=>{
       const [px,py]=point(x,y);layers.push({y:py,draw:()=>paint(key,px,py,width,height)});
     };
     const hutCounts=new Map();
     for(const [slot,camp] of (s.huts||[]).entries()){
       const index=hutCounts.get(camp)||0;hutCounts.set(camp,index+1);
-      const [x,y]=point(...hutSite(camp,index));
+      const [x,y]=point(...hutSite(camp,index,s));
       layers.push({y,draw:()=>drawHouseholdHut(ctx,x,y,s.hutDetails?.[slot]||{},shelterDrawingScale,campFireLit(s,camp))});
     }
-    if(s.shed.built)prop('painted_barn',827,463,112,102);
+    if(s.shed.built)prop('painted_barn',...(s.shed.site||[827,463]),112,102);
+    else if(s.shed.project){const [x,y]=point(...s.shed.project.site),stage=s.shed.project.work;
+      layers.push({y,draw:()=>{for(const offset of [-22,22])line(ctx,x+offset,y,x+offset,y-12-stage*5,'#85633c',3);
+        if(stage>=2)line(ctx,x-22,y-12-stage*5,x+22,y-12-stage*5,'#a08050',3);
+        if(stage>=4){line(ctx,x-22,y-32,x,y-48,'#85633c',3);line(ctx,x,y-48,x+22,y-32,'#85633c',3);}}});}
+    for(const patch of buildingPatches(s,camps)){
+      const wear=s.local?.landUse?.[landUseKey(patch)];if(!wear?.weathering)continue;
+      const [x,y]=point(...patch.site);layers.push({y:y+8,draw:()=>drawWeatheredSite(ctx,x,y,wear.weathering)});
+    }
     const forest=worldTrees(s);
     forest.forEach(([x,y,size],id)=>{
       if(x>2000||x< -1000||y< -640||y>1280)return;
@@ -1059,7 +980,7 @@ export function createClearing(host,getState,{onRiverFall}={}){
         if((!fallen||pendingFall)&&age<0){groveTree(ctx,px,py,size,foliage(id),species);return;}
         ctx.fillStyle='#71573b';ctx.fillRect(px-4,py-6,8,6);ellipse(ctx,px,py-6,5,2,'#cfac78');
         const daysSinceCut=s.day-(s.local?.regrowthSince?.[id]??s.local?.stumps?.[id]);
-        if(fallen&&daysSinceCut>=6&&!treeKeptClear(s,forest[id],campSites))groveTree(ctx,px,py,size*daysSinceCut/30,foliage(id),species);
+        if(fallen&&daysSinceCut>=6&&!treeKeptClear(s,forest[id],campSites))groveTree(ctx,px,py,size*daysSinceCut/landUseRules.regrowthDays,foliage(id),species);
         if(age>=0&&age<1.2){
           ctx.save();ctx.translate(px,py);ctx.rotate(Math.min(1,age*age)*1.5);
           groveTree(ctx,0,0,size,foliage(id),species);ctx.restore();
@@ -1096,7 +1017,7 @@ export function createClearing(host,getState,{onRiverFall}={}){
     });
     if(s.farming.expansion){const [x,y]=point(...s.farming.expansion.site);line(ctx,x-10,y,x+10,y,'#977548',2);line(ctx,x-10,y-4,x-10,y+3,'#b79966',2);line(ctx,x+10,y-4,x+10,y+3,'#b79966',2);}
     for(const quern of s.farming.querns||[]){
-      const home=campSites[quern.camp],x=home[0]-25,y=home[1]+25;
+      const [x,y]=quernSite(s,quern);
       layers.push({y:point(x,y)[1],draw:()=>drawSaddleQuern(ctx,...point(x,y),
         s.villagers.some(v=>(v.tribe||0)===quern.camp&&v.activity==='Grind wheat into flour'),clock)});
     }
@@ -1112,16 +1033,26 @@ export function createClearing(host,getState,{onRiverFall}={}){
         p={seed:s.seed,x,y,leg:1,wait:v.id%3*.25,travel:0,goal:null,landing:0};people.set(v.id,p);
       }
       const child=v.age<s.config.life.adult;
+      const accident=v.lastRiverAccident;
+      if(accident?.day===s.day&&p.shownAccident!==accident.count){
+        p.shownAccident=accident.count;p.channel=accident.channel==='tributary'?'neris':'main';
+        p.x=accident.location[0]/1000*fieldWidth;p.y=accident.location[1]/640*fieldHeight;
+        p.swept=accident.channel==='main'?(Math.sign(accident.landing[1]-streamY(accident.landing[0],1000,640))||1):
+          (Math.sign(accident.landing[0]-nerisX(accident.landing[1]/640)*1000)||1);
+        p.landing=accident.channel==='tributary'?accident.landing[1]/640*fieldHeight:accident.landing[0]/1000*fieldWidth;
+        p.crossing=p.tributaryCrossing=0;p.goal=null;p.wait=0;
+      }
       const eastern=daughter?.members.includes(v.id);
       const home=v.campJourney?.site||(eastern?daughter.site:camps[v.tribe||0]);
-      const [fireX,fireY]=eastern?[point(...home)[0]+64,point(...home)[1]]:hearths[v.tribe||0];
-      const hearth=s.fireKnown?[fireX,fireY+4]:null;
+      const firePoint=eastern?[point(...home)[0]+64,point(...home)[1]]:hearths[v.tribe||0];
+      const [fireX,fireY]=firePoint||point(...home);
+      const hearth=firePoint?[firePoint[0],firePoint[1]+4]:null;
       const localFire=v.campJourney?.to==='east'?daughter?.wood>0:campFireLit(s,v.campJourney?.to??v.tribe);
       const hutSlot=eastern||v.campJourney?-1:sleepingHut(s,v);
       const hutIndex=hutSlot<0?-1:s.huts.slice(0,hutSlot).filter(c=>c===(v.tribe||0)).length;
       const away=fieldCamp?.members.includes(v.id);
-      const sleepSite=v.herbalist?.home||(away?fieldCamp.site:hutIndex<0?home:hutSite(v.tribe||0,hutIndex));
-      const domesticSite=v.herbalist?.home||(hutIndex<0?home:hutSite(v.tribe||0,hutIndex));
+      const sleepSite=v.herbalist?.home||(away?fieldCamp.site:hutIndex<0?home:hutSite(v.tribe||0,hutIndex,s));
+      const domesticSite=v.herbalist?.home||(hutIndex<0?home:hutSite(v.tribe||0,hutIndex,s));
       const evening=hour>=17&&hour<19;
       const retiring=hour>=19||hour<6;
       const ritual=awakened&&v.outlook!=='Skeptical'&&
@@ -1174,12 +1105,13 @@ export function createClearing(host,getState,{onRiverFall}={}){
         if(job==='Fish'&&p.leg===1&&!s.storesUphill)p.goal=[bankX,bankTop];
         const hut=hutJobs[v.id];
         if(visitSites.has(v.id)&&job===assignments.get(v.id)&&(!clearingSite||p.leg===0))p.goal=point(...visitSites.get(v.id));
+        if(/^Build tributary /.test(job)){const banks=tributaryCrossingBanks(fieldWidth,fieldHeight,true);p.goal=[banks.left[0]-7,banks.left[1]];}
         if(job==='Sow wild seeds')p.goal=point(650,522);
         if(outing?.members.includes(v.id)&&(job==='Scout upriver'||job==='Visit remembered grove'))p.goal=point(outing.x,outing.y);
         if(job==='Forage'&&foragingPatches[v.id]!==undefined&&p.leg===0)p.goal=point(...explorationSites[foragingPatches[v.id]]);
-        if(hut&&(!clearingSite||p.leg===0))p.goal=point(...hutSite(hut.camp,hut.index));
+        if(hut&&(!clearingSite||p.leg===0))p.goal=point(...(hut.site||hutSite(hut.camp,hut.index,s)));
         if(job==='Hunt'&&p.leg===0)p.goal[0]+=(huntSites.get(v.id)||0)*15;
-        const compact=!!hut||haul&&p.leg>=1||['Rest','Build shelter','Shape jar','Fire jar','Build kiln','Weave trap','Recover energy'].includes(job)||
+        const compact=!!hut||haul&&p.leg>=1||['Rest','Build shelter','Shape jar','Fire jar','Build kiln','Weave trap','Recover energy','Grind wheat into flour','Bake hearth flatbread'].includes(job)||
           /^(Make |Experiment |Learn |Teach |Collect )/.test(job);
         if(compact){
           const anchor=[p.goal[0],p.goal[1]+(hut||site===domesticSite?22:6)];
@@ -1247,7 +1179,10 @@ export function createClearing(host,getState,{onRiverFall}={}){
       let walking=false;
       const previousLeg=p.leg;
       if(p.wait>0&&!p.swept)p.wait-=seconds;
-      else if(seconds>0&&(p.goal||p.swept))walking=walkRiver(p,p.goal||[p.x,p.y],stride*seconds*(alarm||rescue?2.3:1),fieldWidth,fieldHeight,flood,v,child,bridgeProtection(s),hearth,season.frozen,worldWidth,kaunas,onRiverFall);
+      else if(seconds>0&&(p.goal||p.swept)){
+        const protection=bridgeProtection(s),visual={...protection,visualSafe:true,tributary:{...protection.tributary,visualSafe:true}};
+        walking=walkRiver(p,p.goal||[p.x,p.y],stride*seconds*(alarm||rescue?2.3:1),fieldWidth,fieldHeight,flood,v,child,visual,hearth,season.frozen,worldWidth,kaunas,onRiverFall);
+      }
       if(pursuit&&fraction>=pursuit.encounter){
         const destination=away?point(...fieldCamp.site):point(...(pursuit.success?foodCache:home));
         if(Math.hypot(p.x-destination[0],p.y-destination[1])<8)p.huntReturned=true;
@@ -1265,7 +1200,7 @@ export function createClearing(host,getState,{onRiverFall}={}){
       p.hitHeight=sleeping?14:child?28:43;
       const atWork=p.leg>0&&!walking;
       const activity={Hunt:'hunting hares',Forage:'gathering berries',Harvest:'harvesting crops',Plant:'planting crops','Warm up':'warming up',Rest:'resting','Gather wood':'gathering wood','Build shelter':'building the lean-to','Build bridge':'building the footbridge'};
-      p.caption=p.swept?'swept downstream':alarm?(p.leg>0?'taking cover from Godzilla':'fleeing Godzilla'):ritual?(atWork?'keeping a dusk vigil':'walking to the stones'):sleeping?'sleeping':retiring?'heading home to sleep':
+      p.caption=p.waitingCrossing?'waiting for a safe tributary crossing':p.swept?'swept downstream':alarm?(p.leg>0?'taking cover from Godzilla':'fleeing Godzilla'):ritual?(atWork?'keeping a dusk vigil':'walking to the stones'):sleeping?'sleeping':retiring?'heading home to sleep':
         p.carry?(job==='Gather wood'?'carrying wood home':'bringing food to the cache'):
         (['Hunt','Forage','Harvest','Gather wood'].includes(job)&&p.leg>=2)?'back at camp':
         (job.startsWith('Build ')&&!atWork)?(job==='Build bridge'?'heading to the ford':'heading to the shelter site'):
@@ -1311,7 +1246,8 @@ export function createClearing(host,getState,{onRiverFall}={}){
         const height=child?28:45,width=height*2/3;
         const onBridge=bridge&&Math.abs(p.x-fieldWidth*fordFraction)<12;
         const water=riverWaterAt(p.x,p.y,fieldWidth,fieldHeight,flood,kaunas);
-        const wading=!season.frozen&&(!onBridge&&water.main||water.tributary&&!water.main);
+        const onTributaryBridge=tributaryBridgeBuilt(s)&&Math.abs(p.y-fieldHeight*nerisFord)<=12;
+        const wading=!season.frozen&&(!onBridge&&water.main||water.tributary&&!water.main&&!onTributaryBridge);
         if(wading){
           ctx.beginPath();ctx.ellipse(p.x,p.y,width*.27+2*Math.sin(clock*4),3,0,0,Math.PI*2);
           ctx.lineWidth=1;ctx.strokeStyle='#cfddd1';ctx.stroke();
@@ -1387,7 +1323,7 @@ export function createClearing(host,getState,{onRiverFall}={}){
           line(ctx,p.x+4,p.y-18,p.x+12,p.y-24+lift,'#b39261',2);
           line(ctx,p.x+9,p.y-27+lift,p.x+15,p.y-23+lift,'#808075',4);
         }
-        if(v.id===birthId&&birthTime>0){
+        if(birthIds.has(v.id)&&birthTime>0){
           for(let i=0;i<7;i++){const angle=i*2.4+clock*.7;ellipse(ctx,p.x+Math.cos(angle)*24,p.y-height/2+Math.sin(angle)*24,2,2,'#f2c95d');}
         }
       }});
@@ -1458,22 +1394,29 @@ export function createClearing(host,getState,{onRiverFall}={}){
     const picked=people.get(selected);
     const emptyHome=selected==='healer-home'?healerHome:null;
     const pickedHut=typeof selected==='string'&&selected.startsWith('hut:')?Number(selected.slice(4)):null;
-    const pickedStore=selected==='cache',pickedCommunal=selected==='communal';
+    const pickedStore=selected==='cache',pickedCommunal=selected==='communal',pickedTributary=selected==='tributary-bridge'?s.local?.tributaryBridge:null;
     const pickedAnimal=typeof selected==='string'&&selected.startsWith('animal:')?s.local?.husbandry?.animals.find(a=>a.id===Number(selected.slice(7))&&a.status==='alive'):null;
     const pickedPen=typeof selected==='string'&&selected.startsWith('pen:')?s.local?.husbandry?.pens.find(p=>p.id===selected.slice(4)):null;
-    card.hidden=!picked&&!emptyHome&&pickedHut===null&&!pickedStore&&!pickedCommunal&&!pickedAnimal&&!pickedPen;
+    const pickedOven=typeof selected==='string'&&selected.startsWith('oven:')?s.local?.ovens?.[selected.slice(5)]:null;
+    card.hidden=!picked&&!emptyHome&&pickedHut===null&&!pickedStore&&!pickedCommunal&&!pickedAnimal&&!pickedPen&&!pickedTributary&&!pickedOven;
     dismissCard.hidden=!phoneLayoutEnabled();
     if(pickedAnimal){
       title.textContent=pickedAnimal.name;activity.textContent=pickedAnimal.sex+' · '+(pickedAnimal.age/(4*s.config.learning.seasonLength)).toFixed(1)+' years · health '+Math.round(pickedAnimal.health)+'/100';
       bioLine.textContent='Caretaker: '+(s.villagers.find(v=>v.id===pickedAnimal.keeperId)?.name||'needed')+(pickedAnimal.pregnancy?' · young expected around day '+pickedAnimal.pregnancy.due:'')+'. Ancestry and care records are in Observe → Livestock.';
     }
     if(pickedPen){title.textContent='Livestock enclosure';activity.textContent='Enclosure '+pickedPen.work+'/'+livestockBuildingRules.enclosure.work+' · shelter '+pickedPen.shelterWork+'/'+livestockBuildingRules.shelter.work;bioLine.textContent='Household of '+(s.villagers.find(v=>v.id===pickedPen.ownerId)?.name||'a former villager')+' · full-winter hay estimate '+livestockWinterNeed(s,pickedPen)+'.';}
+    if(pickedOven){title.textContent='Earthen bread oven';activity.textContent=ovenFinished(pickedOven)?'Completed · half baking fuel':'Under construction';bioLine.textContent='Camp '+(pickedOven.camp+1)+' · wood or wood charcoal.';}
     if(pickedStore){title.textContent='Uphill cache';activity.textContent=(s.food-bankFood)+' / '+foodCapacity(s)+' provisions';bioLine.textContent='';}
     if(pickedCommunal){title.textContent='Communal shelter';activity.textContent=s.settlementWork>=s.config.settlement.shelterWork?'Completed':'Under construction';bioLine.textContent='A shared shelter for the camp, built and maintained by villagers.';}
+    if(pickedTributary){
+      title.textContent='Tributary footbridge';activity.textContent=tributaryBridgeBuilt(s)?'Completed':'Under construction ('+pickedTributary.work+'/'+tributaryBridgeRules.work+')';
+      bioLine.textContent='Handrails '+(pickedTributary.railWork||0)+'/4 · bracing '+(pickedTributary.braceWork||0)+'/6. Flood crossings can still be dangerous.';
+    }
     if(pickedHut!==null){
       const detail=s.hutDetails?.[pickedHut],residents=s.villagers.filter(v=>sleepingHut(s,v)===pickedHut);
       title.textContent=detail?.shape||'Village hut';activity.textContent=detail?.ruined?'Burned hut · waiting to be rebuilt':'Camp '+(s.huts[pickedHut]+1)+' · '+s.config.settlement.bedsPerHut+' sleeping places';
       bioLine.textContent=(detail?.wall?'Walls: '+detail.wall+'. ':'')+(residents.length?'Household: '+residents.map(v=>v.name).join(', ')+'.':'No household is sleeping here.');
+      if(detail?.foodStore?.work)bioLine.textContent+=' Food storage: '+(detail.foodStore.work>=houseStorageRules.work?houseStorageRules.capacity+' provisions of camp capacity.':detail.foodStore.work+'/'+houseStorageRules.work+' workdays.');
     }
     if(emptyHome){
       title.textContent=emptyHome.markerBuilt?'Woodland healer’s hut':'Herb shelter';
@@ -1504,7 +1447,7 @@ export function createClearing(host,getState,{onRiverFall}={}){
     const s=getState(),sites=[];
     const add=(slot,coords)=>sites.push({slot,x:coords[0]/1000,y:coords[1]/640});
     if(s.settlementWork>0)add(-1,[227,217]);
-    (s.huts||[]).forEach((camp,i)=>{if(!s.hutDetails?.[i]?.ruined)add(i,hutSite(camp,s.huts.slice(0,i).filter(k=>k===camp).length));});
+    (s.huts||[]).forEach((camp,i)=>{if(!s.hutDetails?.[i]?.ruined)add(i,hutSite(camp,s.huts.slice(0,i).filter(k=>k===camp).length,s));});
     return {sites,width:fieldWidth,height:fieldHeight,walkers:s.villagers.flatMap(v=>{
       const p=people.get(v.id);return p&&!p.swept&&v.age>=s.config.life.adult&&!v.illnessDays?[{id:v.id,x:p.x,y:p.y,side:Math.sign(p.y-streamY(p.x,fieldWidth,fieldHeight))}]:[];
     }),bankAt:(x,y)=>Math.sign(y-streamY(x,fieldWidth,fieldHeight))};

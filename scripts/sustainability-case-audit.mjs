@@ -30,7 +30,7 @@ if(isMainThread){
       const previous=s,ledger=foodLedger(s);s=stepDay(s);const r=s.lastDay;
       personDays+=previous.villagers.length;childDays+=previous.villagers.filter(v=>v.age<s.config.life.adult).length;
       const season=seasons[s.local.season]??={days:0,personDays:0,births:0,deaths:0,hungerDeaths:0,hungryPersonDays:0,food:0,meals:0};
-      season.days++;season.personDays+=previous.villagers.length;season.births+=Number(r.birth!=null);season.deaths+=r.deaths.length;
+      season.days++;season.personDays+=previous.villagers.length;season.births+=(r.births??(r.birth!=null?[r.birth]:[])).length;season.deaths+=r.deaths.length;
       season.hungerDeaths+=r.deaths.filter(d=>d.causes.includes('hunger')).length;
       const hungry=r.beforeMeals.filter(v=>v.fullness<=s.config.needs.damageAtOrBelow&&!r.meals.includes(v.id));
       hungryPersonDays+=hungry.length;season.hungryPersonDays+=hungry.length;

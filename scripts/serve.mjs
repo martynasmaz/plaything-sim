@@ -7,7 +7,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const port=Number(process.env.PORT||4173);
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8',
   '.css':'text/css; charset=utf-8','.svg':'image/svg+xml; charset=utf-8','.png':'image/png','.txt':'text/plain; charset=utf-8'};
-const server=http.createServer(async(req,res)=>{
+export function createProjectServer(){return http.createServer(async(req,res)=>{
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return;}
   try {
     const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
@@ -19,6 +19,9 @@ const server=http.createServer(async(req,res)=>{
     res.writeHead(200,{'Content-Type':types[path.extname(filename)]||'application/octet-stream','Cache-Control':'no-store'});
     res.end(req.method==='HEAD'?undefined:data);
   }catch{res.writeHead(404,{'Content-Type':'text/plain'});res.end('Not found');}
-});
+});}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+const server=createProjectServer();
 server.listen(port,'127.0.0.1',()=>console.log(`Plaything Sim is ready: http://127.0.0.1:${port}\nKeep this window open. Press Ctrl+C to stop.`));
 server.on('error',error=>{console.error(error.message);process.exitCode=1;});
+}

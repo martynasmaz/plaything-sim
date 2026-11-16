@@ -1,5 +1,5 @@
 // Physical NPC project records. The renderer never creates or advances them.
-import {householdHutSite} from './settlement-layout.js';
+import {builtHutSite} from './settlement-layout.js';
 export const healerBuildingRules={hutWork:6,rackWork:2,markerWork:2};
 export const healerTrainingRules={minAge:12,ageGap:10,plantDays:2,remedyDays:3,patientDays:2};
 export function healerTrainingComplete(v){
@@ -11,7 +11,7 @@ export function healerSite(camp){return [camp[0]-84,camp[1]-52];}
 export function healerNeighbors(s,camps,future=false){
   return camps.flatMap((camp,id)=>{
     const count=(s.huts||[]).filter(c=>c===id).length;
-    return [camp,...Array.from({length:future?Math.max(8,count+2):count},(_,i)=>householdHutSite(camp,i))];
+    return [camp,...Array.from({length:future?Math.max(8,count+2):count},(_,i)=>builtHutSite(s,camps,id,i))];
   });
 }
 export function crowdedHealerSite(site,neighbors){

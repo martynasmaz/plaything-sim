@@ -8,6 +8,8 @@
 //    gaps, no errors, and a command typed + Enter is queued and applied.
 // Fake timers make both runs deterministic. Screenshot: reports/ui-minimal-preview.png
 import assert from 'node:assert/strict';
+import {archivedCheck} from './archived-check.mjs';
+archivedCheck(import.meta.url,'Use node scripts/browser-smoke.mjs for the current clearing and phone UI.');
 import {mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath,pathToFileURL} from 'node:url';
