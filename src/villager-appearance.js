@@ -1,14 +1,24 @@
-// Shared villager appearance: the map and family portraits use this same painter.
+import {CONFIG} from './config.js';
+// Shared villager appearance uses the world's life stages, including old saves.
 const personTribeColors=['#9c5139','#446c72','#806a96'];
 function personLine(g,x,y,a,b,color,width=2){g.beginPath();g.moveTo(x,y);g.lineTo(a,b);g.strokeStyle=color;g.lineWidth=width;g.stroke();}
 function personEllipse(g,x,y,rx,ry,color){g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fillStyle=color;g.fill();}
-export function paintWorker(g,v,x,y,child,walking,sleeping,travel,job,clock,toolkit=[],furWraps=false){
+export function villagerDrawingScale(v,child,life=CONFIG.life){
+  const adultScale=.94+((Math.imul(v.id,2654435761)>>>0)%15)/100;
+  const growth=Math.max(0,Math.min(1,v.age/life.adult));
+  return child ? .60+(adultScale-.60)*growth : adultScale;
+}
+export function villagerHairColor(v,life=CONFIG.life){
+  const variant=Math.imul(v.id,2654435761)>>>0;
+  return v.age>=life.elder?'#a89d86':['#56402e','#715137','#483a30','#8b653e'][(variant>>>8)%4];
+}
+export function paintWorker(g,v,x,y,child,walking,sleeping,travel,job,clock,toolkit=[],furWraps=false,life=CONFIG.life){
   g.save();g.translate(x,y);
   const variant=Math.imul(v.id,2654435761)>>>0;
-  const scale=child ? .60+.004*v.age : .94+(variant%15)/100;
+  const scale=villagerDrawingScale(v,child,life);
   g.scale(scale,scale);
   const shoulders=child?4:(v.gender==='male'?5:4)+(variant%5-2)*.55;
-  const hair=v.age>=240?'#a89d86':['#56402e','#715137','#483a30','#8b653e'][(variant>>>8)%4];
+  const hair=villagerHairColor(v,life);
   const wearingWool=!!v.practice?.gear['wool wrap'],hide=wearingWool?'#bbae8a':furWraps?'#99764f':personTribeColors[v.tribe||0];
   if(sleeping){
     personEllipse(g,0,-4,12,5,hide);personEllipse(g,10,-6,4.6,4,'#c09b51');

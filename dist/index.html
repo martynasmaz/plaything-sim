@@ -3781,17 +3781,26 @@ function riverLandingFraction(seed,id,count){
 
 
 // ---- src/villager-appearance.js ----
-// Shared villager appearance: the map and family portraits use this same painter.
+// Shared villager appearance uses the world's life stages, including old saves.
 const personTribeColors=['#9c5139','#446c72','#806a96'];
 function personLine(g,x,y,a,b,color,width=2){g.beginPath();g.moveTo(x,y);g.lineTo(a,b);g.strokeStyle=color;g.lineWidth=width;g.stroke();}
 function personEllipse(g,x,y,rx,ry,color){g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fillStyle=color;g.fill();}
-function paintWorker(g,v,x,y,child,walking,sleeping,travel,job,clock,toolkit=[],furWraps=false){
+function villagerDrawingScale(v,child,life=CONFIG.life){
+  const adultScale=.94+((Math.imul(v.id,2654435761)>>>0)%15)/100;
+  const growth=Math.max(0,Math.min(1,v.age/life.adult));
+  return child ? .60+(adultScale-.60)*growth : adultScale;
+}
+function villagerHairColor(v,life=CONFIG.life){
+  const variant=Math.imul(v.id,2654435761)>>>0;
+  return v.age>=life.elder?'#a89d86':['#56402e','#715137','#483a30','#8b653e'][(variant>>>8)%4];
+}
+function paintWorker(g,v,x,y,child,walking,sleeping,travel,job,clock,toolkit=[],furWraps=false,life=CONFIG.life){
   g.save();g.translate(x,y);
   const variant=Math.imul(v.id,2654435761)>>>0;
-  const scale=child ? .60+.004*v.age : .94+(variant%15)/100;
+  const scale=villagerDrawingScale(v,child,life);
   g.scale(scale,scale);
   const shoulders=child?4:(v.gender==='male'?5:4)+(variant%5-2)*.55;
-  const hair=v.age>=240?'#a89d86':['#56402e','#715137','#483a30','#8b653e'][(variant>>>8)%4];
+  const hair=villagerHairColor(v,life);
   const wearingWool=!!v.practice?.gear['wool wrap'],hide=wearingWool?'#bbae8a':furWraps?'#99764f':personTribeColors[v.tribe||0];
   if(sleeping){
     personEllipse(g,0,-4,12,5,hide);personEllipse(g,10,-6,4.6,4,'#c09b51');
@@ -11886,7 +11895,8 @@ function createClearing(host,getState,{onRiverFall}={}){
       if(job==='Hunt'&&p.leg===1)caught.add(huntSites.get(v.id));
       const [homeX,homeY]=point(...sleepSite);
       const sleeping=job==='Sleep'&&p.leg>0&&!p.swept&&Math.hypot(p.x-homeX,p.y-homeY)<(v.outdoors?90:35);
-      p.hitHeight=sleeping?14:child?28:43;
+      const personHeight=43*villagerDrawingScale(v,child,s.config.life);
+      p.hitHeight=sleeping?14:personHeight;
       const atWork=p.leg>0&&!walking;
       const activity={Hunt:'hunting hares',Forage:'gathering berries',Harvest:'harvesting crops',Plant:'planting crops','Warm up':'warming up',Rest:'resting','Gather wood':'gathering wood','Build shelter':'building the lean-to','Build bridge':'building the footbridge'};
       p.caption=p.waitingCrossing?'waiting for a safe tributary crossing':p.swept?'swept downstream':alarm?(p.leg>0?'taking cover from Godzilla':'fleeing Godzilla'):ritual?(atWork?'keeping a dusk vigil':'walking to the stones'):sleeping?'sleeping':retiring?'heading home to sleep':
@@ -11919,7 +11929,7 @@ function createClearing(host,getState,{onRiverFall}={}){
       const nearby=[...people].some(([id,peer])=>id!==v.id&&!peer.swept&&Math.hypot(peer.x-p.x,peer.y-p.y)<95);
       const emoji=villagerSpeech(p,activityEmoji(job,using?.item),clock,v.id,
         s.speed>0&&nearby&&atWork&&!sleeping&&!urgent&&!unwell&&!alarm&&!rescue&&!p.swept&&bubbles.length<2);
-      if(emoji)bubbles.push({x:p.x,y:p.y-(child?28:45)-12,emoji});
+      if(emoji)bubbles.push({x:p.x,y:p.y-personHeight-14,emoji});
       layers.push({y:p.y,draw:()=>{
         if(p.fatal)return;
         if(p.swept){
@@ -11928,11 +11938,11 @@ function createClearing(host,getState,{onRiverFall}={}){
           ellipse(ctx,p.x,p.y,12,3,'#b9d2cf77');
           line(ctx,p.x-5,p.y-2,p.x-12,p.y-4+stroke*.3,'#bc9856',2);
           line(ctx,p.x+4,p.y-2,p.x+13,p.y-4-stroke*.3,'#bc9856',2);
-          ellipse(ctx,p.x,p.y-5,4.5,5,'#d1a651');ellipse(ctx,p.x-1,p.y-8,4,2,'#56402e');
+          ellipse(ctx,p.x,p.y-5,4.5,5,'#d1a651');ellipse(ctx,p.x-1,p.y-8,4,2,villagerHairColor(v,s.config.life));
           return;
         }
         if(sleeping&&hutSlot>=0&&!v.outdoors)return; // Occupants are inside, not stacked at the doorway.
-        const height=child?28:45,width=height*2/3;
+        const height=personHeight+2,width=height*2/3;
         const onBridge=bridge&&Math.abs(p.x-fieldWidth*fordFraction)<12;
         const water=riverWaterAt(p.x,p.y,fieldWidth,fieldHeight,flood,kaunas);
         const onTributaryBridge=tributaryBridgeBuilt(s)&&Math.abs(p.y-fieldHeight*nerisFord)<=12;
@@ -11948,7 +11958,7 @@ function createClearing(host,getState,{onRiverFall}={}){
         ctx.save();
         if(unwell)ctx.filter='sepia(.4) hue-rotate(38deg)';
         if(wading){ctx.beginPath();ctx.rect(p.x-45,p.y-100,90,100);ctx.clip();}
-        paintWorker(ctx,v,p.x+shiver,p.y-bob+(wading?7:0),child,walking,sleeping,p.travel,targetTree!==undefined&&p.leg===0||chopping?'Chop tree':job,clock,s.toolkit,s.furWraps);
+        paintWorker(ctx,v,p.x+shiver,p.y-bob+(wading?7:0),child,walking,sleeping,p.travel,targetTree!==undefined&&p.leg===0||chopping?'Chop tree':job,clock,s.toolkit,s.furWraps,s.config.life);
         ctx.restore();
         if(!sleeping&&!p.swept){
           if(job==='Cut and bundle winter hay')drawFodderBundle(ctx,p.x+10,p.y-17,{dry:false});
@@ -11965,7 +11975,7 @@ function createClearing(host,getState,{onRiverFall}={}){
         if(using){
           const x=p.x+8,y=p.y-18+Math.sin(clock*5)*2;
           if(['bow','sling','spear thrower'].includes(using.item)){
-            paintWorker(ctx,v,p.x,p.y,child,walking,false,p.travel,'Hunt',clock,s.toolkit,s.furWraps);
+            paintWorker(ctx,v,p.x,p.y,child,walking,false,p.travel,'Hunt',clock,s.toolkit,s.furWraps,s.config.life);
           }else if(fishingCrafts.includes(using.item)){
             const method={'fishing spear':'spear','fish trap':'trap','hook and line':'line','fishing pole':'pole','fishing net':'net'}[using.item];
             if(!walking&&!using.action.startsWith('Maintain '))drawRiverFishing(ctx,{x:p.x,y:p.y,method,clock,id:v.id,caught:using.result==='stored one provision'?1:0});
