@@ -1023,6 +1023,81 @@ function coordinatedAlternative(s,v,report){
   if(can('wood')&&(s.local.deposits.wood>=1||canFellBuildingTree(s,v)))return 'wood';
   return 'rest';
 }
+// Hut workers return whether doWork should append its normal action record.
+// Clearing records its own action; blocked or interrupted work records none.
+function improveHouseholdHut(s,v,report){
+  const c=s.config,idea=nextHutImprovement(s,v.tribe||0,v);
+  if(c.learning){
+    const recipe=equipmentRecipe(s,v,idea);
+    if(!equipmentAffordable(s,recipe))return false;
+    payEquipment(s,recipe);
+  }
+  const heating=idea==='chimney'||idea==='ondol';
+  const localSlots=s.huts.map((camp,slot)=>camp===(v.tribe||0)?slot:-1).filter(slot=>slot>=0);
+  const slot=heating?localSlots.find(slot=>!s.hutDetails?.[slot]?.[idea]):localSlots[(s.shelterIdeas?.length||0)%localSlots.length];
+  if(slot===undefined)return false;
+  s.hutDetails??=[];
+  const detail=s.hutDetails[slot]??={wall:wallTypes[0],shape:hutTypes[0]};
+  if(heating)detail[idea]=true;
+  else if(wallTypes.includes(idea))detail.wall=idea;
+  else detail.shape=idea;
+  if(!c.learning)s.wood-=2;
+  v.activity='Build '+idea;
+  report.hutSites??={};
+  report.hutSites[v.id]={camp:s.huts[slot],index:s.huts.slice(0,slot).filter(camp=>camp===s.huts[slot]).length};
+  learnShelter(s,v,idea,report);
+  return true;
+}
+
+function finishHutConstruction(s,v,site,report){
+  const c=s.config,repairSlot=s.hutProject.repairSlot??-1;
+  if(repairSlot>=0){
+    const detail=s.hutDetails[repairSlot];
+    detail.ruined=false;detail.scorched=false;delete detail.decayedDay;
+    s.hutProject=null;
+    log(s,'A ruined hut has been rebuilt.','discovery');
+    return;
+  }
+  const clearedTrees=s.hutProject.clearedTrees||[],founder=s.villagers.find(p=>p.id===s.hutProject.founder)||v;
+  const owner=nearestHearthCamp(s,campSites,site,s.hutProject.camp);
+  s.huts??=[];s.huts.push(owner);s.hutProject=null;
+  const camp=s.huts.at(-1);
+  // The paid timber frame starts with brush cladding. Stone/mud walls and
+  // more elaborate roofs are separate material-backed improvements.
+  const wall=c.learning?'brush wall':favoredCraft(s,wallTypes,camp);
+  const shape=c.learning?'dome hut':favoredCraft(s,hutTypes,camp);
+  (s.hutDetails??=[])[s.huts.length-1]={wall,shape,clearedTrees,site:site.slice()};
+  settleBuiltHouse(s,s.huts.length-1,founder);
+  report.hutSites[v.id]={camp,index:s.huts.slice(0,-1).filter(c=>c===camp).length,site:site.slice()};
+  if(founder.id===v.id)v.journeyPosition=site.slice();
+  learnShelter(s,v,wall,report);
+  learnShelter(s,v,shape,report);
+  log(s,`The villagers finished a hut with ${c.settlement.bedsPerHut} sleeping places.`,'discovery');
+}
+
+function buildHouseholdHut(s,v,report){
+  const c=s.config,{camp,index,repairSlot,site,blocked}=hutBuildingSite(s,v);
+  if(blocked){v.activity='Look for a clear building site';v.gained=0;return false;}
+  s.hutProject??={camp,index,work:0,site:site.slice(),founder:v.id};
+  s.hutProject.site??=site.slice();
+  s.hutProject.camp=camp;
+  if(repairSlot>=0)s.hutProject.repairSlot=repairSlot;
+  s.hutProject.index??=index;
+  if(c.learning&&buildingSiteTree(s,site)!==null){
+    if(clearBuildingTree(s,v,s.hutProject,site,report)){
+      v.activity='Clear hut site';
+      report.actions.push({id:v.id,action:v.activity,site,gained:v.gained});
+    }
+    return false;
+  }
+  s.wood--;
+  s.hutProject.work+=(s.toolkit?.includes('mallet & chisel')?2:1)+Number(!!v.practice?.gear['lined bed']);
+  report.hutSites??={};
+  report.hutSites[v.id]={camp,index,site:site.slice()};
+  if(s.hutProject.work>=c.settlement.shelterWork)finishHutConstruction(s,v,site,report);
+  return true;
+}
+
 function doWork(s, v, action, report, fishingMethodOverride,coordinated=false) {
   if(!coordinated&&coordinationEnabled(s,report)){
     const job=ordinarySharedJob(s,v,action);
@@ -1209,61 +1284,9 @@ function doWork(s, v, action, report, fishingMethodOverride,coordinated=false) {
     if(s.local)s.local.harvests=(s.local.harvests||0)+1;
     v.gained = s.food - before; report.gatheredFood += v.gained; report.harvests += 1;
   } else if(action==='improve hut'){
-    const idea=nextHutImprovement(s,v.tribe||0,v);
-    if(c.learning){const recipe=equipmentRecipe(s,v,idea);if(!equipmentAffordable(s,recipe))return;payEquipment(s,recipe);}
-    const heating=idea==='chimney'||idea==='ondol';
-    const local=s.huts.map((camp,i)=>camp===(v.tribe||0)?i:-1).filter(i=>i>=0);
-    const i=heating?local.find(i=>!s.hutDetails?.[i]?.[idea]):local[(s.shelterIdeas?.length||0)%local.length];
-    if(i===undefined)return;
-    s.hutDetails??=[];
-    const detail=s.hutDetails[i]??={wall:wallTypes[0],shape:hutTypes[0]};
-    if(heating)detail[idea]=true;
-    else if(wallTypes.includes(idea))detail.wall=idea;
-    else detail.shape=idea;
-    if(!c.learning)s.wood-=2;
-    v.activity='Build '+idea;
-    report.hutSites??={};
-    report.hutSites[v.id]={camp:s.huts[i],index:s.huts.slice(0,i).filter(camp=>camp===s.huts[i]).length};
-    learnShelter(s,v,idea,report);
+    if(!improveHouseholdHut(s,v,report))return;
   } else if(action==='hut'){
-    const {camp,index,repairSlot,site,blocked}=hutBuildingSite(s,v);
-    if(blocked){v.activity='Look for a clear building site';v.gained=0;return;}
-    s.hutProject??={camp,index,work:0,site:site.slice(),founder:v.id};
-    s.hutProject.site??=site.slice();
-    s.hutProject.camp=camp;
-    if(repairSlot>=0)s.hutProject.repairSlot=repairSlot;
-    s.hutProject.index??=index;
-    if(c.learning&&buildingSiteTree(s,site)!==null){
-      if(clearBuildingTree(s,v,s.hutProject,site,report)){
-        v.activity='Clear hut site';
-        report.actions.push({id:v.id,action:v.activity,site,gained:v.gained});
-      }
-      return;
-    }
-    s.wood--;s.hutProject.work+=(s.toolkit?.includes('mallet & chisel')?2:1)+Number(!!v.practice?.gear['lined bed']);
-    report.hutSites??={};
-    report.hutSites[v.id]={camp,index,site:site.slice()};
-    if(s.hutProject.work>=c.settlement.shelterWork){
-      const ruin=s.hutProject.repairSlot??-1;
-      if(ruin>=0){s.hutDetails[ruin].ruined=false;s.hutDetails[ruin].scorched=false;delete s.hutDetails[ruin].decayedDay;s.hutProject=null;log(s,'A ruined hut has been rebuilt.','discovery');}
-      else{
-      const clearedTrees=s.hutProject.clearedTrees||[],founder=s.villagers.find(p=>p.id===s.hutProject.founder)||v;
-      const owner=nearestHearthCamp(s,campSites,site,s.hutProject.camp);
-      s.huts??=[];s.huts.push(owner);s.hutProject=null;
-      const camp=s.huts.at(-1);
-      // The paid timber frame starts with brush cladding. Stone/mud walls and
-      // more elaborate roofs are separate material-backed improvements.
-      const wall=c.learning?'brush wall':favoredCraft(s,wallTypes,camp);
-      const shape=c.learning?'dome hut':favoredCraft(s,hutTypes,camp);
-      (s.hutDetails??=[])[s.huts.length-1]={wall,shape,clearedTrees,site:site.slice()};
-      settleBuiltHouse(s,s.huts.length-1,founder);
-      report.hutSites[v.id]={camp,index:s.huts.slice(0,-1).filter(c=>c===camp).length,site:site.slice()};
-      if(founder.id===v.id)v.journeyPosition=site.slice();
-      learnShelter(s,v,wall,report);
-      learnShelter(s,v,shape,report);
-      log(s,`The villagers finished a hut with ${c.settlement.bedsPerHut} sleeping places.`,'discovery');
-      }
-    }
+    if(!buildHouseholdHut(s,v,report))return;
   } else if (action==='shelter'||action==='bridge'){
     s.wood-=1;
     const {shelterWork,bridgeWork}=c.settlement;
